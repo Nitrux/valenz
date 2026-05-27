@@ -111,6 +111,31 @@ Maui.ApplicationWindow
             case "audio-volume-high": return "\uF028"
             case "audio-volume-medium": return "\uF027"
             case "audio-volume-low": return "\uF026"
+            case "battery": return "\uF240"
+            case "battery-full": return "\uF240"
+            case "battery-100": return "\uF240"
+            case "battery-good": return "\uF241"
+            case "battery-080": return "\uF241"
+            case "battery-medium": return "\uF242"
+            case "battery-060": return "\uF242"
+            case "battery-040": return "\uF242"
+            case "battery-low": return "\uF243"
+            case "battery-caution": return "\uF243"
+            case "battery-020": return "\uF243"
+            case "battery-empty": return "\uF244"
+            case "battery-missing": return "\uF244"
+            case "battery-000": return "\uF244"
+            case "battery-charging": return "\uEEA1"
+            case "battery-full-charging": return "\uEEA1"
+            case "battery-good-charging": return "\uEEA1"
+            case "battery-medium-charging": return "\uEEA1"
+            case "battery-low-charging": return "\uEEA1"
+            case "battery-caution-charging": return "\uEEA1"
+            case "battery-charging-080": return "\uEEA1"
+            case "battery-charging-060": return "\uEEA1"
+            case "battery-charging-040": return "\uEEA1"
+            case "battery-charging-020": return "\uEEA1"
+            case "power-profile-performance": return "\uF0E7"
             default: return "\uF128"
         }
     }
@@ -143,6 +168,10 @@ Maui.ApplicationWindow
     readonly property string prototypeNetworkState: root.controlCenterPrototypeNetworkState()
     readonly property string prototypeBluetoothState: root.controlCenterPrototypeBluetoothState()
     readonly property string prototypeVolumeState: root.controlCenterPrototypeVolumeState()
+    readonly property string controlCenterVolumePercentageText: root.cleanText(valenzBridge ? valenzBridge.controlCenterVolumePercentage : "")
+    readonly property bool controlCenterBatteryCharging: valenzBridge ? valenzBridge.controlCenterBatteryCharging : false
+    readonly property string controlCenterBatteryPercentageText: root.cleanText(valenzBridge ? valenzBridge.controlCenterBatteryPercentage : "")
+    readonly property string controlCenterPowerProfileIconName: "power-profile-performance"
     readonly property bool prototypeWiredNetwork: (nowDateTime.getMinutes() % 4) < 2
     readonly property bool prototypeBluetoothEnabled: (nowDateTime.getMinutes() % 3) !== 0
     readonly property int prototypeVolumeLevel: 30 + ((nowDateTime.getMinutes() * 3) % 70)
@@ -177,6 +206,29 @@ Maui.ApplicationWindow
             case "high": return "audio-volume-high"
             default: return prototypeVolumeLevel > 65 ? "audio-volume-high" : (prototypeVolumeLevel > 30 ? "audio-volume-medium" : "audio-volume-low")
         }
+    }
+    readonly property string controlCenterBatteryIconName:
+    {
+        let percentage = parseInt(root.controlCenterBatteryPercentageText, 10)
+        if (isNaN(percentage))
+            percentage = 0
+        percentage = Math.max(0, Math.min(100, percentage))
+
+        if (root.controlCenterBatteryCharging)
+        {
+            if (percentage >= 95) return "battery-full-charging"
+            if (percentage >= 75) return "battery-good-charging"
+            if (percentage >= 45) return "battery-medium-charging"
+            if (percentage >= 20) return "battery-low-charging"
+            return "battery-caution-charging"
+        }
+
+        if (percentage >= 95) return "battery-full"
+        if (percentage >= 75) return "battery-good"
+        if (percentage >= 45) return "battery-medium"
+        if (percentage >= 20) return "battery-low"
+        if (percentage > 0) return "battery-caution"
+        return "battery-empty"
     }
     readonly property bool controlCenterUseSystemThemeIcons:
         {
@@ -253,6 +305,12 @@ Maui.ApplicationWindow
                 id: _mprisControl
                 bridge: valenzBridge
                 visible: root.mprisModuleVisible
+            },
+
+            ToolSeparator
+            {
+                topPadding: 10
+                bottomPadding: 10
             }
         ]
 
@@ -275,6 +333,10 @@ Maui.ApplicationWindow
                 networkIconName: root.prototypeNetworkIconName
                 bluetoothIconName: root.prototypeBluetoothIconName
                 volumeIconName: root.prototypeVolumeIconName
+                volumePercentageText: root.controlCenterVolumePercentageText
+                batteryIconName: root.controlCenterBatteryIconName
+                batteryPercentageText: root.controlCenterBatteryPercentageText
+                powerProfileIconName: root.controlCenterPowerProfileIconName
                 glyphForIcon: root.controlCenterButtonGlyph
                 glyphColorForKind: root.controlCenterButtonGlyphColor
             },

@@ -10,56 +10,36 @@ ToolButton
 
     property var popup
     property bool useSystemThemeIcons: true
-    property string networkIconName: "network-wireless"
-    property string bluetoothIconName: "bluetooth-active"
-    property string volumeIconName: "audio-volume-medium"
+    property string networkIconName
+    property string bluetoothIconName
+    property string volumeIconName
+    property string volumePercentageText
+    property string batteryIconName
+    property string batteryPercentageText
+    property string powerProfileIconName
     property var glyphForIcon
     property var glyphColorForKind
-    readonly property bool popupVisible: controlCenterButton.popup && controlCenterButton.popup.opened
-    readonly property color activeContentColor: (controlCenterButton.down || controlCenterButton.checked) ? Maui.Theme.highlightedTextColor : Maui.Theme.textColor
+    readonly property bool popupVisible: controlCenterButton.popup && controlCenterButton.popup.visible
+    readonly property color activeContentColor: (controlCenterButton.down || controlCenterButton.popupVisible) ? Maui.Theme.highlightedTextColor : Maui.Theme.textColor
 
     text: "Control center"
     display: ToolButton.IconOnly
     checked: popupVisible
     padding: Maui.Style.space.small
-    property bool _skipNextClick: false
-    property bool _manualCloseRequest: false
-    onClicked:
+    function togglePopup()
     {
-        if (_skipNextClick)
-        {
-            _skipNextClick = false
+        if (!controlCenterButton.popup)
             return
-        }
 
-        if (controlCenterButton.popup && (controlCenterButton.popup.opened || controlCenterButton.popup.visible))
-        {
-            _manualCloseRequest = true
+        if (controlCenterButton.popup.visible)
             controlCenterButton.popup.close()
-        }
-        else if (controlCenterButton.popup)
+        else
             controlCenterButton.popup.open()
     }
 
-    Connections
+    onClicked:
     {
-        target: controlCenterButton.popup
-
-        function onAboutToHide()
-        {
-            if (!controlCenterButton._manualCloseRequest)
-                controlCenterButton._skipNextClick = true
-        }
-
-        function onClosed()
-        {
-            controlCenterButton._manualCloseRequest = false
-        }
-
-        function onOpened()
-        {
-            controlCenterButton._skipNextClick = false
-        }
+        togglePopup()
     }
 
     contentItem: RowLayout
@@ -90,7 +70,7 @@ ToolButton
                 color: controlCenterButton.activeContentColor
                 font.family: "Symbols Nerd Font"
                 font.weight: Font.Normal
-                font.pixelSize: Math.max(13, Math.round(parent.height * 0.9))
+                font.pixelSize: Math.max(10, Math.round(parent.height * 0.65))
                 textFormat: Text.PlainText
                 renderType: Text.QtRendering
             }
@@ -120,7 +100,7 @@ ToolButton
                 color: controlCenterButton.activeContentColor
                 font.family: "Symbols Nerd Font"
                 font.weight: Font.Normal
-                font.pixelSize: Math.max(13, Math.round(parent.height * 0.9))
+                font.pixelSize: Math.max(10, Math.round(parent.height * 0.65))
                 textFormat: Text.PlainText
                 renderType: Text.QtRendering
             }
@@ -135,24 +115,131 @@ ToolButton
             Maui.Icon
             {
                 anchors.centerIn: parent
+                id: _powerProfileIcon
                 width: 16
                 height: 16
-                source: controlCenterButton.volumeIconName
+                source: controlCenterButton.powerProfileIconName
                 color: controlCenterButton.activeContentColor
-                visible: controlCenterButton.useSystemThemeIcons
+                visible: controlCenterButton.useSystemThemeIcons && valid
             }
 
             Label
             {
                 anchors.centerIn: parent
-                visible: !controlCenterButton.useSystemThemeIcons
-                text: controlCenterButton.glyphForIcon ? controlCenterButton.glyphForIcon(controlCenterButton.volumeIconName) : ""
+                visible: !controlCenterButton.useSystemThemeIcons || !(_powerProfileIcon.valid && controlCenterButton.useSystemThemeIcons)
+                text: controlCenterButton.glyphForIcon ? controlCenterButton.glyphForIcon(controlCenterButton.powerProfileIconName) : ""
                 color: controlCenterButton.activeContentColor
                 font.family: "Symbols Nerd Font"
                 font.weight: Font.Normal
-                font.pixelSize: Math.max(13, Math.round(parent.height * 0.9))
+                font.pixelSize: Math.max(10, Math.round(parent.height * 0.65))
                 textFormat: Text.PlainText
                 renderType: Text.QtRendering
+            }
+        }
+
+        Item
+        {
+            Layout.alignment: Qt.AlignVCenter
+            width: _volumeRow.implicitWidth
+            height: 20
+
+            RowLayout
+            {
+                id: _volumeRow
+                anchors.centerIn: parent
+                spacing: Maui.Style.space.tiny
+
+                Item
+                {
+                    Layout.alignment: Qt.AlignVCenter
+                    width: 20
+                    height: 20
+
+                    Maui.Icon
+                    {
+                        anchors.centerIn: parent
+                        width: 16
+                        height: 16
+                        source: controlCenterButton.volumeIconName
+                        color: controlCenterButton.activeContentColor
+                        visible: controlCenterButton.useSystemThemeIcons
+                    }
+
+                    Label
+                    {
+                        anchors.centerIn: parent
+                        visible: !controlCenterButton.useSystemThemeIcons
+                        text: controlCenterButton.glyphForIcon ? controlCenterButton.glyphForIcon(controlCenterButton.volumeIconName) : ""
+                        color: controlCenterButton.activeContentColor
+                        font.family: "Symbols Nerd Font"
+                        font.weight: Font.Normal
+                        font.pixelSize: Math.max(10, Math.round(parent.height * 0.65))
+                        textFormat: Text.PlainText
+                        renderType: Text.QtRendering
+                    }
+                }
+
+                WorkspaceBadge
+                {
+                    Layout.alignment: Qt.AlignVCenter
+                    visible: controlCenterButton.volumePercentageText.length > 0
+                    badgeText: controlCenterButton.volumePercentageText
+                    bridge: null
+                    onClicked: controlCenterButton.togglePopup()
+                }
+            }
+        }
+
+        Item
+        {
+            Layout.alignment: Qt.AlignVCenter
+            width: _batteryRow.implicitWidth
+            height: 20
+
+            RowLayout
+            {
+                id: _batteryRow
+                anchors.centerIn: parent
+                spacing: Maui.Style.space.tiny
+
+                Item
+                {
+                    Layout.alignment: Qt.AlignVCenter
+                    width: 20
+                    height: 20
+
+                    Maui.Icon
+                    {
+                        anchors.centerIn: parent
+                        width: 16
+                        height: 16
+                        source: controlCenterButton.batteryIconName
+                        color: controlCenterButton.activeContentColor
+                        visible: controlCenterButton.useSystemThemeIcons
+                    }
+
+                    Label
+                    {
+                        anchors.centerIn: parent
+                        visible: !controlCenterButton.useSystemThemeIcons
+                        text: controlCenterButton.glyphForIcon ? controlCenterButton.glyphForIcon(controlCenterButton.batteryIconName) : ""
+                        color: controlCenterButton.activeContentColor
+                        font.family: "Symbols Nerd Font"
+                        font.weight: Font.Normal
+                        font.pixelSize: Math.max(10, Math.round(parent.height * 0.65))
+                        textFormat: Text.PlainText
+                        renderType: Text.QtRendering
+                    }
+                }
+
+                WorkspaceBadge
+                {
+                    Layout.alignment: Qt.AlignVCenter
+                    visible: controlCenterButton.batteryPercentageText.length > 0
+                    badgeText: controlCenterButton.batteryPercentageText
+                    bridge: null
+                    onClicked: controlCenterButton.togglePopup()
+                }
             }
         }
     }

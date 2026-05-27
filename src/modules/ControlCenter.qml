@@ -55,6 +55,56 @@ Dialog
     standardButtons: Dialog.NoButton
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
     padding: 0
+    transformOrigin: Item.TopRight
+
+    enter: Transition
+    {
+        ParallelAnimation
+        {
+            NumberAnimation
+            {
+                property: "opacity"
+                from: 0.0
+                to: 1.0
+                duration: 170
+                easing.type: Easing.OutCubic
+            }
+
+            NumberAnimation
+            {
+                property: "scale"
+                from: 0.96
+                to: 1.0
+                duration: 170
+                easing.type: Easing.OutCubic
+            }
+        }
+    }
+
+    exit: Transition
+    {
+        ParallelAnimation
+        {
+            NumberAnimation
+            {
+                property: "opacity"
+                from: 1.0
+                to: 0.0
+                duration: 130
+                easing.type: Easing.OutCubic
+            }
+
+            NumberAnimation
+            {
+                property: "scale"
+                from: 1.0
+                to: 0.97
+                duration: 130
+                easing.type: Easing.OutCubic
+            }
+        }
+    }
+
     width: _panel.implicitWidth
     height: _panel.implicitHeight
     onAboutToShow:

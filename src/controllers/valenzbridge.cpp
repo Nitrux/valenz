@@ -2,8 +2,11 @@
 
 #include <QDateTime>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
+#include <QMetaType>
 #include <QSettings>
+#include <QTextStream>
 #include <QtGlobal>
 
 namespace
@@ -25,6 +28,9 @@ constexpr auto kControlCenterIconModeKey = "ControlCenter/iconMode";
 constexpr auto kControlCenterPrototypeNetworkStateKey = "ControlCenter/prototypeNetworkState";
 constexpr auto kControlCenterPrototypeBluetoothStateKey = "ControlCenter/prototypeBluetoothState";
 constexpr auto kControlCenterPrototypeVolumeStateKey = "ControlCenter/prototypeVolumeState";
+constexpr auto kControlCenterVolumePercentageKey = "ControlCenter/volumePercentage";
+constexpr auto kControlCenterBatteryStateKey = "ControlCenter/batteryState";
+constexpr auto kControlCenterBatteryPercentageKey = "ControlCenter/batteryPercentage";
 
 constexpr auto kLegacyWorkspaceCurrentKey = "workspace/current";
 constexpr auto kLegacyWorkspaceCountKey = "workspace/count";
@@ -42,6 +48,9 @@ constexpr auto kLegacyControlCenterIconModeKey = "controlCenter/iconMode";
 constexpr auto kLegacyControlCenterPrototypeNetworkStateKey = "controlCenter/prototypeNetworkState";
 constexpr auto kLegacyControlCenterPrototypeBluetoothStateKey = "controlCenter/prototypeBluetoothState";
 constexpr auto kLegacyControlCenterPrototypeVolumeStateKey = "controlCenter/prototypeVolumeState";
+constexpr auto kLegacyControlCenterVolumePercentageKey = "controlCenter/volumePercentage";
+constexpr auto kLegacyControlCenterBatteryStateKey = "controlCenter/batteryState";
+constexpr auto kLegacyControlCenterBatteryPercentageKey = "controlCenter/batteryPercentage";
 
 QString normalizePrototypeNetworkState(const QString &value)
 {
@@ -80,6 +89,89 @@ QString normalizePrototypeVolumeState(const QString &value)
     }
 
     return QStringLiteral("auto");
+}
+
+QString normalizeBatteryPercentage(const QString &value)
+{
+    const QString normalized = value.trimmed();
+    if (normalized.isEmpty())
+        return QStringLiteral("0%");
+
+    QString numeric = normalized;
+    if (numeric.endsWith(QLatin1Char('%')))
+        numeric.chop(1);
+    numeric = numeric.trimmed();
+
+    bool ok = false;
+    const int parsed = numeric.toInt(&ok);
+    if (!ok)
+        return QStringLiteral("0%");
+
+    const int bounded = qBound(0, parsed, 100);
+    return QStringLiteral("%1%").arg(bounded);
+}
+
+bool normalizeControlCenterBatteryCharging(const QVariant &value)
+{
+    if (value.metaType().id() == QMetaType::Bool)
+        return value.toBool();
+
+    const QString normalized = value.toString().trimmed().toLower();
+    if (normalized == QLatin1String("charging")
+        || normalized == QLatin1String("true")
+        || normalized == QLatin1String("1")
+        || normalized == QLatin1String("on")
+        || normalized == QLatin1String("yes")
+        || normalized.contains(QLatin1String("charging")))
+    {
+        return true;
+    }
+
+    return false;
+}
+
+QString readIniValueFallback(const QString &filePath, const QString &groupName, const QString &keyName)
+{
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        return {};
+
+    QTextStream stream(&file);
+    bool inTargetGroup = false;
+
+    while (!stream.atEnd())
+    {
+        const QString rawLine = stream.readLine();
+        const QString trimmedLine = rawLine.trimmed();
+
+        if (trimmedLine.isEmpty() || trimmedLine.startsWith(QLatin1Char('#'))
+            || trimmedLine.startsWith(QLatin1Char(';')))
+        {
+            continue;
+        }
+
+        if (trimmedLine.startsWith(QLatin1Char('[')) && trimmedLine.endsWith(QLatin1Char(']')))
+        {
+            const QString currentGroup = trimmedLine.mid(1, trimmedLine.size() - 2).trimmed();
+            inTargetGroup = currentGroup.compare(groupName, Qt::CaseInsensitive) == 0;
+            continue;
+        }
+
+        if (!inTargetGroup)
+            continue;
+
+        const int separatorIndex = trimmedLine.indexOf(QLatin1Char('='));
+        if (separatorIndex <= 0)
+            continue;
+
+        const QString currentKey = trimmedLine.left(separatorIndex).trimmed();
+        if (currentKey.compare(keyName, Qt::CaseInsensitive) != 0)
+            continue;
+
+        return trimmedLine.mid(separatorIndex + 1).trimmed();
+    }
+
+    return {};
 }
 }
 
@@ -326,6 +418,53 @@ void ValenzBridge::setPrototypeVolumeState(const QString &state)
     Q_EMIT prototypeVolumeStateChanged(m_prototypeVolumeState);
 }
 
+QString ValenzBridge::controlCenterVolumePercentage() const
+{
+    return m_controlCenterVolumePercentage;
+}
+
+void ValenzBridge::setControlCenterVolumePercentage(const QString &value)
+{
+    const QString normalized = normalizeBatteryPercentage(value);
+    if (m_controlCenterVolumePercentage == normalized)
+        return;
+
+    m_controlCenterVolumePercentage = normalized;
+    persistControlCenterState();
+    Q_EMIT controlCenterVolumePercentageChanged(m_controlCenterVolumePercentage);
+}
+
+bool ValenzBridge::controlCenterBatteryCharging() const
+{
+    return m_controlCenterBatteryCharging;
+}
+
+void ValenzBridge::setControlCenterBatteryCharging(bool charging)
+{
+    if (m_controlCenterBatteryCharging == charging)
+        return;
+
+    m_controlCenterBatteryCharging = charging;
+    persistControlCenterState();
+    Q_EMIT controlCenterBatteryChargingChanged(m_controlCenterBatteryCharging);
+}
+
+QString ValenzBridge::controlCenterBatteryPercentage() const
+{
+    return m_controlCenterBatteryPercentage;
+}
+
+void ValenzBridge::setControlCenterBatteryPercentage(const QString &value)
+{
+    const QString normalized = normalizeBatteryPercentage(value);
+    if (m_controlCenterBatteryPercentage == normalized)
+        return;
+
+    m_controlCenterBatteryPercentage = normalized;
+    persistControlCenterState();
+    Q_EMIT controlCenterBatteryPercentageChanged(m_controlCenterBatteryPercentage);
+}
+
 void ValenzBridge::trace(const QString &source, const QString &action, const QString &detail)
 {
     if (!m_enabled)
@@ -439,8 +578,41 @@ void ValenzBridge::initializeConfig()
     ensureKey(QString::fromLatin1(kControlCenterPrototypeNetworkStateKey), QString::fromLatin1(kLegacyControlCenterPrototypeNetworkStateKey), "auto");
     ensureKey(QString::fromLatin1(kControlCenterPrototypeBluetoothStateKey), QString::fromLatin1(kLegacyControlCenterPrototypeBluetoothStateKey), "auto");
     ensureKey(QString::fromLatin1(kControlCenterPrototypeVolumeStateKey), QString::fromLatin1(kLegacyControlCenterPrototypeVolumeStateKey), "auto");
+    ensureKey(QString::fromLatin1(kControlCenterVolumePercentageKey), QString::fromLatin1(kLegacyControlCenterVolumePercentageKey), "50%");
+
+    if (!userSettings.contains(kControlCenterBatteryStateKey))
+    {
+        if (userSettings.contains(kLegacyControlCenterBatteryStateKey))
+        {
+            userSettings.setValue(kControlCenterBatteryStateKey, userSettings.value(kLegacyControlCenterBatteryStateKey));
+            userSettings.remove(kLegacyControlCenterBatteryStateKey);
+        }
+        else
+        {
+            const QVariant legacyBatteryIcon = userSettings.contains("ControlCenter/batteryIconName")
+                                                   ? userSettings.value("ControlCenter/batteryIconName")
+                                                   : userSettings.value("controlCenter/batteryIconName");
+            userSettings.setValue(kControlCenterBatteryStateKey,
+                                  normalizeControlCenterBatteryCharging(legacyBatteryIcon) ? "charging" : "battery");
+        }
+    }
+
+    ensureKey(QString::fromLatin1(kControlCenterBatteryPercentageKey), QString::fromLatin1(kLegacyControlCenterBatteryPercentageKey), "0%");
+
+    userSettings.remove("ControlCenter/batteryIconName");
+    userSettings.remove("controlCenter/batteryIconName");
+    userSettings.remove("ControlCenter/powerProfileIconName");
+    userSettings.remove("controlCenter/powerProfileIconName");
 
     userSettings.sync();
+
+    const QString focusedTitleKey = QString::fromLatin1(kFocusedWindowTitleKey);
+    const QStringList allKeys = userSettings.allKeys();
+    qInfo().noquote() << QStringLiteral("[valenz][config] qsettings.status=%1 contains(%2)=%3")
+                             .arg(static_cast<int>(userSettings.status()))
+                             .arg(focusedTitleKey, userSettings.contains(focusedTitleKey) ? QStringLiteral("true") : QStringLiteral("false"));
+    qInfo().noquote() << QStringLiteral("[valenz][config] allKeys=%1")
+                             .arg(allKeys.join(QStringLiteral(",")));
 
     m_workspaceCount = qMax(1, userSettings.value(kWorkspaceCountKey, 10).toInt());
     m_currentWorkspace = qBound(1, userSettings.value(kWorkspaceCurrentKey, 1).toInt(), m_workspaceCount);
@@ -456,6 +628,25 @@ void ValenzBridge::initializeConfig()
     m_prototypeNetworkState = normalizePrototypeNetworkState(userSettings.value(kControlCenterPrototypeNetworkStateKey, "auto").toString());
     m_prototypeBluetoothState = normalizePrototypeBluetoothState(userSettings.value(kControlCenterPrototypeBluetoothStateKey, "auto").toString());
     m_prototypeVolumeState = normalizePrototypeVolumeState(userSettings.value(kControlCenterPrototypeVolumeStateKey, "auto").toString());
+    m_controlCenterVolumePercentage = normalizeBatteryPercentage(userSettings.value(kControlCenterVolumePercentageKey, "50%").toString());
+    m_controlCenterBatteryCharging = normalizeControlCenterBatteryCharging(userSettings.value(kControlCenterBatteryStateKey, "battery"));
+    m_controlCenterBatteryPercentage = normalizeBatteryPercentage(userSettings.value(kControlCenterBatteryPercentageKey, "0%").toString());
+
+    if (m_focusedWindowTitle.isEmpty())
+    {
+        const QString fallbackTitle = readIniValueFallback(m_userConfigPath, QStringLiteral("Window"),
+                                                           QStringLiteral("focusedWindowTitle"));
+        if (!fallbackTitle.isEmpty())
+        {
+            m_focusedWindowTitle = fallbackTitle;
+            qWarning().noquote() << QStringLiteral("[valenz][config] recovered focusedWindowTitle via fallback parser");
+        }
+    }
+
+    qInfo().noquote() << QStringLiteral("[valenz][config] path=%1 exists=%2")
+                             .arg(m_userConfigPath, QFileInfo::exists(m_userConfigPath) ? QStringLiteral("true") : QStringLiteral("false"));
+    qInfo().noquote() << QStringLiteral("[valenz][config] loaded Window/focusedWindowTitle=%1")
+                             .arg(m_focusedWindowTitle);
 }
 
 void ValenzBridge::persistWorkspaceState() const
@@ -505,5 +696,8 @@ void ValenzBridge::persistControlCenterState() const
     userSettings.setValue(kControlCenterPrototypeNetworkStateKey, m_prototypeNetworkState);
     userSettings.setValue(kControlCenterPrototypeBluetoothStateKey, m_prototypeBluetoothState);
     userSettings.setValue(kControlCenterPrototypeVolumeStateKey, m_prototypeVolumeState);
+    userSettings.setValue(kControlCenterVolumePercentageKey, m_controlCenterVolumePercentage);
+    userSettings.setValue(kControlCenterBatteryStateKey, m_controlCenterBatteryCharging ? "charging" : "battery");
+    userSettings.setValue(kControlCenterBatteryPercentageKey, m_controlCenterBatteryPercentage);
     userSettings.sync();
 }

@@ -21,6 +21,9 @@ class ValenzBridge : public QObject
     Q_PROPERTY(QString prototypeNetworkState READ prototypeNetworkState WRITE setPrototypeNetworkState NOTIFY prototypeNetworkStateChanged FINAL)
     Q_PROPERTY(QString prototypeBluetoothState READ prototypeBluetoothState WRITE setPrototypeBluetoothState NOTIFY prototypeBluetoothStateChanged FINAL)
     Q_PROPERTY(QString prototypeVolumeState READ prototypeVolumeState WRITE setPrototypeVolumeState NOTIFY prototypeVolumeStateChanged FINAL)
+    Q_PROPERTY(QString controlCenterVolumePercentage READ controlCenterVolumePercentage WRITE setControlCenterVolumePercentage NOTIFY controlCenterVolumePercentageChanged FINAL)
+    Q_PROPERTY(bool controlCenterBatteryCharging READ controlCenterBatteryCharging WRITE setControlCenterBatteryCharging NOTIFY controlCenterBatteryChargingChanged FINAL)
+    Q_PROPERTY(QString controlCenterBatteryPercentage READ controlCenterBatteryPercentage WRITE setControlCenterBatteryPercentage NOTIFY controlCenterBatteryPercentageChanged FINAL)
 
 public:
     explicit ValenzBridge(QObject *parent = nullptr);
@@ -55,6 +58,12 @@ public:
     void setPrototypeBluetoothState(const QString &state);
     QString prototypeVolumeState() const;
     void setPrototypeVolumeState(const QString &state);
+    QString controlCenterVolumePercentage() const;
+    void setControlCenterVolumePercentage(const QString &value);
+    bool controlCenterBatteryCharging() const;
+    void setControlCenterBatteryCharging(bool charging);
+    QString controlCenterBatteryPercentage() const;
+    void setControlCenterBatteryPercentage(const QString &value);
 
     Q_INVOKABLE void trace(const QString &source, const QString &action, const QString &detail = QString());
     Q_INVOKABLE void goToPreviousWorkspace();
@@ -82,6 +91,9 @@ Q_SIGNALS:
     void prototypeNetworkStateChanged(const QString &state);
     void prototypeBluetoothStateChanged(const QString &state);
     void prototypeVolumeStateChanged(const QString &state);
+    void controlCenterVolumePercentageChanged(const QString &value);
+    void controlCenterBatteryChargingChanged(bool charging);
+    void controlCenterBatteryPercentageChanged(const QString &value);
 
 private:
     int clampWorkspace(int workspace) const;
@@ -106,5 +118,8 @@ private:
     QString m_prototypeNetworkState;
     QString m_prototypeBluetoothState;
     QString m_prototypeVolumeState;
+    QString m_controlCenterVolumePercentage;
+    bool m_controlCenterBatteryCharging = false;
+    QString m_controlCenterBatteryPercentage;
     QString m_userConfigPath;
 };
