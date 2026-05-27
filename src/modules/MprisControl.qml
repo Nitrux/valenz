@@ -9,6 +9,7 @@ Item
     id: mprisControl
 
     property QtObject bridge
+    readonly property int actionsButtonHeight: _mediaControls.implicitHeight
 
     Layout.fillWidth: false
     implicitHeight: visible ? Math.max(_artFrame.implicitHeight, _mediaGrid.implicitHeight) : 0

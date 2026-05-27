@@ -250,6 +250,7 @@ Maui.ApplicationWindow
 
             MprisControl
             {
+                id: _mprisControl
                 bridge: valenzBridge
                 visible: root.mprisModuleVisible
             }
@@ -350,10 +351,14 @@ Maui.ApplicationWindow
                 {
                     id: _windowTitleMiddle
                     bridge: valenzBridge
+                    referenceHeight: _mprisControl.actionsButtonHeight
                     anchors.left: parent.left
-                    anchors.right: _weatherBlock.left
-                    anchors.rightMargin: Maui.Style.space.medium
                     anchors.verticalCenter: parent.verticalCenter
+                    width:
+                    {
+                        const available = _weatherBlock.x - Maui.Style.space.medium - x
+                        return Math.max(0, Math.min(implicitWidth, available))
+                    }
                 }
 
                 RowLayout

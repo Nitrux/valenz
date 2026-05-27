@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Layouts
 
 import org.mauikit.controls as Maui
 
@@ -9,24 +8,43 @@ Item
     id: windowTitle
 
     property QtObject bridge
-
-    Layout.fillWidth: true
-    Layout.minimumWidth: Maui.Style.units.gridUnit * 7
-    Layout.preferredWidth: implicitWidth
+    property int referenceHeight: -1
+    readonly property int tabHeight: referenceHeight > 0 ? referenceHeight : _toolButtonHeightProbe.implicitHeight
+    readonly property string displayTitle:
+    {
+        const focusedTitle = windowTitle.cleanText(windowTitle.bridge ? windowTitle.bridge.focusedWindowTitle : "")
+        return focusedTitle.length > 0 ? focusedTitle : "Focused window title"
+    }
 
     implicitWidth: Math.max(
-        Maui.Style.units.gridUnit * 7,
-        _focusedWindowText.implicitWidth + Maui.Style.iconSizes.small + (Maui.Style.space.big * 2))
-    implicitHeight: Math.max(Maui.Style.iconSizes.medium, Maui.Style.toolBarHeightAlt - Maui.Style.space.small)
+        Maui.Style.units.gridUnit * 4,
+        _focusedWindowMetrics.advanceWidth + Maui.Style.iconSizes.small + (Maui.Style.space.big * 3))
+    implicitHeight: tabHeight
 
     function cleanText(value)
     {
         return String(value || "").trim()
     }
 
+    TextMetrics
+    {
+        id: _focusedWindowMetrics
+        text: windowTitle.displayTitle
+        font: _focusedWindowText.font
+    }
+
+    ToolButton
+    {
+        id: _toolButtonHeightProbe
+        visible: false
+        display: ToolButton.IconOnly
+        icon.name: "media-playback-start"
+    }
+
     Maui.TabButton
     {
         id: _focusedWindowTab
+        implicitHeight: windowTitle.tabHeight
         anchors.fill: parent
         padding: 0
         leftPadding: Maui.Style.space.small
@@ -91,11 +109,7 @@ Item
                 {
                     id: _focusedWindowText
                     y: (_focusedWindowViewport.height - height) / 2
-                    text:
-                    {
-                        const focusedTitle = windowTitle.cleanText(windowTitle.bridge ? windowTitle.bridge.focusedWindowTitle : "")
-                        return focusedTitle.length > 0 ? focusedTitle : "Focused window title"
-                    }
+                    text: windowTitle.displayTitle
                     color: Maui.Theme.textColor
                     wrapMode: Text.NoWrap
                     width: _focusedWindowTextWrap.scrolling ? implicitWidth : _focusedWindowViewport.width
