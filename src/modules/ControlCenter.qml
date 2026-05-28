@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Effects
 
 import org.mauikit.controls as Maui
 
@@ -13,12 +14,15 @@ Dialog
     property QtObject bridge
     property Item overlayItem: controlCenter.parent
 
+    Maui.Theme.colorSet: Maui.Theme.View
+
     readonly property int _baseUnit: Math.max(20, Maui.Style.units.gridUnit)
     readonly property int _margin: Math.max(Maui.Style.contentMargins, Maui.Style.space.medium)
     readonly property int _dropOffset: 6
-    readonly property color _cardColor: Qt.rgba(1, 1, 1, 0.28)
-    readonly property color _titleColor: Qt.rgba(0.06, 0.09, 0.16, 0.94)
-    readonly property color _subtitleColor: Qt.rgba(0.06, 0.09, 0.16, 0.72)
+    readonly property int _panelInset: Maui.Style.contentMargins
+    readonly property color _panelColor: Qt.alpha(Maui.Theme.backgroundColor, 0.76)
+    readonly property string _nerdFontFamily: "Symbols Nerd Font Mono"
+    readonly property int _minPanelWidth: Maui.Handy.isMobile ? _baseUnit * 16 : _baseUnit * 20
     property int _geometryRevision: 0
 
     function _touchGeometryRevision()
@@ -105,7 +109,7 @@ Dialog
         }
     }
 
-    width: _panel.implicitWidth
+    width: Math.max(_panel.implicitWidth, _minPanelWidth)
     height: _panel.implicitHeight
     onAboutToShow:
     {
@@ -190,208 +194,249 @@ Dialog
 
     background: Rectangle
     {
-        color: "transparent"
+        color: Qt.alpha(controlCenter._panelColor, 0)
     }
 
     contentItem: Rectangle
     {
         id: _panel
-        implicitWidth: controlCenter._baseUnit * 18
-        implicitHeight: _panelContent.implicitHeight + (Maui.Style.space.medium * 2)
-        radius: Maui.Style.radiusV + 6
-        border.width: 1
-        border.color: Qt.rgba(1, 1, 1, 0.26)
-        gradient: Gradient
+        implicitWidth: Math.max(controlCenter._minPanelWidth, _panelContent.implicitWidth + (controlCenter._panelInset * 2))
+        implicitHeight: _panelContent.implicitHeight + (controlCenter._panelInset * 2)
+        radius: Maui.Style.radiusV
+        color: controlCenter._panelColor
+        layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software
+        layer.effect: MultiEffect
         {
-            GradientStop { position: 0.0; color: Qt.rgba(0.82, 0.91, 0.98, 0.94) }
-            GradientStop { position: 1.0; color: Qt.rgba(0.62, 0.80, 0.97, 0.92) }
+            autoPaddingEnabled: true
+            shadowEnabled: true
+            shadowColor: "#80000000"
         }
 
         ColumnLayout
         {
             id: _panelContent
             anchors.fill: parent
-            anchors.margins: Maui.Style.space.medium
+            anchors.margins: controlCenter._panelInset
             spacing: Maui.Style.space.medium
 
-            RowLayout
+            GridLayout
             {
                 Layout.fillWidth: true
-                spacing: Maui.Style.space.small
+                columns: 2
+                rowSpacing: Maui.Style.space.small
+                columnSpacing: Maui.Style.space.small
 
-                Rectangle
+                Maui.SectionItem
                 {
                     Layout.fillWidth: true
-                    implicitHeight: controlCenter._baseUnit * 1.5
-                    radius: Maui.Style.radiusV + 4
-                    color: controlCenter._cardColor
+                    Layout.columnSpan: 2
+                    flat: false
+                    text: "Alex R."
+                    label2.text: "October 26, 2023 | 10:45 AM"
+                    iconSource: "user-identity"
 
                     RowLayout
                     {
-                        anchors.fill: parent
-                        anchors.margins: Maui.Style.space.small
+                        Layout.fillWidth: true
                         spacing: Maui.Style.space.small
-
-                        Rectangle
-                        {
-                            width: Maui.Style.iconSizes.medium
-                            height: width
-                            radius: width / 2
-                            color: Qt.rgba(1, 1, 1, 0.42)
-                            clip: true
-
-                            Image
-                            {
-                                anchors.fill: parent
-                                fillMode: Image.PreserveAspectCrop
-                                source: "qrc:/app/valenz/assets/cover.png"
-                            }
-                        }
-
-                        Label
-                        {
-                            Layout.fillWidth: true
-                            text: "Hola Zaron"
-                            font.weight: Font.DemiBold
-                            color: controlCenter._titleColor
-                            elide: Text.ElideRight
-                        }
-                    }
-                }
-
-                Rectangle
-                {
-                    Layout.preferredWidth: controlCenter._baseUnit * 5
-                    implicitHeight: controlCenter._baseUnit * 1.5
-                    radius: Maui.Style.radiusV + 4
-                    color: controlCenter._cardColor
-
-                    RowLayout
-                    {
-                        anchors.fill: parent
-                        anchors.margins: Maui.Style.space.small
-                        spacing: Maui.Style.space.small
-
-                        Maui.Icon
-                        {
-                            source: "battery"
-                            width: 16
-                            height: 16
-                            color: controlCenter._titleColor
-                        }
-
-                        Label
-                        {
-                            text: "62%"
-                            color: controlCenter._titleColor
-                        }
 
                         Item { Layout.fillWidth: true }
 
                         Maui.Icon
                         {
-                            source: "system-shutdown"
-                            width: 16
-                            height: 16
-                            color: Qt.rgba(0.86, 0.22, 0.26, 1.0)
+                            source: "battery"
+                            color: Maui.Theme.textColor
+                        }
+
+                        Label
+                        {
+                            text: controlCenter.bridge ? controlCenter.bridge.controlCenterBatteryPercentage : "85%"
+                            color: Maui.Theme.textColor
                         }
                     }
                 }
-            }
 
-            RowLayout
-            {
-                Layout.fillWidth: true
-                spacing: Maui.Style.space.small
-
-                Rectangle
+                Maui.SectionItem
                 {
                     Layout.fillWidth: true
-                    Layout.preferredWidth: 2
-                    implicitHeight: controlCenter._baseUnit * 7
-                    radius: Maui.Style.radiusV + 4
-                    color: controlCenter._cardColor
+                    flat: false
+                    text: "Bluetooth"
+                    label2.text: controlCenter.bridge && controlCenter.bridge.prototypeBluetoothState === "off" ? "Off" : "On"
+                    iconSource: "bluetooth-active"
 
-                    ColumnLayout
+                    RowLayout
                     {
-                        anchors.fill: parent
-                        anchors.margins: Maui.Style.space.small
+                        Layout.fillWidth: true
                         spacing: Maui.Style.space.small
 
-                        RowLayout
+                        ToolButton
                         {
-                            Layout.fillWidth: true
-                            spacing: Maui.Style.space.small
-
-                            Rectangle
+                            text: "On"
+                            checkable: true
+                            checked: controlCenter.bridge && controlCenter.bridge.prototypeBluetoothState === "on"
+                            onClicked:
                             {
-                                width: Maui.Style.iconSizes.medium
-                                height: width
-                                radius: width / 2
-                                color: Qt.rgba(0.12, 0.42, 0.92, 0.95)
-                                Maui.Icon { anchors.centerIn: parent; source: "network-wireless"; width: 16; height: 16; color: "white" }
-                            }
-
-                            Label
-                            {
-                                text: "Red"
-                                font.weight: Font.DemiBold
-                                color: controlCenter._titleColor
-                                Layout.fillWidth: true
-                                elide: Text.ElideRight
+                                if (controlCenter.bridge)
+                                    controlCenter.bridge.prototypeBluetoothState = "on"
                             }
                         }
 
-                        RowLayout
+                        ToolButton
                         {
-                            Layout.fillWidth: true
-                            spacing: Maui.Style.space.small
-
-                            Rectangle
+                            text: "Off"
+                            checkable: true
+                            checked: controlCenter.bridge && controlCenter.bridge.prototypeBluetoothState === "off"
+                            onClicked:
                             {
-                                width: Maui.Style.iconSizes.medium
-                                height: width
-                                radius: width / 2
-                                color: Qt.rgba(0.12, 0.42, 0.92, 0.95)
-                                Maui.Icon { anchors.centerIn: parent; source: "bluetooth-active"; width: 16; height: 16; color: "white" }
-                            }
-
-                            ColumnLayout
-                            {
-                                Layout.fillWidth: true
-                                spacing: 0
-                                Label { text: "Bluetooth"; font.weight: Font.DemiBold; color: controlCenter._titleColor }
-                                Label { text: "No conectado"; color: controlCenter._subtitleColor }
+                                if (controlCenter.bridge)
+                                    controlCenter.bridge.prototypeBluetoothState = "off"
                             }
                         }
+                    }
+                }
 
-                        RowLayout
+                Maui.SectionItem
+                {
+                    Layout.fillWidth: true
+                    flat: false
+                    text: "Cellular"
+                    label2.text: "Off"
+                    iconSource: "network-cellular-offline-symbolic"
+
+                    RowLayout
+                    {
+                        Layout.fillWidth: true
+                        spacing: Maui.Style.space.small
+
+                        ToolButton { text: "On"; checkable: true }
+                        ToolButton { text: "Off"; checkable: true; checked: true }
+                    }
+                }
+
+                Maui.SectionItem
+                {
+                    Layout.fillWidth: true
+                    flat: false
+                    text: "WiFi"
+                    label2.text: "Home_Network"
+                    iconSource: "network-wireless"
+
+                    RowLayout
+                    {
+                        Layout.fillWidth: true
+                        spacing: Maui.Style.space.small
+                        ToolButton { text: "On"; checkable: true; checked: true }
+                        ToolButton { text: "Off"; checkable: true }
+                    }
+                }
+
+                Maui.SectionItem
+                {
+                    Layout.fillWidth: true
+                    flat: false
+                    text: "Do Not Disturb"
+                    label2.text: "Off"
+                    iconSource: "notifications-disabled"
+
+                    RowLayout
+                    {
+                        Layout.fillWidth: true
+                        spacing: Maui.Style.space.small
+                        ToolButton { text: "On"; checkable: true }
+                        ToolButton { text: "Off"; checkable: true; checked: true }
+                    }
+                }
+
+                Maui.SectionItem
+                {
+                    Layout.fillWidth: true
+                    flat: false
+                    text: "Rotation Lock"
+                    label2.text: "On"
+                    iconSource: "rotation-locked"
+
+                    Switch
+                    {
+                        checked: true
+                    }
+                }
+
+                Maui.SectionItem
+                {
+                    Layout.fillWidth: true
+                    flat: false
+                    text: "Volume"
+                    iconSource: "audio-volume-high"
+
+                    RowLayout
+                    {
+                        Layout.fillWidth: true
+                        spacing: Maui.Style.space.small
+                        Maui.Icon { source: "audio-volume-muted" }
+                        Slider
                         {
                             Layout.fillWidth: true
-                            spacing: Maui.Style.space.small
+                            from: 0
+                            to: 100
+                            value: 62
+                        }
+                        Maui.Icon { source: "audio-volume-high" }
+                    }
+                }
 
-                            Rectangle
-                            {
-                                width: Maui.Style.iconSizes.medium
-                                height: width
-                                radius: width / 2
-                                color: Qt.rgba(0.12, 0.42, 0.92, 0.95)
-                                Maui.Icon { anchors.centerIn: parent; source: "settings-configure"; width: 16; height: 16; color: "white" }
-                            }
+                Maui.SectionItem
+                {
+                    Layout.fillWidth: true
+                    flat: false
+                    text: "Brightness"
+                    iconSource: "display-brightness"
 
-                            ColumnLayout
-                            {
-                                Layout.fillWidth: true
-                                spacing: 0
-                                Label { text: "Configuracion"; font.weight: Font.DemiBold; color: controlCenter._titleColor }
-                                Label
-                                {
-                                    text: "Configuracion del sis..."
-                                    color: controlCenter._subtitleColor
-                                    elide: Text.ElideRight
-                                    Layout.fillWidth: true
-                                }
-                            }
+                    RowLayout
+                    {
+                        Layout.fillWidth: true
+                        spacing: Maui.Style.space.small
+                        Maui.Icon { source: "brightness-low" }
+                        Slider
+                        {
+                            Layout.fillWidth: true
+                            from: 0
+                            to: 100
+                            value: 70
+                        }
+                        Maui.Icon { source: "brightness-high" }
+                    }
+                }
+
+                Maui.SectionItem
+                {
+                    Layout.fillWidth: true
+                    Layout.columnSpan: 2
+                    flat: false
+                    text: "Ambient Waves"
+                    label2.text: "Synth Horizon"
+                    iconSource: "media-playback-start"
+
+                    RowLayout
+                    {
+                        Layout.fillWidth: true
+                        spacing: Maui.Style.space.small
+
+                        Item { Layout.fillWidth: true }
+
+                        ToolButton
+                        {
+                            icon.name: "media-playback-start"
+                            display: ToolButton.IconOnly
+                        }
+                        ToolButton
+                        {
+                            icon.name: "media-playback-pause"
+                            display: ToolButton.IconOnly
+                        }
+                        ToolButton
+                        {
+                            icon.name: "media-skip-forward"
+                            display: ToolButton.IconOnly
                         }
                     }
                 }
@@ -399,199 +444,100 @@ Dialog
                 ColumnLayout
                 {
                     Layout.fillWidth: true
-                    Layout.preferredWidth: 2
                     spacing: Maui.Style.space.small
 
-                    Rectangle
+                    Maui.SectionItem
                     {
                         Layout.fillWidth: true
-                        implicitHeight: controlCenter._baseUnit * 3.6
-                        radius: Maui.Style.radiusV + 4
-                        color: controlCenter._cardColor
+                        flat: false
+                        text: "Night Light"
+                        label2.text: "On"
+                        iconSource: "weather-clear-night"
 
-                        ColumnLayout
+                        Switch
                         {
-                            anchors.fill: parent
-                            anchors.margins: Maui.Style.space.small
-                            spacing: Maui.Style.space.small
-
-                            Label
-                            {
-                                text: "Volumen"
-                                font.weight: Font.DemiBold
-                                color: controlCenter._titleColor
-                            }
-
-                            RowLayout
-                            {
-                                Layout.fillWidth: true
-                                spacing: Maui.Style.space.small
-
-                                Slider
-                                {
-                                    Layout.fillWidth: true
-                                    from: 0
-                                    to: 100
-                                    value: 62
-                                }
-
-                                Rectangle
-                                {
-                                    width: Maui.Style.iconSizes.medium
-                                    height: width
-                                    radius: width / 2
-                                    color: Qt.rgba(0.45, 0.50, 0.62, 0.36)
-                                    Maui.Icon { anchors.centerIn: parent; source: "configure"; width: 16; height: 16; color: controlCenter._titleColor }
-                                }
-                            }
+                            checked: true
                         }
                     }
 
-                    RowLayout
+                    Maui.SectionItem
                     {
                         Layout.fillWidth: true
-                        spacing: Maui.Style.space.small
+                        flat: false
+                        text: "Live Captions"
+                        label2.text: "On"
+                        iconSource: "comments"
 
-                        Rectangle
+                        Switch
                         {
-                            Layout.fillWidth: true
-                            implicitHeight: controlCenter._baseUnit * 2.9
-                            radius: Maui.Style.radiusV + 4
-                            color: controlCenter._cardColor
-
-                            Column
-                            {
-                                anchors.centerIn: parent
-                                spacing: Maui.Style.space.tiny
-                                Maui.Icon { anchors.horizontalCenter: parent.horizontalCenter; source: "weather-clear-night"; width: 16; height: 16; color: controlCenter._titleColor }
-                                Label { text: "Off"; color: controlCenter._titleColor; horizontalAlignment: Text.AlignHCenter }
-                            }
-                        }
-
-                        Rectangle
-                        {
-                            Layout.fillWidth: true
-                            implicitHeight: controlCenter._baseUnit * 2.9
-                            radius: Maui.Style.radiusV + 4
-                            color: controlCenter._cardColor
-
-                            Column
-                            {
-                                anchors.centerIn: parent
-                                spacing: Maui.Style.space.tiny
-                                Maui.Icon { anchors.horizontalCenter: parent.horizontalCenter; source: "notifications-disabled"; width: 16; height: 16; color: controlCenter._titleColor }
-                                Label { text: "DND"; color: controlCenter._titleColor; horizontalAlignment: Text.AlignHCenter }
-                            }
+                            checked: true
                         }
                     }
                 }
-            }
 
-            Rectangle
-            {
-                Layout.fillWidth: true
-                implicitHeight: controlCenter._baseUnit * 2.7
-                radius: Maui.Style.radiusV + 4
-                color: controlCenter._cardColor
-
-                RowLayout
+                Maui.SectionItem
                 {
-                    anchors.fill: parent
-                    anchors.margins: Maui.Style.space.small
-                    spacing: Maui.Style.space.medium
+                    Layout.fillWidth: true
+                    flat: false
+                    text: "CPU"
+                    label2.text: "25%"
+                    iconSource: "cpu"
 
-                    Maui.Icon
+                    ColumnLayout
                     {
-                        source: "weather-few-clouds"
-                        width: Maui.Style.iconSizes.medium
-                        height: width
-                        color: Qt.rgba(0.96, 0.68, 0.18, 1.0)
-                    }
-
-                    RowLayout
-                    {
+                        Layout.fillWidth: true
                         spacing: Maui.Style.space.tiny
-
-                        Label
-                        {
-                            text: "25°"
-                            color: controlCenter._titleColor
-                            font.pointSize: Maui.Style.fontSizes.big
-                        }
-
-                        Label
-                        {
-                            text: "15.6°"
-                            color: controlCenter._titleColor
-                            font.weight: Font.Bold
-                            font.pixelSize: 35
-                        }
-                    }
-
-                    Item { Layout.fillWidth: true }
-
-                    ColumnLayout
-                    {
-                        spacing: 0
-                        Label { text: "Despejado"; color: controlCenter._titleColor; font.pointSize: Maui.Style.fontSizes.medium }
-                        Label { text: "Durango"; color: controlCenter._subtitleColor }
+                        Label { text: "RAM 60%"; color: Maui.Theme.textColor }
+                        Label { text: "Disk 512GB / 1TB"; color: Maui.Theme.disabledTextColor }
                     }
                 }
-            }
 
-            Rectangle
-            {
-                Layout.fillWidth: true
-                implicitHeight: controlCenter._baseUnit * 2.8
-                radius: Maui.Style.radiusV + 4
-                color: controlCenter._cardColor
-
-                RowLayout
+                Maui.SectionItem
                 {
-                    anchors.fill: parent
-                    anchors.margins: Maui.Style.space.small
-                    spacing: Maui.Style.space.small
+                    Layout.fillWidth: true
+                    Layout.columnSpan: 2
+                    flat: false
+                    text: "Shortcuts"
+                    label2.text: ""
 
-                    Rectangle
-                    {
-                        width: controlCenter._baseUnit * 2.1
-                        height: width
-                        radius: Maui.Style.radiusV
-                        clip: true
-                        color: Qt.rgba(0.1, 0.1, 0.2, 0.24)
-
-                        Image
-                        {
-                            anchors.fill: parent
-                            fillMode: Image.PreserveAspectCrop
-                            source: "qrc:/app/valenz/assets/cover.png"
-                        }
-                    }
-
-                    ColumnLayout
+                    Maui.ToolActions
                     {
                         Layout.fillWidth: true
-                        spacing: 0
-                        Label
-                        {
-                            text: "Mi Heroe"
-                            font.weight: Font.DemiBold
-                            color: controlCenter._titleColor
-                            elide: Text.ElideRight
-                        }
-                        Label
-                        {
-                            text: "Antonio Orozco"
-                            color: controlCenter._subtitleColor
-                            elide: Text.ElideRight
-                        }
-                    }
+                        display: ToolButton.IconOnly
+                        expanded: true
 
-                    RowLayout
-                    {
-                        spacing: Maui.Style.space.small
-                        ToolButton { icon.name: "media-playback-pause"; display: ToolButton.IconOnly }
-                        ToolButton { icon.name: "media-skip-forward"; display: ToolButton.IconOnly }
+                        Action
+                        {
+                            text: "Screen Record"
+                            icon.name: "media-record"
+                            onTriggered:
+                            {
+                                if (controlCenter.bridge)
+                                    controlCenter.bridge.trace("controlCenter", "shortcut_screen_record")
+                            }
+                        }
+
+                        Action
+                        {
+                            text: "Accessibility"
+                            icon.name: "accessibility"
+                            onTriggered:
+                            {
+                                if (controlCenter.bridge)
+                                    controlCenter.bridge.trace("controlCenter", "shortcut_accessibility")
+                            }
+                        }
+
+                        Action
+                        {
+                            text: "Settings"
+                            icon.name: "settings-configure"
+                            onTriggered:
+                            {
+                                if (controlCenter.bridge)
+                                    controlCenter.bridge.trace("controlCenter", "shortcut_settings")
+                            }
+                        }
                     }
                 }
             }
