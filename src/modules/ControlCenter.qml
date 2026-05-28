@@ -19,10 +19,19 @@ Dialog
     readonly property int _baseUnit: Math.max(20, Maui.Style.units.gridUnit)
     readonly property int _margin: Math.max(Maui.Style.contentMargins, Maui.Style.space.medium)
     readonly property int _dropOffset: 6
-    readonly property int _panelInset: Maui.Style.contentMargins
-    readonly property color _panelColor: Qt.alpha(Maui.Theme.backgroundColor, 0.76)
+    readonly property int _panelInsetX: 8
+    readonly property int _panelInsetY: 8
+    // readonly property color _panelColor: Qt.alpha(Maui.Theme.backgroundColor, 0.76)
+    readonly property color _panelColor: Maui.Theme.backgroundColor
     readonly property string _nerdFontFamily: "Symbols Nerd Font Mono"
+    readonly property int _glyphSize: Math.max(15, Math.round(Maui.Style.iconSizes.medium * 0.9))
+    readonly property int _cardPadding: Maui.Style.space.small
+    readonly property int _toolActionMinSize: Math.max(28, Maui.Style.toolBarHeightAlt)
     readonly property int _minPanelWidth: Maui.Handy.isMobile ? _baseUnit * 16 : _baseUnit * 20
+    property bool _cellularEnabled: false
+    property bool _dndEnabled: false
+    property bool _rotationLocked: true
+    property bool _nightLightEnabled: true
     property int _geometryRevision: 0
 
     function _touchGeometryRevision()
@@ -200,8 +209,8 @@ Dialog
     contentItem: Rectangle
     {
         id: _panel
-        implicitWidth: Math.max(controlCenter._minPanelWidth, _panelContent.implicitWidth + (controlCenter._panelInset * 2))
-        implicitHeight: _panelContent.implicitHeight + (controlCenter._panelInset * 2)
+        implicitWidth: Math.max(controlCenter._minPanelWidth, _panelContent.implicitWidth + (controlCenter._panelInsetX * 2))
+        implicitHeight: _panelContent.implicitHeight + (controlCenter._panelInsetY * 2)
         radius: Maui.Style.radiusV
         color: controlCenter._panelColor
         layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software
@@ -216,8 +225,11 @@ Dialog
         {
             id: _panelContent
             anchors.fill: parent
-            anchors.margins: controlCenter._panelInset
-            spacing: Maui.Style.space.medium
+            anchors.leftMargin: controlCenter._panelInsetX
+            anchors.rightMargin: controlCenter._panelInsetX
+            anchors.topMargin: controlCenter._panelInsetY
+            anchors.bottomMargin: controlCenter._panelInsetY
+            spacing: Maui.Style.space.small
 
             GridLayout
             {
@@ -228,235 +240,65 @@ Dialog
 
                 Maui.SectionItem
                 {
-                    Layout.fillWidth: true
-                    Layout.columnSpan: 2
-                    flat: false
-                    text: "Alex R."
-                    label2.text: "October 26, 2023 | 10:45 AM"
-                    iconSource: "user-identity"
-
-                    RowLayout
-                    {
                         Layout.fillWidth: true
-                        spacing: Maui.Style.space.small
-
-                        Item { Layout.fillWidth: true }
-
-                        Maui.Icon
-                        {
-                            source: "battery"
-                            color: Maui.Theme.textColor
-                        }
-
-                        Label
-                        {
-                            text: controlCenter.bridge ? controlCenter.bridge.controlCenterBatteryPercentage : "85%"
-                            color: Maui.Theme.textColor
-                        }
-                    }
-                }
-
-                Maui.SectionItem
-                {
-                    Layout.fillWidth: true
-                    flat: false
-                    text: "Bluetooth"
-                    label2.text: controlCenter.bridge && controlCenter.bridge.prototypeBluetoothState === "off" ? "Off" : "On"
-                    iconSource: "bluetooth-active"
-
-                    RowLayout
-                    {
-                        Layout.fillWidth: true
-                        spacing: Maui.Style.space.small
-
-                        ToolButton
-                        {
-                            text: "On"
-                            checkable: true
-                            checked: controlCenter.bridge && controlCenter.bridge.prototypeBluetoothState === "on"
-                            onClicked:
-                            {
-                                if (controlCenter.bridge)
-                                    controlCenter.bridge.prototypeBluetoothState = "on"
-                            }
-                        }
-
-                        ToolButton
-                        {
-                            text: "Off"
-                            checkable: true
-                            checked: controlCenter.bridge && controlCenter.bridge.prototypeBluetoothState === "off"
-                            onClicked:
-                            {
-                                if (controlCenter.bridge)
-                                    controlCenter.bridge.prototypeBluetoothState = "off"
-                            }
-                        }
-                    }
-                }
-
-                Maui.SectionItem
-                {
-                    Layout.fillWidth: true
-                    flat: false
-                    text: "Cellular"
-                    label2.text: "Off"
-                    iconSource: "network-cellular-offline-symbolic"
-
-                    RowLayout
-                    {
-                        Layout.fillWidth: true
-                        spacing: Maui.Style.space.small
-
-                        ToolButton { text: "On"; checkable: true }
-                        ToolButton { text: "Off"; checkable: true; checked: true }
-                    }
-                }
-
-                Maui.SectionItem
-                {
-                    Layout.fillWidth: true
-                    flat: false
-                    text: "WiFi"
-                    label2.text: "Home_Network"
-                    iconSource: "network-wireless"
-
-                    RowLayout
-                    {
-                        Layout.fillWidth: true
-                        spacing: Maui.Style.space.small
-                        ToolButton { text: "On"; checkable: true; checked: true }
-                        ToolButton { text: "Off"; checkable: true }
-                    }
-                }
-
-                Maui.SectionItem
-                {
-                    Layout.fillWidth: true
-                    flat: false
-                    text: "Do Not Disturb"
-                    label2.text: "Off"
-                    iconSource: "notifications-disabled"
-
-                    RowLayout
-                    {
-                        Layout.fillWidth: true
-                        spacing: Maui.Style.space.small
-                        ToolButton { text: "On"; checkable: true }
-                        ToolButton { text: "Off"; checkable: true; checked: true }
-                    }
-                }
-
-                Maui.SectionItem
-                {
-                    Layout.fillWidth: true
-                    flat: false
-                    text: "Rotation Lock"
-                    label2.text: "On"
-                    iconSource: "rotation-locked"
-
-                    Switch
-                    {
-                        checked: true
-                    }
-                }
-
-                Maui.SectionItem
-                {
-                    Layout.fillWidth: true
-                    flat: false
-                    text: "Volume"
-                    iconSource: "audio-volume-high"
-
-                    RowLayout
-                    {
-                        Layout.fillWidth: true
-                        spacing: Maui.Style.space.small
-                        Maui.Icon { source: "audio-volume-muted" }
-                        Slider
-                        {
-                            Layout.fillWidth: true
-                            from: 0
-                            to: 100
-                            value: 62
-                        }
-                        Maui.Icon { source: "audio-volume-high" }
-                    }
-                }
-
-                Maui.SectionItem
-                {
-                    Layout.fillWidth: true
-                    flat: false
-                    text: "Brightness"
-                    iconSource: "display-brightness"
-
-                    RowLayout
-                    {
-                        Layout.fillWidth: true
-                        spacing: Maui.Style.space.small
-                        Maui.Icon { source: "brightness-low" }
-                        Slider
-                        {
-                            Layout.fillWidth: true
-                            from: 0
-                            to: 100
-                            value: 70
-                        }
-                        Maui.Icon { source: "brightness-high" }
-                    }
-                }
-
-                Maui.SectionItem
-                {
-                    Layout.fillWidth: true
-                    Layout.columnSpan: 2
-                    flat: false
-                    text: "Ambient Waves"
-                    label2.text: "Synth Horizon"
-                    iconSource: "media-playback-start"
-
-                    RowLayout
-                    {
-                        Layout.fillWidth: true
-                        spacing: Maui.Style.space.small
-
-                        Item { Layout.fillWidth: true }
-
-                        ToolButton
-                        {
-                            icon.name: "media-playback-start"
-                            display: ToolButton.IconOnly
-                        }
-                        ToolButton
-                        {
-                            icon.name: "media-playback-pause"
-                            display: ToolButton.IconOnly
-                        }
-                        ToolButton
-                        {
-                            icon.name: "media-skip-forward"
-                            display: ToolButton.IconOnly
-                        }
-                    }
-                }
-
-                ColumnLayout
-                {
-                    Layout.fillWidth: true
-                    spacing: Maui.Style.space.small
-
-                    Maui.SectionItem
-                    {
-                        Layout.fillWidth: true
+                        Layout.columnSpan: 2
                         flat: false
-                        text: "Night Light"
-                        label2.text: "On"
-                        iconSource: "weather-clear-night"
+                        padding: controlCenter._cardPadding
+                        text: ""
+                        label2.text: ""
 
-                        Switch
+                        RowLayout
                         {
-                            checked: true
+                            Layout.fillWidth: true
+                            spacing: Maui.Style.space.small
+
+                            Rectangle
+                            {
+                                implicitWidth: Maui.Style.iconSizes.big + Maui.Style.space.small
+                                implicitHeight: implicitWidth
+                                radius: implicitWidth / 2
+                                color: Maui.Theme.alternateBackgroundColor
+
+                                Label
+                                {
+                                    anchors.centerIn: parent
+                                    text: "\uf007"
+                                    font.family: controlCenter._nerdFontFamily
+                                    font.pixelSize: controlCenter._glyphSize
+                                    color: Maui.Theme.textColor
+                                }
+                            }
+
+                            Label
+                            {
+                                text: "Alex R."
+                                color: Maui.Theme.textColor
+                                font.weight: Font.DemiBold
+                                verticalAlignment: Text.AlignVCenter
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            ToolButton
+                            {
+                                Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                                Layout.minimumHeight: 28
+                                text: "Power"
+                                icon.name: "system-shutdown"
+                                display: ToolButton.TextBesideIcon
+
+                                background: Rectangle
+                                {
+                                    radius: Math.round(Maui.Style.radiusV * 0.6)
+                                    color: parent.down ? "#cc3b49" : "#e34b5a"
+                                }
+
+                                onClicked:
+                                {
+                                    if (controlCenter.bridge)
+                                        controlCenter.bridge.trace("controlCenter", "shortcut_power")
+                                }
+                            }
                         }
                     }
 
@@ -464,81 +306,385 @@ Dialog
                     {
                         Layout.fillWidth: true
                         flat: false
-                        text: "Live Captions"
-                        label2.text: "On"
-                        iconSource: "comments"
+                        padding: controlCenter._cardPadding
+                        text: ""
+                        label2.text: ""
 
-                        Switch
+                        RowLayout
                         {
-                            checked: true
+                            Layout.fillWidth: true
+                            spacing: Maui.Style.space.small
+
+                            Label
+                            {
+                                text: "\uf294"
+                                font.family: controlCenter._nerdFontFamily
+                                font.pixelSize: controlCenter._glyphSize
+                                color: Maui.Theme.textColor
+                            }
+
+                            ColumnLayout
+                            {
+                                spacing: 0
+
+                                Label
+                                {
+                                    text: "Bluetooth"
+                                    color: Maui.Theme.textColor
+                                    font.weight: Font.DemiBold
+                                }
+                                Label
+                                {
+                                    text: controlCenter.bridge && controlCenter.bridge.prototypeBluetoothState === "off" ? "Off" : "On"
+                                    color: Maui.Theme.disabledTextColor
+                                }
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            Switch
+                            {
+                                checked: controlCenter.bridge ? controlCenter.bridge.prototypeBluetoothState !== "off" : true
+                                onToggled:
+                                {
+                                    if (controlCenter.bridge)
+                                        controlCenter.bridge.prototypeBluetoothState = checked ? "on" : "off"
+                                }
+                            }
                         }
                     }
-                }
 
-                Maui.SectionItem
-                {
-                    Layout.fillWidth: true
-                    flat: false
-                    text: "CPU"
-                    label2.text: "25%"
-                    iconSource: "cpu"
-
-                    ColumnLayout
+                    Maui.SectionItem
                     {
                         Layout.fillWidth: true
-                        spacing: Maui.Style.space.tiny
-                        Label { text: "RAM 60%"; color: Maui.Theme.textColor }
-                        Label { text: "Disk 512GB / 1TB"; color: Maui.Theme.disabledTextColor }
+                        flat: false
+                        padding: controlCenter._cardPadding
+                        text: ""
+                        label2.text: ""
+
+                        RowLayout
+                        {
+                            Layout.fillWidth: true
+                            spacing: Maui.Style.space.small
+
+                            Label
+                            {
+                                text: "\uf817"
+                                font.family: controlCenter._nerdFontFamily
+                                font.pixelSize: controlCenter._glyphSize
+                                color: Maui.Theme.textColor
+                            }
+
+                            ColumnLayout
+                            {
+                                spacing: 0
+                                Label { text: "Cellular"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
+                                Label { text: controlCenter._cellularEnabled ? "On" : "Off"; color: Maui.Theme.disabledTextColor }
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            Switch
+                            {
+                                checked: controlCenter._cellularEnabled
+                                onToggled: controlCenter._cellularEnabled = checked
+                            }
+                        }
                     }
-                }
 
-                Maui.SectionItem
-                {
-                    Layout.fillWidth: true
-                    Layout.columnSpan: 2
-                    flat: false
-                    text: "Shortcuts"
-                    label2.text: ""
-
-                    Maui.ToolActions
+                    Maui.SectionItem
                     {
                         Layout.fillWidth: true
-                        display: ToolButton.IconOnly
-                        expanded: true
+                        flat: false
+                        padding: controlCenter._cardPadding
+                        text: ""
+                        label2.text: ""
 
-                        Action
+                        RowLayout
                         {
-                            text: "Screen Record"
-                            icon.name: "media-record"
-                            onTriggered:
+                            Layout.fillWidth: true
+                            spacing: Maui.Style.space.small
+
+                            Label
                             {
-                                if (controlCenter.bridge)
-                                    controlCenter.bridge.trace("controlCenter", "shortcut_screen_record")
+                                text: "\uf1eb"
+                                font.family: controlCenter._nerdFontFamily
+                                font.pixelSize: controlCenter._glyphSize
+                                color: Maui.Theme.textColor
                             }
-                        }
 
-                        Action
-                        {
-                            text: "Accessibility"
-                            icon.name: "accessibility"
-                            onTriggered:
+                            ColumnLayout
                             {
-                                if (controlCenter.bridge)
-                                    controlCenter.bridge.trace("controlCenter", "shortcut_accessibility")
+                                spacing: 0
+                                Label { text: "WiFi"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
+                                Label { text: "Home_Network"; color: Maui.Theme.disabledTextColor }
                             }
-                        }
 
-                        Action
-                        {
-                            text: "Settings"
-                            icon.name: "settings-configure"
-                            onTriggered:
+                            Item { Layout.fillWidth: true }
+
+                            Switch
                             {
-                                if (controlCenter.bridge)
-                                    controlCenter.bridge.trace("controlCenter", "shortcut_settings")
+                                checked: controlCenter.bridge ? controlCenter.bridge.prototypeNetworkState !== "offline" : true
+                                onToggled:
+                                {
+                                    if (controlCenter.bridge)
+                                        controlCenter.bridge.prototypeNetworkState = checked ? "wireless" : "offline"
+                                }
                             }
                         }
                     }
+
+                    Maui.SectionItem
+                    {
+                        Layout.fillWidth: true
+                        flat: false
+                        padding: controlCenter._cardPadding
+                        text: ""
+                        label2.text: ""
+
+                        RowLayout
+                        {
+                            Layout.fillWidth: true
+                            spacing: Maui.Style.space.small
+
+                            Label
+                            {
+                                text: "\uf05e"
+                                font.family: controlCenter._nerdFontFamily
+                                font.pixelSize: controlCenter._glyphSize
+                                color: Maui.Theme.textColor
+                            }
+
+                            ColumnLayout
+                            {
+                                spacing: 0
+                                Label { text: "Do Not Disturb"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
+                                Label { text: controlCenter._dndEnabled ? "On" : "Off"; color: Maui.Theme.disabledTextColor }
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            Switch
+                            {
+                                checked: controlCenter._dndEnabled
+                                onToggled: controlCenter._dndEnabled = checked
+                            }
+                        }
+                    }
+
+                    Maui.SectionItem
+                    {
+                        Layout.fillWidth: true
+                        flat: false
+                        padding: controlCenter._cardPadding
+                        text: ""
+                        label2.text: ""
+
+                        RowLayout
+                        {
+                            Layout.fillWidth: true
+                            spacing: Maui.Style.space.small
+
+                            Label
+                            {
+                                text: "\uf2f1"
+                                font.family: controlCenter._nerdFontFamily
+                                font.pixelSize: controlCenter._glyphSize
+                                color: Maui.Theme.textColor
+                            }
+
+                            ColumnLayout
+                            {
+                                spacing: 0
+                                Label { text: "Rotation Lock"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
+                                Label { text: controlCenter._rotationLocked ? "On" : "Off"; color: Maui.Theme.disabledTextColor }
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            Switch
+                            {
+                                checked: controlCenter._rotationLocked
+                                onToggled: controlCenter._rotationLocked = checked
+                            }
+                        }
+                    }
+
+                    Maui.SectionItem
+                    {
+                        Layout.fillWidth: true
+                        flat: false
+                        padding: controlCenter._cardPadding
+                        text: ""
+                        label2.text: ""
+
+                        RowLayout
+                        {
+                            Layout.fillWidth: true
+                            spacing: Maui.Style.space.small
+
+                            Label
+                            {
+                                text: "\uf186"
+                                font.family: controlCenter._nerdFontFamily
+                                font.pixelSize: controlCenter._glyphSize
+                                color: Maui.Theme.textColor
+                            }
+
+                            ColumnLayout
+                            {
+                                spacing: 0
+                                Label { text: "Night Light"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
+                                Label { text: controlCenter._nightLightEnabled ? "On" : "Off"; color: Maui.Theme.disabledTextColor }
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            Switch
+                            {
+                                checked: controlCenter._nightLightEnabled
+                                onToggled: controlCenter._nightLightEnabled = checked
+                            }
+                        }
+                    }
+
+                    Maui.SectionItem
+                    {
+                        Layout.fillWidth: true
+                        Layout.columnSpan: 2
+                        flat: false
+                        padding: controlCenter._cardPadding
+                        text: ""
+                        label2.text: ""
+
+                        RowLayout
+                        {
+                            Layout.fillWidth: true
+                            spacing: Maui.Style.space.small
+                            Label
+                            {
+                                text: "\uf026"
+                                font.family: controlCenter._nerdFontFamily
+                                font.pixelSize: controlCenter._glyphSize
+                                color: Maui.Theme.textColor
+                            }
+                            Slider
+                            {
+                                Layout.fillWidth: true
+                                from: 0
+                                to: 100
+                                value: 62
+                            }
+                            Label
+                            {
+                                text: "\uf028"
+                                font.family: controlCenter._nerdFontFamily
+                                font.pixelSize: controlCenter._glyphSize
+                                color: Maui.Theme.textColor
+                            }
+                        }
+                    }
+
+                    Maui.SectionItem
+                    {
+                        Layout.fillWidth: true
+                        Layout.columnSpan: 2
+                        flat: false
+                        padding: controlCenter._cardPadding
+                        text: ""
+                        label2.text: ""
+
+                        RowLayout
+                        {
+                            Layout.fillWidth: true
+                            spacing: Maui.Style.space.small
+                            Label
+                            {
+                                text: "\uf185"
+                                font.family: controlCenter._nerdFontFamily
+                                font.pixelSize: controlCenter._glyphSize
+                                color: Maui.Theme.textColor
+                            }
+                            Slider
+                            {
+                                Layout.fillWidth: true
+                                from: 0
+                                to: 100
+                                value: 70
+                            }
+                            Label
+                            {
+                                text: "\uf185"
+                                font.family: controlCenter._nerdFontFamily
+                                font.pixelSize: controlCenter._glyphSize
+                                color: Maui.Theme.textColor
+                                opacity: 0.65
+                            }
+                        }
+                    }
+
+                    Maui.SectionItem
+                    {
+                        Layout.fillWidth: true
+                        Layout.columnSpan: 2
+                        flat: false
+                        padding: controlCenter._cardPadding
+                        text: ""
+                        label2.text: ""
+
+                        ColumnLayout
+                        {
+                            Layout.fillWidth: true
+                            spacing: Maui.Style.space.small
+
+                            RowLayout
+                            {
+                                Layout.fillWidth: true
+                                spacing: Maui.Style.space.small
+                                Label { text: "\uf2db"; font.family: controlCenter._nerdFontFamily; font.pixelSize: controlCenter._glyphSize; color: Maui.Theme.textColor }
+                                Label { text: "CPU"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
+                                Label { text: "25%"; color: Maui.Theme.disabledTextColor }
+                            }
+                            ProgressBar
+                            {
+                                Layout.fillWidth: true
+                                from: 0
+                                to: 100
+                                value: 25
+                            }
+
+                            RowLayout
+                            {
+                                Layout.fillWidth: true
+                                spacing: Maui.Style.space.small
+                                Label { text: "\uefc5"; font.family: controlCenter._nerdFontFamily; font.pixelSize: controlCenter._glyphSize; color: Maui.Theme.textColor }
+                                Label { text: "RAM"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
+                                Label { text: "60%"; color: Maui.Theme.disabledTextColor }
+                            }
+                            ProgressBar
+                            {
+                                Layout.fillWidth: true
+                                from: 0
+                                to: 100
+                                value: 60
+                            }
+
+                            RowLayout
+                            {
+                                Layout.fillWidth: true
+                                spacing: Maui.Style.space.small
+                                Label { text: "\uf0a0"; font.family: controlCenter._nerdFontFamily; font.pixelSize: controlCenter._glyphSize; color: Maui.Theme.textColor }
+                                Label { text: "Disk"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
+                                Label { text: "512GB / 1TB"; color: Maui.Theme.disabledTextColor }
+                            }
+                            ProgressBar
+                            {
+                                Layout.fillWidth: true
+                                from: 0
+                                to: 100
+                                value: 50
+                            }
+                        }
                 }
             }
         }
