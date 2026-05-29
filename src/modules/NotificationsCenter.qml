@@ -463,6 +463,7 @@ Dialog
 
                         delegate: Maui.SectionItem
                         {
+                            id: _notificationCard
                             required property int index
                             required property string sourceName
                             required property string messageText
@@ -471,6 +472,17 @@ Dialog
                             required property int urgencyLevel
                             required property string actionText
                             required property string actionKey
+
+                            property bool _dismissing: false
+
+                            function startDismiss()
+                            {
+                                if (_dismissing)
+                                    return
+
+                                _dismissing = true
+                                _dismissAnimation.start()
+                            }
 
                             width: _notificationsColumn.width
                             flat: false
@@ -483,6 +495,30 @@ Dialog
                                 radius: Maui.Style.radiusV
                                 border.width: urgencyLevel >= 0 ? 1 : 0
                                 border.color: notificationsCenter._urgencyAccentColor(urgencyLevel)
+                            }
+                            ParallelAnimation
+                            {
+                                id: _dismissAnimation
+
+                                NumberAnimation
+                                {
+                                    target: _notificationCard
+                                    property: "x"
+                                    to: _notificationCard.width + Maui.Style.space.large
+                                    duration: 200
+                                    easing.type: Easing.InOutCubic
+                                }
+
+                                NumberAnimation
+                                {
+                                    target: _notificationCard
+                                    property: "opacity"
+                                    to: 0
+                                    duration: 160
+                                    easing.type: Easing.InOutQuad
+                                }
+
+                                onFinished: notificationsCenter.dismissNotification(index)
                             }
 
                             ColumnLayout
@@ -565,7 +601,8 @@ Dialog
                                             radius: Maui.Style.radiusV
                                             color: _dismissButton.hovered || _dismissButton.down ? Maui.Theme.negativeBackgroundColor : "transparent"
                                         }
-                                        onClicked: notificationsCenter.dismissNotification(index)
+                                        enabled: !_notificationCard._dismissing
+                                        onClicked: _notificationCard.startDismiss()
                                     }
                                 }
 
