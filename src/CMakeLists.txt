@@ -42,6 +42,7 @@ qt_add_qml_module(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
     MauiKit4
+    MauiKit4::Calendar
     MauiKitSystem::Power
     Qt6::Core
     Qt6::Gui

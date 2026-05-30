@@ -16,6 +16,7 @@ set(REQUIRED_QT_VERSION 6.9)
 set(REQUIRED_KF_VERSION 6.13.0)
 set(REQUIRED_MAUI_VERSION 4.0.3)
 set(REQUIRED_MAUI_SYSTEM_VERSION 0.6.6)
+set(REQUIRED_MAUI_CALENDAR_VERSION 4.0.3)
 
 include(CheckCXXCompilerFlag)
 include(FeatureSummary)
@@ -37,6 +38,7 @@ find_package(Qt6 ${REQUIRED_QT_VERSION} REQUIRED NO_MODULE COMPONENTS Core Gui Q
 find_package(KF6CoreAddons ${REQUIRED_KF_VERSION} REQUIRED)
 find_package(KF6I18n ${REQUIRED_KF_VERSION} REQUIRED)
 find_package(MauiKit4 ${REQUIRED_MAUI_VERSION} REQUIRED)
+find_package(MauiKitCalendar4 ${REQUIRED_MAUI_CALENDAR_VERSION} REQUIRED)
 find_package(MauiKitSystem ${REQUIRED_MAUI_SYSTEM_VERSION} REQUIRED COMPONENTS Power)
 
 # Qt 6.8+ policy: generate qmldir files for extra QML subdirectories (e.g. src/modules).
