@@ -3,6 +3,7 @@
 
 #include <QDBusConnection>
 #include <QDBusMessage>
+#include <QStringList>
 #include <QTimer>
 #include <QtGlobal>
 
@@ -23,6 +24,38 @@ void emitNotificationsSignal(const QString &member, const QVariantList &argument
                                                       member);
     message.setArguments(arguments);
     QDBusConnection::sessionBus().send(message);
+}
+
+QString normalizeNotificationText(const QString &text)
+{
+    QString normalized = text;
+    normalized.replace(QStringLiteral("\r\n"), QStringLiteral("\n"));
+    normalized.replace(QStringLiteral("\r"), QStringLiteral("\n"));
+
+    const QStringList lines = normalized.split(QStringLiteral("\n"));
+    QStringList paragraphs;
+    QStringList paragraphLines;
+
+    for (const QString &line : lines)
+    {
+        const QString compactLine = line.simplified();
+        if (compactLine.isEmpty())
+        {
+            if (!paragraphLines.isEmpty())
+            {
+                paragraphs.push_back(paragraphLines.join(QStringLiteral(" ")));
+                paragraphLines.clear();
+            }
+            continue;
+        }
+
+        paragraphLines.push_back(compactLine);
+    }
+
+    if (!paragraphLines.isEmpty())
+        paragraphs.push_back(paragraphLines.join(QStringLiteral(" ")));
+
+    return paragraphs.join(QStringLiteral("\n\n")).trimmed();
 }
 }
 
@@ -218,10 +251,10 @@ uint NotificationsController::Notify(const QString &appName,
     entry.id = replacesId > 0 ? replacesId : m_nextId++;
     entry.sourceName = appName.trimmed().isEmpty() ? QStringLiteral("Notification") : appName.trimmed();
 
-    const QString cleanSummary = summary.trimmed();
-    const QString cleanBody = body.trimmed();
+    const QString cleanSummary = normalizeNotificationText(summary);
+    const QString cleanBody = normalizeNotificationText(body);
     if (!cleanSummary.isEmpty() && !cleanBody.isEmpty())
-        entry.messageText = QStringLiteral("%1\n%2").arg(cleanSummary, cleanBody);
+        entry.messageText = QStringLiteral("%1\n\n%2").arg(cleanSummary, cleanBody);
     else if (!cleanBody.isEmpty())
         entry.messageText = cleanBody;
     else if (!cleanSummary.isEmpty())
