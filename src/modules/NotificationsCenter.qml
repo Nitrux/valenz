@@ -12,6 +12,7 @@ Dialog
     property Item anchorButton
     property var rootWindow
     property Item overlayItem: notificationsCenter.parent
+    property QtObject controller
     property bool useSystemThemeIcons: true
 
     Maui.Theme.colorSet: Maui.Theme.View
@@ -24,7 +25,7 @@ Dialog
     readonly property color _panelColor: Maui.Theme.backgroundColor
     readonly property int _cardPadding: Math.max(Maui.Style.space.medium, Maui.Style.space.small + 2)
     readonly property int _minPanelWidth: Maui.Handy.isMobile ? _baseUnit * 16 : _baseUnit * 20
-    readonly property int notificationCount: _notificationsModel.count
+    readonly property int notificationCount: controller ? controller.count : _notificationsModel.count
     property int _geometryRevision: 0
     property bool _clearingAll: false
     property int clearAllTrigger: 0
@@ -112,6 +113,12 @@ Dialog
 
     function dismissNotification(index)
     {
+        if (controller)
+        {
+            controller.dismiss(index)
+            return
+        }
+
         if (index >= 0 && index < _notificationsModel.count)
             _notificationsModel.remove(index, 1)
     }
@@ -125,17 +132,21 @@ Dialog
 
         if (_clearRemainingAnimations === 0)
         {
-            _notificationsModel.clear()
+            if (controller)
+                controller.clearAllNotifications()
+            else
+                _notificationsModel.clear()
+
             _clearingAll = false
         }
     }
 
     function clearNotifications()
     {
-        if (_clearingAll || _notificationsModel.count === 0)
+        if (_clearingAll || notificationCount === 0)
             return
 
-        _clearRemainingAnimations = _notificationsModel.count
+        _clearRemainingAnimations = notificationCount
         _clearingAll = true
         clearAllTrigger += 1
     }
@@ -143,61 +154,6 @@ Dialog
     ListModel
     {
         id: _notificationsModel
-
-        ListElement
-        {
-            sourceName: "Power"
-            messageText: "Power profile switched to Power Saver"
-            timestampText: "Now"
-            iconName: "battery"
-            urgencyLevel: 1
-            actionText: "Revert"
-            actionKey: "power_revert"
-        }
-
-        ListElement
-        {
-            sourceName: "Bluetooth"
-            messageText: "Headset connected"
-            timestampText: "2 min ago"
-            iconName: "bluetooth-active"
-            urgencyLevel: 0
-            actionText: "Disconnect"
-            actionKey: "bt_disconnect"
-        }
-
-        ListElement
-        {
-            sourceName: "Software Update"
-            messageText: "Security updates are ready to install."
-            timestampText: "5 min ago"
-            iconName: "system-software-update"
-            urgencyLevel: 2
-            actionText: "Install"
-            actionKey: "updates_install"
-        }
-
-        ListElement
-        {
-            sourceName: "Calendar"
-            messageText: "Meeting starts in 10 minutes."
-            timestampText: "8 min ago"
-            iconName: "office-calendar"
-            urgencyLevel: 1
-            actionText: "Open"
-            actionKey: "calendar_open"
-        }
-
-        ListElement
-        {
-            sourceName: "Downloads"
-            messageText: "Background sync completed successfully."
-            timestampText: "12 min ago"
-            iconName: "folder-download"
-            urgencyLevel: 0
-            actionText: "View"
-            actionKey: "downloads_view"
-        }
     }
 
     modal: false
@@ -261,6 +217,8 @@ Dialog
     onAboutToShow:
     {
         _touchGeometryRevision()
+        if (controller)
+            controller.refreshTimestamps()
     }
 
     onOpened:
@@ -482,7 +440,7 @@ Dialog
 
                     Repeater
                     {
-                        model: _notificationsModel
+                        model: notificationsCenter.controller ? notificationsCenter.controller : _notificationsModel
 
                         delegate: Maui.SectionItem
                         {
@@ -678,6 +636,12 @@ Dialog
                                         text: actionText
                                         onClicked:
                                         {
+                                            if (notificationsCenter.controller)
+                                            {
+                                                notificationsCenter.controller.invokeAction(index)
+                                                return
+                                            }
+
                                             if (notificationsCenter.rootWindow && notificationsCenter.rootWindow.traceMenu)
                                                 notificationsCenter.rootWindow.traceMenu("notification_action", actionKey)
                                         }

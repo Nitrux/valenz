@@ -234,6 +234,7 @@ Maui.ApplicationWindow
             return root.controlCenterScreenDpi() <= 120
         }
 
+
     Timer
     {
         interval: 1000
@@ -241,6 +242,7 @@ Maui.ApplicationWindow
         running: true
         onTriggered: root.nowDateTime = new Date()
     }
+
 
     ControlCenter
     {
@@ -254,6 +256,7 @@ Maui.ApplicationWindow
     NotificationsCenter
     {
         id: _notificationsCenterPopup
+        controller: notificationsController
         parent: Overlay.overlay
         anchorButton: _notificationsCenterButton
         rootWindow: root
@@ -356,9 +359,9 @@ Maui.ApplicationWindow
                 id: _notificationsCenterButton
                 popup: _notificationsCenterPopup
                 useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
-                iconName: "notifications"
+                iconName: notificationsController && notificationsController.dndEnabled ? "notifications-disabled" : "notifications"
                 glyphForIcon: root.controlCenterButtonGlyph
-                countText: String(Math.max(0, _notificationsCenterPopup.notificationCount))
+                countText: String(Math.max(0, notificationsController ? notificationsController.count : 0))
             },
 
             ToolSeparator
