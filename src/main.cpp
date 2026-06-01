@@ -6,6 +6,9 @@
 #include <QSurfaceFormat>
 #include <QUrl>
 
+#include <KLocalizedContext>
+#include <KLocalizedString>
+
 #include <MauiKit4/Core/mauiapp.h>
 
 #include "controllers/valenzbridge.h"
@@ -19,10 +22,13 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
     app.setOrganizationName(QStringLiteral("Maui"));
 
+    KLocalizedString::setApplicationDomain("valenz");
+
     // Ensure MauiKit core is initialized so Maui QML resources are available.
     MauiApp::instance();
 
     QQmlApplicationEngine engine;
+    engine.rootContext()->setContextObject(new KLocalizedContext(&engine));
     ValenzBridge valenzBridge;
     engine.rootContext()->setContextProperty(QStringLiteral("valenzBridge"), &valenzBridge);
 

@@ -12,6 +12,7 @@ Dialog
 
     property Item anchorItem
     property QtObject rootWindow
+    property QtObject bridge
     property Item overlayItem: calendarPopup.parent
     property date selectedDate: new Date()
     property int displayMonth: selectedDate.getMonth()
@@ -32,6 +33,8 @@ Dialog
     readonly property int _preferredPanelHeight: Maui.Handy.isMobile ? _baseUnit * 23 : _baseUnit * 24
     readonly property int _calendarSpacing: Maui.Style.space.small
     readonly property int _eventsCount: _eventCountForSelectedDate()
+    readonly property bool _agendaInstalled: !!calendarPopup.bridge && calendarPopup.bridge.agendaInstalled
+    readonly property int _effectiveMinPanelHeight: calendarPopup._agendaInstalled ? _minPanelHeight : 0
 
     readonly property real _targetY:
     {
@@ -352,7 +355,7 @@ Dialog
     height:
     {
         const contentHeight = _contentColumn ? (_contentColumn.implicitHeight + (_panelInsetY * 2)) : _preferredPanelHeight
-        const desiredHeight = Math.max(_minPanelHeight, contentHeight)
+        const desiredHeight = Math.max(_effectiveMinPanelHeight, contentHeight)
         return Math.min(desiredHeight, _availableHeightFromAnchor)
     }
 
@@ -585,6 +588,7 @@ Dialog
                 Maui.SectionItem
                 {
                     id: _eventsCard
+                    visible: calendarPopup._agendaInstalled
                     width: parent.width
                     flat: false
                     padding: Maui.Style.space.medium
@@ -706,7 +710,7 @@ Dialog
 
                             Button
                             {
-                                text: "Open Agenda"
+                                text: "Edit Events"
                                 onClicked:
                                 {
                                     if (calendarPopup.rootWindow && calendarPopup.rootWindow.traceMenu)

@@ -8,6 +8,8 @@
 #include <QVariantMap>
 
 class QLocalSocket;
+class QNetworkAccessManager;
+class QNetworkReply;
 class QTimer;
 
 class ValenzBridge : public QObject
@@ -22,6 +24,7 @@ class ValenzBridge : public QObject
     Q_PROPERTY(QString mediaArtSource READ mediaArtSource WRITE setMediaArtSource NOTIFY mediaArtSourceChanged FINAL)
     Q_PROPERTY(bool mediaPlaying READ mediaPlaying WRITE setMediaPlaying NOTIFY mediaPlayingChanged FINAL)
     Q_PROPERTY(bool mprisVisible READ mprisVisible WRITE setMprisVisible NOTIFY mprisVisibleChanged FINAL)
+    Q_PROPERTY(bool mprisAlwaysVisible READ mprisAlwaysVisible WRITE setMprisAlwaysVisible NOTIFY mprisAlwaysVisibleChanged FINAL)
     Q_PROPERTY(QString focusedWindowTitle READ focusedWindowTitle WRITE setFocusedWindowTitle NOTIFY focusedWindowTitleChanged FINAL)
     Q_PROPERTY(QString focusedWindowIconName READ focusedWindowIconName WRITE setFocusedWindowIconName NOTIFY focusedWindowIconNameChanged FINAL)
     Q_PROPERTY(QString controlCenterIconMode READ controlCenterIconMode WRITE setControlCenterIconMode NOTIFY controlCenterIconModeChanged FINAL)
@@ -33,6 +36,15 @@ class ValenzBridge : public QObject
     Q_PROPERTY(QString controlCenterVolumePercentage READ controlCenterVolumePercentage WRITE setControlCenterVolumePercentage NOTIFY controlCenterVolumePercentageChanged FINAL)
     Q_PROPERTY(bool controlCenterBatteryCharging READ controlCenterBatteryCharging WRITE setControlCenterBatteryCharging NOTIFY controlCenterBatteryChargingChanged FINAL)
     Q_PROPERTY(QString controlCenterBatteryPercentage READ controlCenterBatteryPercentage WRITE setControlCenterBatteryPercentage NOTIFY controlCenterBatteryPercentageChanged FINAL)
+    Q_PROPERTY(bool agendaInstalled READ agendaInstalled NOTIFY agendaInstalledChanged FINAL)
+    Q_PROPERTY(QString weatherIconName READ weatherIconName WRITE setWeatherIconName NOTIFY weatherIconNameChanged FINAL)
+    Q_PROPERTY(QString weatherTemperature READ weatherTemperature WRITE setWeatherTemperature NOTIFY weatherTemperatureChanged FINAL)
+    Q_PROPERTY(QString weatherConditionLabel READ weatherConditionLabel WRITE setWeatherConditionLabel NOTIFY weatherConditionLabelChanged FINAL)
+    Q_PROPERTY(QString weatherLocationName READ weatherLocationName NOTIFY weatherLocationNameChanged FINAL)
+    Q_PROPERTY(double weatherLatitude READ weatherLatitude WRITE setWeatherLatitude NOTIFY weatherLatitudeChanged FINAL)
+    Q_PROPERTY(double weatherLongitude READ weatherLongitude WRITE setWeatherLongitude NOTIFY weatherLongitudeChanged FINAL)
+    Q_PROPERTY(QString weatherTemperatureUnit READ weatherTemperatureUnit WRITE setWeatherTemperatureUnit NOTIFY weatherTemperatureUnitChanged FINAL)
+    Q_PROPERTY(int weatherRefreshMinutes READ weatherRefreshMinutes WRITE setWeatherRefreshMinutes NOTIFY weatherRefreshMinutesChanged FINAL)
 
 public:
     explicit ValenzBridge(QObject *parent = nullptr);
@@ -55,6 +67,8 @@ public:
     void setMediaPlaying(bool playing);
     bool mprisVisible() const;
     void setMprisVisible(bool visible);
+    bool mprisAlwaysVisible() const;
+    void setMprisAlwaysVisible(bool alwaysVisible);
     QString focusedWindowTitle() const;
     void setFocusedWindowTitle(const QString &title);
     QString focusedWindowIconName() const;
@@ -77,6 +91,22 @@ public:
     void setControlCenterBatteryCharging(bool charging);
     QString controlCenterBatteryPercentage() const;
     void setControlCenterBatteryPercentage(const QString &value);
+    bool agendaInstalled() const;
+    QString weatherIconName() const;
+    void setWeatherIconName(const QString &iconName);
+    QString weatherTemperature() const;
+    void setWeatherTemperature(const QString &temperature);
+    QString weatherConditionLabel() const;
+    void setWeatherConditionLabel(const QString &label);
+    QString weatherLocationName() const;
+    double weatherLatitude() const;
+    void setWeatherLatitude(double latitude);
+    double weatherLongitude() const;
+    void setWeatherLongitude(double longitude);
+    QString weatherTemperatureUnit() const;
+    void setWeatherTemperatureUnit(const QString &unit);
+    int weatherRefreshMinutes() const;
+    void setWeatherRefreshMinutes(int minutes);
 
     Q_INVOKABLE void trace(const QString &source, const QString &action, const QString &detail = QString());
     Q_INVOKABLE void goToPreviousWorkspace();
@@ -86,6 +116,7 @@ public:
     Q_INVOKABLE void mediaTogglePlayPause();
     Q_INVOKABLE void mediaNextTrack();
     Q_INVOKABLE QString configFilePath() const;
+    Q_INVOKABLE void refreshWeather();
 
 Q_SIGNALS:
     void traceRaised(const QString &source, const QString &action, const QString &detail, const QString &timestamp);
@@ -98,6 +129,7 @@ Q_SIGNALS:
     void mediaArtSourceChanged(const QString &source);
     void mediaPlayingChanged(bool playing);
     void mprisVisibleChanged(bool visible);
+    void mprisAlwaysVisibleChanged(bool alwaysVisible);
     void focusedWindowTitleChanged(const QString &title);
     void focusedWindowIconNameChanged(const QString &iconName);
     void controlCenterIconModeChanged(const QString &mode);
@@ -109,10 +141,20 @@ Q_SIGNALS:
     void controlCenterVolumePercentageChanged(const QString &value);
     void controlCenterBatteryChargingChanged(bool charging);
     void controlCenterBatteryPercentageChanged(const QString &value);
+    void agendaInstalledChanged(bool installed);
+    void weatherIconNameChanged(const QString &iconName);
+    void weatherTemperatureChanged(const QString &temperature);
+    void weatherConditionLabelChanged(const QString &label);
+    void weatherLocationNameChanged(const QString &locationName);
+    void weatherLatitudeChanged(double latitude);
+    void weatherLongitudeChanged(double longitude);
+    void weatherTemperatureUnitChanged(const QString &unit);
+    void weatherRefreshMinutesChanged(int minutes);
 
 private Q_SLOTS:
     void onMprisPropertiesChanged(const QString &interfaceName, const QVariantMap &changedProperties, const QStringList &invalidatedProperties);
     void onMprisNameOwnerChanged(const QString &serviceName, const QString &oldOwner, const QString &newOwner);
+    void onWeatherReplyFinished(QNetworkReply *reply);
 
 private:
     int clampWorkspace(int workspace) const;
@@ -138,6 +180,11 @@ private:
     void clearMprisPropertiesSubscription();
     bool invokeMprisPlayerMethod(const QString &method);
     void persistControlCenterState() const;
+    void persistMprisState() const;
+    void persistWeatherState() const;
+    void updateWeatherRefreshTimerInterval();
+    void setAgendaInstalled(bool installed);
+    void setWeatherLocationName(const QString &locationName);
 
     bool m_enabled = true;
     int m_currentWorkspace = 1;
@@ -148,6 +195,7 @@ private:
     QString m_mediaArtSource;
     bool m_mediaPlaying = false;
     bool m_mprisVisible = false;
+    bool m_mprisAlwaysVisible = false;
     QString m_focusedWindowTitle;
     QString m_focusedWindowIconName;
     QString m_controlCenterIconMode;
@@ -159,11 +207,22 @@ private:
     QString m_controlCenterVolumePercentage;
     bool m_controlCenterBatteryCharging = false;
     QString m_controlCenterBatteryPercentage;
+    bool m_agendaInstalled = false;
+    QString m_weatherIconName = QStringLiteral("weather-severe-alert");
+    QString m_weatherTemperature = QStringLiteral("--°C");
+    QString m_weatherConditionLabel;
+    QString m_weatherLocationName;
+    double m_weatherLatitude = 40.7128;
+    double m_weatherLongitude = -74.0060;
+    QString m_weatherTemperatureUnit = QStringLiteral("celsius");
+    int m_weatherRefreshMinutes = 20;
     QString m_userConfigPath;
     QLocalSocket *m_hyprlandEventSocket = nullptr;
     QByteArray m_hyprlandEventBuffer;
     QTimer *m_mprisRefreshTimer = nullptr;
     QTimer *m_mprisPlaybackTimer = nullptr;
+    QNetworkAccessManager *m_weatherNetwork = nullptr;
+    QTimer *m_weatherRefreshTimer = nullptr;
     QString m_mprisServiceName;
     QString m_mprisPropertiesServiceName;
     qint64 m_mprisTrackLengthUs = 0;

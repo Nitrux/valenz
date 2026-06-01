@@ -1,6 +1,11 @@
 set(valenz_SRCS
     main.cpp
-    controllers/valenzbridge.cpp)
+    controllers/valenzbridge.cpp
+    controllers/valenzbridge_properties.cpp
+    controllers/valenzbridge_workspace.cpp
+    controllers/valenzbridge_mpris.cpp
+    controllers/valenzbridge_weather.cpp
+    controllers/valenzbridge_config.cpp)
 
 qt_add_executable(${PROJECT_NAME}
     MANUAL_FINALIZATION
@@ -32,6 +37,7 @@ qt_add_qml_module(${PROJECT_NAME}
     modules/WindowTitle.qml
     modules/WeatherClock.qml
     modules/CalendarPopup.qml
+    modules/SettingsDialog.qml
     modules/SystemTray.qml
     modules/ControlCenterButton.qml
     modules/NotificationsCenter.qml
@@ -43,6 +49,7 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE
     MauiKit4
     MauiKit4::Calendar
+    KF6::I18n
     Qt6::Core
     Qt6::DBus
     Qt6::Gui

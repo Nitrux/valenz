@@ -12,6 +12,7 @@ Item
     property string dateText: ""
     property string weatherIconName: "weather-clear"
     property string weatherTemperature: ""
+    property string weatherLocationName: ""
 
     implicitWidth: _clockWeatherGrid.implicitWidth
     implicitHeight: _clockWeatherGrid.implicitHeight
@@ -46,14 +47,15 @@ Item
 
         RowLayout
         {
+            id: _weatherValueRow
             Layout.row: 0
             Layout.column: 1
-            Layout.rowSpan: 2
             Layout.alignment: Qt.AlignVCenter
             spacing: Maui.Style.space.tiny
 
             Maui.Icon
             {
+                id: _weatherIcon
                 Layout.alignment: Qt.AlignVCenter
                 width: Maui.Style.iconSizes.small
                 height: width
@@ -68,6 +70,18 @@ Item
                 font.weight: Font.DemiBold
                 font.pointSize: Maui.Style.fontSizes.big
             }
+        }
+
+        Label
+        {
+            Layout.row: 1
+            Layout.column: 1
+            Layout.leftMargin: _weatherIcon.width + _weatherValueRow.spacing
+            text: weatherClock.weatherLocationName
+            visible: text.length > 0
+            color: Maui.Theme.disabledTextColor
+            font.pointSize: Maui.Style.fontSizes.tiny
+            horizontalAlignment: Text.AlignLeft
         }
     }
 }

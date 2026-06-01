@@ -153,19 +153,12 @@ Maui.ApplicationWindow
     }
 
     property date nowDateTime: new Date()
-    readonly property var prototypeWeatherStates: [
-        ({ icon: "weather-clear", temperature: "26°C" }),
-        ({ icon: "weather-few-clouds", temperature: "24°C" }),
-        ({ icon: "weather-clouds", temperature: "22°C" }),
-        ({ icon: "weather-showers", temperature: "20°C" }),
-        ({ icon: "weather-storm", temperature: "19°C" })
-    ]
-    readonly property int weatherStateIndex: Math.floor((nowDateTime.getHours() * 60 + nowDateTime.getMinutes()) / 20) % prototypeWeatherStates.length
-    readonly property string weatherIconName: prototypeWeatherStates[weatherStateIndex].icon
-    readonly property string weatherTemperature: prototypeWeatherStates[weatherStateIndex].temperature
+    readonly property string weatherIconName: root.cleanText(valenzBridge ? valenzBridge.weatherIconName : "weather-severe-alert")
+    readonly property string weatherTemperature: root.cleanText(valenzBridge ? valenzBridge.weatherTemperature : "--°C")
+    readonly property string weatherLocationName: root.cleanText(valenzBridge ? valenzBridge.weatherLocationName : "")
     readonly property string clockText: Qt.formatTime(nowDateTime, "hh:mm")
     readonly property string dateText: Qt.formatDate(nowDateTime, "ddd, MMM d")
-    readonly property bool mprisModuleVisible: valenzBridge ? valenzBridge.mprisVisible : true
+    readonly property bool mprisModuleVisible: valenzBridge ? (valenzBridge.mprisAlwaysVisible || valenzBridge.mprisVisible) : true
     readonly property string prototypeNetworkState: root.controlCenterPrototypeNetworkState()
     readonly property string prototypeBluetoothState: root.controlCenterPrototypeBluetoothState()
     readonly property string prototypeVolumeState: root.controlCenterPrototypeVolumeState()
@@ -273,6 +266,14 @@ Maui.ApplicationWindow
         parent: Overlay.overlay
         anchorItem: _weatherClock
         rootWindow: root
+        bridge: valenzBridge
+    }
+
+    SettingsDialog
+    {
+        id: _settingsDialog
+        parent: Overlay.overlay
+        bridge: valenzBridge
     }
 
     Maui.PageLayout
@@ -407,7 +408,11 @@ Maui.ApplicationWindow
                     MenuItem
                     {
                         text: "Settings"
-                        onTriggered: root.traceMenu("dialog/settings")
+                        onTriggered:
+                        {
+                            root.traceMenu("dialog/settings")
+                            _settingsDialog.open()
+                        }
                     }
 
                     MenuItem
@@ -490,6 +495,7 @@ Maui.ApplicationWindow
                         dateText: root.dateText
                         weatherIconName: root.weatherIconName
                         weatherTemperature: root.weatherTemperature
+                        weatherLocationName: root.weatherLocationName
 
                         TapHandler
                         {
