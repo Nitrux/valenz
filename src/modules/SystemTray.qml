@@ -8,27 +8,47 @@ RowLayout
 {
     id: systemTray
 
+    property QtObject controller
+
     spacing: Maui.Style.space.tiny
+    visible: !!controller && controller.count > 0
 
-    ToolButton
+    Repeater
     {
-        icon.name: "org.kde.plasma.notifications"
-        display: ToolButton.IconOnly
-        flat: true
-        focusPolicy: Qt.NoFocus
-        onClicked: {}
-        ToolTip.visible: hovered
-        ToolTip.text: "SNI: Notifications"
-    }
+        model: systemTray.controller ? systemTray.controller : null
 
-    ToolButton
-    {
-        icon.name: "network-vpn"
-        display: ToolButton.IconOnly
-        flat: true
-        focusPolicy: Qt.NoFocus
-        onClicked: {}
-        ToolTip.visible: hovered
-        ToolTip.text: "SNI: VPN"
+        delegate: ToolButton
+        {
+            required property int index
+            required property string title
+            required property string iconName
+            required property string iconSource
+            required property string status
+
+            icon.name: iconSource.length > 0 ? "" : (iconName.length > 0 ? iconName : "application-x-executable")
+            icon.source: iconSource.length > 0 ? iconSource : ""
+            display: ToolButton.IconOnly
+            flat: true
+            focusPolicy: Qt.NoFocus
+
+            onClicked:
+            {
+                if (systemTray.controller)
+                    systemTray.controller.activate(index)
+            }
+
+            TapHandler
+            {
+                acceptedButtons: Qt.RightButton
+                onTapped:
+                {
+                    if (systemTray.controller)
+                        systemTray.controller.contextMenu(index)
+                }
+            }
+
+            ToolTip.visible: hovered
+            ToolTip.text: title.length > 0 ? title : status
+        }
     }
 }

@@ -11,6 +11,7 @@
 
 #include <MauiKit4/Core/mauiapp.h>
 
+#include "controllers/valenzbridge_systray.h"
 #include "controllers/valenzbridge.h"
 
 int main(int argc, char *argv[])
@@ -30,7 +31,9 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextObject(new KLocalizedContext(&engine));
     ValenzBridge valenzBridge;
+    SystemTrayController systemTrayController;
     engine.rootContext()->setContextProperty(QStringLiteral("valenzBridge"), &valenzBridge);
+    engine.rootContext()->setContextProperty(QStringLiteral("systemTrayController"), &systemTrayController);
 
     const QUrl url(QStringLiteral("qrc:/app/valenz/main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated, &app,

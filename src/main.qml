@@ -342,6 +342,7 @@ Maui.ApplicationWindow
 
             SystemTray
             {
+                controller: systemTrayController
             },
 
             ToolSeparator
