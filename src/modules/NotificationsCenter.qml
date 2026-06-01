@@ -100,6 +100,30 @@ Dialog
         }
     }
 
+    function _resolvedIconSource(iconName)
+    {
+        const raw = String(iconName || "").trim()
+        if (raw.length === 0)
+            return ""
+
+        if (raw.startsWith("/"))
+            return "file://" + raw
+
+        return raw
+    }
+
+    function _isImageIconSource(iconName)
+    {
+        const source = _resolvedIconSource(iconName)
+        return source.startsWith("file://")
+                || source.startsWith("qrc:/")
+                || source.startsWith(":/")
+                || source.startsWith("data:")
+                || source.startsWith("http://")
+                || source.startsWith("https://")
+                || source.startsWith("image://")
+    }
+
     function _urgencyAccentColor(urgencyLevel)
     {
         switch (urgencyLevel)
@@ -545,20 +569,36 @@ Dialog
                                         width: 28
                                         height: 28
 
-                                        Maui.Icon
+                                        readonly property bool isImageSource: notificationsCenter._isImageIconSource(iconName)
+                                        readonly property string resolvedIconSource: notificationsCenter._resolvedIconSource(iconName)
+
+                                        Image
                                         {
                                             anchors.centerIn: parent
                                             width: 22
                                             height: 22
-                                            source: iconName
+                                            source: parent.isImageSource ? parent.resolvedIconSource : ""
+                                            fillMode: Image.PreserveAspectFit
+                                            smooth: true
+                                            mipmap: true
+                                            visible: parent.isImageSource
+                                        }
+
+                                        Maui.Icon
+                                        {
+                                            id: _notificationIcon
+                                            anchors.centerIn: parent
+                                            width: 22
+                                            height: 22
+                                            source: parent.resolvedIconSource
                                             color: Maui.Theme.textColor
-                                            visible: notificationsCenter.useSystemThemeIcons
+                                            visible: !parent.isImageSource && notificationsCenter.useSystemThemeIcons && valid
                                         }
 
                                         Label
                                         {
                                             anchors.centerIn: parent
-                                            visible: !notificationsCenter.useSystemThemeIcons
+                                            visible: !parent.isImageSource && (!notificationsCenter.useSystemThemeIcons || !_notificationIcon.valid)
                                             text: notificationsCenter._notificationGlyph(iconName)
                                             color: Maui.Theme.textColor
                                             font.family: "Symbols Nerd Font"
@@ -633,6 +673,7 @@ Dialog
 
                                     Button
                                     {
+                                        visible: actionText.length > 0
                                         text: actionText
                                         onClicked:
                                         {

@@ -263,6 +263,17 @@ Maui.ApplicationWindow
         useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
     }
 
+    NotificationsBubble
+    {
+        id: _notificationsBubble
+        parent: Overlay.overlay
+        anchorButton: _notificationsCenterButton
+        rootWindow: root
+        controller: notificationsController
+        notificationsPopup: _notificationsCenterPopup
+        useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
+    }
+
     CalendarPopup
     {
         id: _calendarPopup
@@ -277,6 +288,19 @@ Maui.ApplicationWindow
         id: _settingsDialog
         parent: Overlay.overlay
         bridge: valenzBridge
+    }
+
+    Connections
+    {
+        target: notificationsController
+
+        function onTransientNotification(id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey)
+        {
+            if (_notificationsCenterPopup.visible)
+                return
+
+            _notificationsBubble.showNotification(id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey)
+        }
     }
 
     Maui.PageLayout

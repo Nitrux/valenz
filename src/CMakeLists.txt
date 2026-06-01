@@ -44,6 +44,7 @@ qt_add_qml_module(${PROJECT_NAME}
     modules/ControlCenterButton.qml
     modules/NotificationsCenter.qml
     modules/NotificationsCenterButton.qml
+    modules/NotificationsBubble.qml
     RESOURCES
     assets/cover.png)
 

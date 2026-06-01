@@ -1,7 +1,9 @@
 #include "valenzbridge_notifications.h"
+#include "valenzbridge_p.h"
 
 #include <QDBusConnection>
 #include <QDBusMessage>
+#include <QTimer>
 #include <QtGlobal>
 
 namespace
@@ -13,6 +15,15 @@ constexpr auto kFallbackIcon = "notifications";
 constexpr uint kCloseReasonExpired = 1;
 constexpr uint kCloseReasonDismissedByUser = 2;
 constexpr uint kCloseReasonClosedByCall = 3;
+
+void emitNotificationsSignal(const QString &member, const QVariantList &arguments)
+{
+    QDBusMessage message = QDBusMessage::createSignal(QString::fromLatin1(kNotificationPath),
+                                                      QString::fromLatin1(kNotificationService),
+                                                      member);
+    message.setArguments(arguments);
+    QDBusConnection::sessionBus().send(message);
+}
 }
 
 NotificationsController::NotificationsController(QObject *parent)
@@ -23,10 +34,16 @@ NotificationsController::NotificationsController(QObject *parent)
     const bool objectRegistered = bus.registerObject(QString::fromLatin1(kNotificationPath),
                                                      QStringLiteral("org.freedesktop.Notifications"),
                                                      this,
-                                                     QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals);
+                                                     QDBusConnection::ExportAllSlots);
 
     const bool serviceRegistered = bus.registerService(QString::fromLatin1(kNotificationService));
     setAvailable(objectRegistered && serviceRegistered);
+
+    auto *timestampTimer = new QTimer(this);
+    timestampTimer->setTimerType(Qt::CoarseTimer);
+    timestampTimer->setInterval(15000);
+    connect(timestampTimer, &QTimer::timeout, this, &NotificationsController::refreshTimestamps);
+    timestampTimer->start();
 }
 
 int NotificationsController::rowCount(const QModelIndex &parent) const
@@ -112,7 +129,11 @@ void NotificationsController::clearAllNotifications()
     Q_EMIT countChanged(0);
 
     for (uint id : ids)
+    {
         Q_EMIT NotificationClosed(id, kCloseReasonClosedByCall);
+        emitNotificationsSignal(QStringLiteral("NotificationClosed"),
+                                {QVariant::fromValue(id), QVariant::fromValue(kCloseReasonClosedByCall)});
+    }
 }
 
 void NotificationsController::dismiss(int index)
@@ -123,16 +144,38 @@ void NotificationsController::dismiss(int index)
     removeByIndex(index, kCloseReasonDismissedByUser);
 }
 
+void NotificationsController::dismissById(uint id)
+{
+    const int row = indexOfId(id);
+    if (row < 0)
+        return;
+
+    removeByIndex(row, kCloseReasonDismissedByUser);
+}
+
 void NotificationsController::invokeAction(int index)
 {
     if (index < 0 || index >= m_entries.size())
         return;
 
     const NotificationEntry &entry = m_entries.at(index);
-    const QString actionKey = entry.actionKey.isEmpty() ? QStringLiteral("default") : entry.actionKey;
-    Q_EMIT ActionInvoked(entry.id, actionKey);
+    if (entry.actionKey.isEmpty())
+        return;
+
+    Q_EMIT ActionInvoked(entry.id, entry.actionKey);
+    emitNotificationsSignal(QStringLiteral("ActionInvoked"),
+                            {QVariant::fromValue(entry.id), QVariant::fromValue(entry.actionKey)});
 
     removeByIndex(index, kCloseReasonDismissedByUser);
+}
+
+void NotificationsController::invokeActionById(uint id)
+{
+    const int row = indexOfId(id);
+    if (row < 0)
+        return;
+
+    invokeAction(row);
 }
 
 void NotificationsController::refreshTimestamps()
@@ -187,7 +230,7 @@ uint NotificationsController::Notify(const QString &appName,
         entry.messageText = QStringLiteral("(No details)");
 
     entry.createdAt = QDateTime::currentDateTime();
-    entry.iconName = normalizeIconName(appIcon, hints);
+    entry.iconName = normalizeIconName(appIcon, appName, hints);
     entry.urgencyLevel = parseUrgency(hints);
     entry.actionText = chooseActionText(actions);
     entry.actionKey = chooseActionKey(actions);
@@ -197,16 +240,16 @@ uint NotificationsController::Notify(const QString &appName,
     {
         m_entries[replaceRow] = entry;
         Q_EMIT dataChanged(index(replaceRow, 0), index(replaceRow, 0));
-        Q_EMIT transientNotification(entry.sourceName, entry.messageText, entry.iconName, entry.urgencyLevel);
+        Q_EMIT transientNotification(entry.id, entry.sourceName, entry.messageText, relativeTimestamp(entry.createdAt), entry.iconName, entry.urgencyLevel, entry.actionText, entry.actionKey);
         return entry.id;
     }
 
-    const int insertRow = m_entries.size();
+    const int insertRow = 0;
     beginInsertRows(QModelIndex(), insertRow, insertRow);
-    m_entries.push_back(entry);
+    m_entries.prepend(entry);
     endInsertRows();
     Q_EMIT countChanged(m_entries.size());
-    Q_EMIT transientNotification(entry.sourceName, entry.messageText, entry.iconName, entry.urgencyLevel);
+    Q_EMIT transientNotification(entry.id, entry.sourceName, entry.messageText, relativeTimestamp(entry.createdAt), entry.iconName, entry.urgencyLevel, entry.actionText, entry.actionKey);
     return entry.id;
 }
 
@@ -285,26 +328,54 @@ QString NotificationsController::chooseActionText(const QStringList &actions)
     if (actions.size() >= 2)
         return actions.at(1).trimmed();
 
-    return QStringLiteral("Open");
+    return QString();
 }
 
 QString NotificationsController::chooseActionKey(const QStringList &actions)
 {
-    if (!actions.isEmpty())
+    if (actions.size() >= 1)
         return actions.at(0).trimmed();
 
-    return QStringLiteral("default");
+    return QString();
 }
 
-QString NotificationsController::normalizeIconName(const QString &iconName, const QVariantMap &hints)
+QString NotificationsController::normalizeIconName(const QString &iconName, const QString &appName, const QVariantMap &hints)
 {
-    const QString explicitIcon = iconName.trimmed();
-    if (!explicitIcon.isEmpty())
-        return explicitIcon;
-
     const QString hintedIcon = hints.value(QStringLiteral("image-path")).toString().trimmed();
     if (!hintedIcon.isEmpty())
         return hintedIcon;
+
+    const QString hintedIconAlt = hints.value(QStringLiteral("image_path")).toString().trimmed();
+    if (!hintedIconAlt.isEmpty())
+        return hintedIconAlt;
+
+    QStringList iconCandidates;
+    addWindowIconCandidates(&iconCandidates, iconName);
+    addWindowIconCandidates(&iconCandidates, appName);
+    addWindowIconCandidates(&iconCandidates, hints.value(QStringLiteral("desktop-entry")).toString());
+    addWindowIconCandidates(&iconCandidates, hints.value(QStringLiteral("desktop_entry")).toString());
+
+    for (const QString &candidate : std::as_const(iconCandidates))
+    {
+        if (isUsableIconSource(candidate))
+            return candidate.trimmed();
+    }
+
+    for (const QString &candidate : std::as_const(iconCandidates))
+    {
+        const QString mappedIcon = lookupIconFromDesktopEntries(candidate);
+        if (mappedIcon.isEmpty())
+            continue;
+
+        if (isUsableIconSource(mappedIcon))
+            return mappedIcon.trimmed();
+
+        return mappedIcon.trimmed();
+    }
+
+    const QString explicitIcon = iconName.trimmed();
+    if (!explicitIcon.isEmpty())
+        return explicitIcon;
 
     return QString::fromLatin1(kFallbackIcon);
 }
@@ -322,6 +393,8 @@ void NotificationsController::removeByIndex(int row, uint closeReason)
 
     Q_EMIT countChanged(m_entries.size());
     Q_EMIT NotificationClosed(id, closeReason);
+    emitNotificationsSignal(QStringLiteral("NotificationClosed"),
+                            {QVariant::fromValue(id), QVariant::fromValue(closeReason)});
 }
 
 void NotificationsController::setAvailable(bool available)

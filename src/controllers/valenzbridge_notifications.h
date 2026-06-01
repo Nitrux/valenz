@@ -40,7 +40,9 @@ public:
 
     Q_INVOKABLE void clearAllNotifications();
     Q_INVOKABLE void dismiss(int index);
+    Q_INVOKABLE void dismissById(uint id);
     Q_INVOKABLE void invokeAction(int index);
+    Q_INVOKABLE void invokeActionById(uint id);
     Q_INVOKABLE void refreshTimestamps();
 
 public Q_SLOTS:
@@ -63,7 +65,7 @@ Q_SIGNALS:
     void countChanged(int count);
     void dndEnabledChanged(bool enabled);
     void availableChanged(bool available);
-    void transientNotification(const QString &sourceName, const QString &messageText, const QString &iconName, int urgencyLevel);
+    void transientNotification(uint id, const QString &sourceName, const QString &messageText, const QString &timestampText, const QString &iconName, int urgencyLevel, const QString &actionText, const QString &actionKey);
 
     void NotificationClosed(uint id, uint reason);
     void ActionInvoked(uint id, const QString &actionKey);
@@ -86,7 +88,7 @@ private:
     static int parseUrgency(const QVariantMap &hints);
     static QString chooseActionText(const QStringList &actions);
     static QString chooseActionKey(const QStringList &actions);
-    static QString normalizeIconName(const QString &iconName, const QVariantMap &hints);
+    static QString normalizeIconName(const QString &iconName, const QString &appName, const QVariantMap &hints);
 
     void removeByIndex(int row, uint closeReason);
     void setAvailable(bool available);
