@@ -1,6 +1,6 @@
 # Valenz
 
-Valenz is a QML-based status bar designed for Wayland compositors.
+Valenz is a QML-based status bar designed for Nitrux.
 
 ## Features
 
@@ -17,6 +17,7 @@ Valenz is a QML-based status bar designed for Wayland compositors.
 ```
 mauikit (>= 4.0.3)
 mauikit-system (>= 4.0.3)
+hyprland (>= 0.55.1)
 qt6 (>= 6.9.2)
 ```
 
