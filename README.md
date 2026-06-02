@@ -4,7 +4,7 @@ Valenz is a QML-based status bar designed for Nitrux.
 
 ## Features
 
-- Live media, workspace, tray, and notification controls.
+- Media, workspace, tray, and notification controls.
 - Control Center indicators for network, Bluetooth, volume, battery, power profile, and night light.
 - Weather, calendar, and system resource widgets.
 
