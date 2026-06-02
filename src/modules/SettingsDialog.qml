@@ -85,7 +85,7 @@ Maui.SettingsDialog
                 id: _latitudeField
                 implicitWidth: Math.max(Maui.Style.units.gridUnit * 8, 180)
                 text: control._formattedCoordinate(control.bridge ? control.bridge.weatherLatitude : 0)
-                placeholderText: "40.7128"
+                placeholderText: "0.0000"
                 selectByMouse: true
                 validator: DoubleValidator
                 {
@@ -107,7 +107,7 @@ Maui.SettingsDialog
                 id: _longitudeField
                 implicitWidth: Math.max(Maui.Style.units.gridUnit * 8, 180)
                 text: control._formattedCoordinate(control.bridge ? control.bridge.weatherLongitude : 0)
-                placeholderText: "-74.0060"
+                placeholderText: "0.0000"
                 selectByMouse: true
                 validator: DoubleValidator
                 {

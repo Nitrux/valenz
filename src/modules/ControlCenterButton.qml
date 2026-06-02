@@ -16,6 +16,7 @@ ToolButton
     property string volumePercentageText
     property string batteryIconName
     property string batteryPercentageText
+    property bool batteryAvailable: false
     property string powerProfileIconName
     property var glyphForIcon
     property var glyphColorForKind
@@ -72,18 +73,19 @@ ToolButton
 
             Maui.Icon
             {
+                id: _networkIcon
                 anchors.centerIn: parent
                 width: 16
                 height: 16
                 source: controlCenterButton.networkIconName
                 color: controlCenterButton.activeContentColor
-                visible: controlCenterButton.useSystemThemeIcons
+                visible: controlCenterButton.useSystemThemeIcons && valid
             }
 
             Label
             {
                 anchors.centerIn: parent
-                visible: !controlCenterButton.useSystemThemeIcons
+                visible: !controlCenterButton.useSystemThemeIcons || !_networkIcon.valid
                 text: controlCenterButton.glyphForIcon ? controlCenterButton.glyphForIcon(controlCenterButton.networkIconName) : ""
                 color: controlCenterButton.activeContentColor
                 font.family: "Symbols Nerd Font"
@@ -102,18 +104,19 @@ ToolButton
 
             Maui.Icon
             {
+                id: _bluetoothIcon
                 anchors.centerIn: parent
                 width: 16
                 height: 16
                 source: controlCenterButton.bluetoothIconName
                 color: controlCenterButton.activeContentColor
-                visible: controlCenterButton.useSystemThemeIcons
+                visible: controlCenterButton.useSystemThemeIcons && valid
             }
 
             Label
             {
                 anchors.centerIn: parent
-                visible: !controlCenterButton.useSystemThemeIcons
+                visible: !controlCenterButton.useSystemThemeIcons || !_bluetoothIcon.valid
                 text: controlCenterButton.glyphForIcon ? controlCenterButton.glyphForIcon(controlCenterButton.bluetoothIconName) : ""
                 color: controlCenterButton.activeContentColor
                 font.family: "Symbols Nerd Font"
@@ -175,18 +178,19 @@ ToolButton
 
                     Maui.Icon
                     {
+                        id: _volumeIcon
                         anchors.centerIn: parent
                         width: 16
                         height: 16
                         source: controlCenterButton.volumeIconName
                         color: controlCenterButton.activeContentColor
-                        visible: controlCenterButton.useSystemThemeIcons
+                        visible: controlCenterButton.useSystemThemeIcons && valid
                     }
 
                     Label
                     {
                         anchors.centerIn: parent
-                        visible: !controlCenterButton.useSystemThemeIcons
+                        visible: !controlCenterButton.useSystemThemeIcons || !_volumeIcon.valid
                         text: controlCenterButton.glyphForIcon ? controlCenterButton.glyphForIcon(controlCenterButton.volumeIconName) : ""
                         color: controlCenterButton.activeContentColor
                         font.family: "Symbols Nerd Font"
@@ -210,6 +214,8 @@ ToolButton
         Item
         {
             Layout.alignment: Qt.AlignVCenter
+            visible: controlCenterButton.batteryAvailable
+            Layout.preferredWidth: visible ? _batteryRow.implicitWidth : 0
             width: _batteryRow.implicitWidth
             height: 20
 
@@ -227,18 +233,19 @@ ToolButton
 
                     Maui.Icon
                     {
+                        id: _batteryIcon
                         anchors.centerIn: parent
                         width: 16
                         height: 16
                         source: controlCenterButton.batteryIconName
                         color: controlCenterButton.activeContentColor
-                        visible: controlCenterButton.useSystemThemeIcons
+                        visible: controlCenterButton.useSystemThemeIcons && valid
                     }
 
                     Label
                     {
                         anchors.centerIn: parent
-                        visible: !controlCenterButton.useSystemThemeIcons
+                        visible: !controlCenterButton.useSystemThemeIcons || !_batteryIcon.valid
                         text: controlCenterButton.glyphForIcon ? controlCenterButton.glyphForIcon(controlCenterButton.batteryIconName) : ""
                         color: controlCenterButton.activeContentColor
                         font.family: "Symbols Nerd Font"

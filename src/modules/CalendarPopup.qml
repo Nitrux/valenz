@@ -213,62 +213,6 @@ Dialog
     ListModel
     {
         id: _eventsModel
-
-        ListElement
-        {
-            dateKey: "2026-05-29"
-            timeText: "09:30"
-            titleText: "Design sync"
-            detailsText: "Agenda integration planning"
-        }
-
-        ListElement
-        {
-            dateKey: "2026-05-29"
-            timeText: "12:00"
-            titleText: "Lunch with product"
-            detailsText: "Roadmap alignment"
-        }
-
-        ListElement
-        {
-            dateKey: "2026-05-29"
-            timeText: "16:00"
-            titleText: "Prototype review"
-            detailsText: "Calendar plus events panel"
-        }
-
-        ListElement
-        {
-            dateKey: "2026-05-30"
-            timeText: "10:00"
-            titleText: "Sprint planning"
-            detailsText: "Cross-team priorities"
-        }
-
-        ListElement
-        {
-            dateKey: "2026-05-30"
-            timeText: "14:30"
-            titleText: "QA follow-up"
-            detailsText: "Regression checks"
-        }
-
-        ListElement
-        {
-            dateKey: "2026-06-02"
-            timeText: "All day"
-            titleText: "Release freeze"
-            detailsText: "Stabilization window"
-        }
-
-        ListElement
-        {
-            dateKey: "2026-06-05"
-            timeText: "11:15"
-            titleText: "Community call"
-            detailsText: "Maui apps feedback"
-        }
     }
 
     Kalendar.MonthModel

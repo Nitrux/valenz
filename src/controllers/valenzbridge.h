@@ -36,6 +36,11 @@ class ValenzBridge : public QObject
     Q_PROPERTY(QString controlCenterVolumePercentage READ controlCenterVolumePercentage WRITE setControlCenterVolumePercentage NOTIFY controlCenterVolumePercentageChanged FINAL)
     Q_PROPERTY(bool controlCenterBatteryCharging READ controlCenterBatteryCharging WRITE setControlCenterBatteryCharging NOTIFY controlCenterBatteryChargingChanged FINAL)
     Q_PROPERTY(QString controlCenterBatteryPercentage READ controlCenterBatteryPercentage WRITE setControlCenterBatteryPercentage NOTIFY controlCenterBatteryPercentageChanged FINAL)
+    Q_PROPERTY(QString controlCenterNetworkState READ controlCenterNetworkState WRITE setControlCenterNetworkState NOTIFY controlCenterNetworkStateChanged FINAL)
+    Q_PROPERTY(bool controlCenterBluetoothEnabled READ controlCenterBluetoothEnabled WRITE setControlCenterBluetoothEnabled NOTIFY controlCenterBluetoothEnabledChanged FINAL)
+    Q_PROPERTY(bool controlCenterVolumeMuted READ controlCenterVolumeMuted WRITE setControlCenterVolumeMuted NOTIFY controlCenterVolumeMutedChanged FINAL)
+    Q_PROPERTY(bool controlCenterBatteryAvailable READ controlCenterBatteryAvailable WRITE setControlCenterBatteryAvailable NOTIFY controlCenterBatteryAvailableChanged FINAL)
+    Q_PROPERTY(bool controlCenterBatteryOnAcPower READ controlCenterBatteryOnAcPower WRITE setControlCenterBatteryOnAcPower NOTIFY controlCenterBatteryOnAcPowerChanged FINAL)
     Q_PROPERTY(bool agendaInstalled READ agendaInstalled NOTIFY agendaInstalledChanged FINAL)
     Q_PROPERTY(QString weatherIconName READ weatherIconName WRITE setWeatherIconName NOTIFY weatherIconNameChanged FINAL)
     Q_PROPERTY(QString weatherTemperature READ weatherTemperature WRITE setWeatherTemperature NOTIFY weatherTemperatureChanged FINAL)
@@ -91,6 +96,16 @@ public:
     void setControlCenterBatteryCharging(bool charging);
     QString controlCenterBatteryPercentage() const;
     void setControlCenterBatteryPercentage(const QString &value);
+    QString controlCenterNetworkState() const;
+    void setControlCenterNetworkState(const QString &state);
+    bool controlCenterBluetoothEnabled() const;
+    void setControlCenterBluetoothEnabled(bool enabled);
+    bool controlCenterVolumeMuted() const;
+    void setControlCenterVolumeMuted(bool muted);
+    bool controlCenterBatteryAvailable() const;
+    void setControlCenterBatteryAvailable(bool available);
+    bool controlCenterBatteryOnAcPower() const;
+    void setControlCenterBatteryOnAcPower(bool onAcPower);
     bool agendaInstalled() const;
     QString weatherIconName() const;
     void setWeatherIconName(const QString &iconName);
@@ -141,6 +156,11 @@ Q_SIGNALS:
     void controlCenterVolumePercentageChanged(const QString &value);
     void controlCenterBatteryChargingChanged(bool charging);
     void controlCenterBatteryPercentageChanged(const QString &value);
+    void controlCenterNetworkStateChanged(const QString &state);
+    void controlCenterBluetoothEnabledChanged(bool enabled);
+    void controlCenterVolumeMutedChanged(bool muted);
+    void controlCenterBatteryAvailableChanged(bool available);
+    void controlCenterBatteryOnAcPowerChanged(bool onAcPower);
     void agendaInstalledChanged(bool installed);
     void weatherIconNameChanged(const QString &iconName);
     void weatherTemperatureChanged(const QString &temperature);
@@ -185,6 +205,13 @@ private:
     void updateWeatherRefreshTimerInterval();
     void setAgendaInstalled(bool installed);
     void setWeatherLocationName(const QString &locationName);
+    void initializeControlCenterRuntime();
+    void refreshControlCenterRuntimeState();
+    void refreshControlCenterNetworkState();
+    void refreshControlCenterBluetoothState();
+    void refreshControlCenterVolumeState();
+    void refreshControlCenterBatteryState();
+    void refreshControlCenterPowerProfileState();
 
     bool m_enabled = true;
     int m_currentWorkspace = 1;
@@ -205,8 +232,13 @@ private:
     QStringList m_controlCenterPowerProfiles;
     QString m_controlCenterPowerProfileCurrent;
     QString m_controlCenterVolumePercentage;
+    bool m_controlCenterVolumeMuted = false;
     bool m_controlCenterBatteryCharging = false;
     QString m_controlCenterBatteryPercentage;
+    QString m_controlCenterNetworkState = QStringLiteral("offline");
+    bool m_controlCenterBluetoothEnabled = false;
+    bool m_controlCenterBatteryAvailable = false;
+    bool m_controlCenterBatteryOnAcPower = false;
     bool m_agendaInstalled = false;
     QString m_weatherIconName = QStringLiteral("weather-severe-alert");
     QString m_weatherTemperature = QStringLiteral("--°C");
@@ -223,6 +255,7 @@ private:
     QTimer *m_mprisPlaybackTimer = nullptr;
     QNetworkAccessManager *m_weatherNetwork = nullptr;
     QTimer *m_weatherRefreshTimer = nullptr;
+    QTimer *m_controlCenterStatusTimer = nullptr;
     QString m_mprisServiceName;
     QString m_mprisPropertiesServiceName;
     qint64 m_mprisTrackLengthUs = 0;

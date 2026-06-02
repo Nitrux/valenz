@@ -136,6 +136,8 @@ Maui.ApplicationWindow
             case "battery-charging-040": return "\uEEA1"
             case "battery-charging-020": return "\uEEA1"
             case "power-profile-performance": return "\uF0E7"
+            case "power-profile-balanced": return "\uEEB2"
+            case "power-profile-power-saver": return "\uF06C"
             case "notifications": return "\uF0F3"
             default: return "\uF128"
         }
@@ -159,46 +161,51 @@ Maui.ApplicationWindow
     readonly property string clockText: Qt.formatTime(nowDateTime, "hh:mm")
     readonly property string dateText: Qt.formatDate(nowDateTime, "ddd, MMM d")
     readonly property bool mprisModuleVisible: valenzBridge ? (valenzBridge.mprisAlwaysVisible || valenzBridge.mprisVisible) : true
-    readonly property string prototypeNetworkState: root.controlCenterPrototypeNetworkState()
-    readonly property string prototypeBluetoothState: root.controlCenterPrototypeBluetoothState()
-    readonly property string prototypeVolumeState: root.controlCenterPrototypeVolumeState()
     readonly property string controlCenterVolumePercentageText: root.cleanText(valenzBridge ? valenzBridge.controlCenterVolumePercentage : "")
     readonly property bool controlCenterBatteryCharging: valenzBridge ? valenzBridge.controlCenterBatteryCharging : false
     readonly property string controlCenterBatteryPercentageText: root.cleanText(valenzBridge ? valenzBridge.controlCenterBatteryPercentage : "")
-    readonly property string controlCenterPowerProfileIconName: "power-profile-performance"
-    readonly property bool prototypeWiredNetwork: (nowDateTime.getMinutes() % 4) < 2
-    readonly property bool prototypeBluetoothEnabled: (nowDateTime.getMinutes() % 3) !== 0
-    readonly property int prototypeVolumeLevel: 30 + ((nowDateTime.getMinutes() * 3) % 70)
-    readonly property string prototypeNetworkIconName:
+    readonly property string controlCenterNetworkState:
     {
-        switch (prototypeNetworkState)
-        {
-            case "wired": return "network-wired"
-            case "wireless": return "network-wireless"
-            case "hotspot": return "network-wireless-hotspot"
-            case "vpn": return "network-vpn"
-            case "cellular": return "network-cellular-3g"
-            case "offline": return "network-disconnect"
-            default: return prototypeWiredNetwork ? "network-wired" : "network-wireless"
-        }
+        const state = root.cleanText(valenzBridge ? valenzBridge.controlCenterNetworkState : "offline").toLowerCase()
+        return (state === "wired" || state === "wireless" || state === "offline") ? state : "offline"
     }
-    readonly property string prototypeBluetoothIconName:
+    readonly property bool controlCenterBluetoothEnabled: valenzBridge ? valenzBridge.controlCenterBluetoothEnabled : false
+    readonly property bool controlCenterVolumeMuted: valenzBridge ? valenzBridge.controlCenterVolumeMuted : false
+    readonly property bool controlCenterBatteryAvailable: valenzBridge ? valenzBridge.controlCenterBatteryAvailable : false
+    readonly property bool controlCenterBatteryOnAcPower: valenzBridge ? valenzBridge.controlCenterBatteryOnAcPower : false
+    readonly property string controlCenterPowerProfileCurrent: root.cleanText(valenzBridge ? valenzBridge.controlCenterPowerProfileCurrent : "balanced").toLowerCase()
+    readonly property string controlCenterNetworkIconName:
     {
-        if (prototypeBluetoothState === "on")
-            return "bluetooth-active"
-        if (prototypeBluetoothState === "off")
-            return "bluetooth-disabled"
-        return prototypeBluetoothEnabled ? "bluetooth-active" : "bluetooth-disabled"
+        if (controlCenterNetworkState === "wired")
+            return "network-wired"
+        if (controlCenterNetworkState === "wireless")
+            return "network-wireless"
+        return "network-disconnect"
     }
-    readonly property string prototypeVolumeIconName:
+    readonly property string controlCenterBluetoothIconName: controlCenterBluetoothEnabled ? "bluetooth-active" : "bluetooth-disabled"
+    readonly property string controlCenterVolumeIconName:
     {
-        switch (prototypeVolumeState)
+        let percentage = parseInt(root.controlCenterVolumePercentageText, 10)
+        if (isNaN(percentage))
+            percentage = 0
+        percentage = Math.max(0, Math.min(100, percentage))
+
+        if (root.controlCenterVolumeMuted || percentage <= 0)
+            return "audio-volume-muted"
+        if (percentage < 33)
+            return "audio-volume-low"
+        if (percentage < 66)
+            return "audio-volume-medium"
+        return "audio-volume-high"
+    }
+    readonly property string controlCenterPowerProfileIconName:
+    {
+        switch (controlCenterPowerProfileCurrent)
         {
-            case "muted": return "audio-volume-muted"
-            case "low": return "audio-volume-low"
-            case "medium": return "audio-volume-medium"
-            case "high": return "audio-volume-high"
-            default: return prototypeVolumeLevel > 65 ? "audio-volume-high" : (prototypeVolumeLevel > 30 ? "audio-volume-medium" : "audio-volume-low")
+            case "performance": return "power-profile-performance"
+            case "power-saver": return "power-profile-power-saver"
+            case "balanced":
+            default: return "power-profile-balanced"
         }
     }
     readonly property string controlCenterBatteryIconName:
@@ -208,7 +215,7 @@ Maui.ApplicationWindow
             percentage = 0
         percentage = Math.max(0, Math.min(100, percentage))
 
-        if (root.controlCenterBatteryCharging)
+        if (root.controlCenterBatteryOnAcPower)
         {
             if (percentage >= 95) return "battery-full-charging"
             if (percentage >= 75) return "battery-good-charging"
@@ -399,12 +406,13 @@ Maui.ApplicationWindow
                 id: _controlCenterButton
                 popup: _controlCenterPopup
                 useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
-                networkIconName: root.prototypeNetworkIconName
-                bluetoothIconName: root.prototypeBluetoothIconName
-                volumeIconName: root.prototypeVolumeIconName
+                networkIconName: root.controlCenterNetworkIconName
+                bluetoothIconName: root.controlCenterBluetoothIconName
+                volumeIconName: root.controlCenterVolumeIconName
                 volumePercentageText: root.controlCenterVolumePercentageText
                 batteryIconName: root.controlCenterBatteryIconName
                 batteryPercentageText: root.controlCenterBatteryPercentageText
+                batteryAvailable: root.controlCenterBatteryAvailable
                 powerProfileIconName: root.controlCenterPowerProfileIconName
                 glyphForIcon: root.controlCenterButtonGlyph
                 glyphColorForKind: root.controlCenterButtonGlyphColor

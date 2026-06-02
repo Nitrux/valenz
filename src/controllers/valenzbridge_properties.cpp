@@ -438,7 +438,6 @@ void ValenzBridge::setControlCenterVolumePercentage(const QString &value)
         return;
 
     m_controlCenterVolumePercentage = normalized;
-    persistControlCenterState();
     Q_EMIT controlCenterVolumePercentageChanged(m_controlCenterVolumePercentage);
 }
 
@@ -453,7 +452,6 @@ void ValenzBridge::setControlCenterBatteryCharging(bool charging)
         return;
 
     m_controlCenterBatteryCharging = charging;
-    persistControlCenterState();
     Q_EMIT controlCenterBatteryChargingChanged(m_controlCenterBatteryCharging);
 }
 
@@ -469,8 +467,78 @@ void ValenzBridge::setControlCenterBatteryPercentage(const QString &value)
         return;
 
     m_controlCenterBatteryPercentage = normalized;
-    persistControlCenterState();
     Q_EMIT controlCenterBatteryPercentageChanged(m_controlCenterBatteryPercentage);
+}
+
+QString ValenzBridge::controlCenterNetworkState() const
+{
+    return m_controlCenterNetworkState;
+}
+
+void ValenzBridge::setControlCenterNetworkState(const QString &state)
+{
+    const QString normalized = normalizePrototypeNetworkState(state);
+    if (m_controlCenterNetworkState == normalized)
+        return;
+
+    m_controlCenterNetworkState = normalized;
+    Q_EMIT controlCenterNetworkStateChanged(m_controlCenterNetworkState);
+}
+
+bool ValenzBridge::controlCenterBluetoothEnabled() const
+{
+    return m_controlCenterBluetoothEnabled;
+}
+
+void ValenzBridge::setControlCenterBluetoothEnabled(bool enabled)
+{
+    if (m_controlCenterBluetoothEnabled == enabled)
+        return;
+
+    m_controlCenterBluetoothEnabled = enabled;
+    Q_EMIT controlCenterBluetoothEnabledChanged(m_controlCenterBluetoothEnabled);
+}
+
+bool ValenzBridge::controlCenterVolumeMuted() const
+{
+    return m_controlCenterVolumeMuted;
+}
+
+void ValenzBridge::setControlCenterVolumeMuted(bool muted)
+{
+    if (m_controlCenterVolumeMuted == muted)
+        return;
+
+    m_controlCenterVolumeMuted = muted;
+    Q_EMIT controlCenterVolumeMutedChanged(m_controlCenterVolumeMuted);
+}
+
+bool ValenzBridge::controlCenterBatteryAvailable() const
+{
+    return m_controlCenterBatteryAvailable;
+}
+
+void ValenzBridge::setControlCenterBatteryAvailable(bool available)
+{
+    if (m_controlCenterBatteryAvailable == available)
+        return;
+
+    m_controlCenterBatteryAvailable = available;
+    Q_EMIT controlCenterBatteryAvailableChanged(m_controlCenterBatteryAvailable);
+}
+
+bool ValenzBridge::controlCenterBatteryOnAcPower() const
+{
+    return m_controlCenterBatteryOnAcPower;
+}
+
+void ValenzBridge::setControlCenterBatteryOnAcPower(bool onAcPower)
+{
+    if (m_controlCenterBatteryOnAcPower == onAcPower)
+        return;
+
+    m_controlCenterBatteryOnAcPower = onAcPower;
+    Q_EMIT controlCenterBatteryOnAcPowerChanged(m_controlCenterBatteryOnAcPower);
 }
 
 void ValenzBridge::trace(const QString &source, const QString &action, const QString &detail)

@@ -32,4 +32,5 @@ ValenzBridge::ValenzBridge(QObject *parent)
 
     refreshMprisState();
     refreshWeather();
+    initializeControlCenterRuntime();
 }

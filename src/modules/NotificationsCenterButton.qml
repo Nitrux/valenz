@@ -12,7 +12,7 @@ ToolButton
     property bool useSystemThemeIcons: true
     property string iconName: "notifications"
     property var glyphForIcon
-    property string countText: "1"
+    property string countText: ""
     property int reopenGuardMs: 180
     property double _lastClosedAtMs: -1
     readonly property bool popupVisible: notificationsCenterButton.popup && notificationsCenterButton.popup.visible

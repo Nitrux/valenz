@@ -2,6 +2,7 @@ set(valenz_SRCS
     main.cpp
     controllers/valenzbridge.cpp
     controllers/valenzbridge_properties.cpp
+    controllers/valenzbridge_controlcenter.cpp
     controllers/valenzbridge_workspace.cpp
     controllers/valenzbridge_mpris.cpp
     controllers/valenzbridge_weather.cpp
