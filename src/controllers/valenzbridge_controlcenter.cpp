@@ -2,12 +2,13 @@
 #include "valenzbridge_p.h"
 
 #include <QRegularExpression>
+#include <QDebug>
 
 namespace
 {
 bool runCommandText(const QString &program,
                     const QStringList &arguments,
-                    QString *stdOut,
+                    QString *stdOut = nullptr,
                     int timeoutMs = 350)
 {
     QProcess process;
@@ -26,7 +27,8 @@ bool runCommandText(const QString &program,
     if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
         return false;
 
-    *stdOut = QString::fromLocal8Bit(process.readAllStandardOutput()).trimmed();
+    if (stdOut)
+        *stdOut = QString::fromLocal8Bit(process.readAllStandardOutput()).trimmed();
     return true;
 }
 
@@ -118,6 +120,120 @@ QString networkStateFromNmcliStatus()
     return QStringLiteral("offline");
 }
 
+bool readCpuUsagePercent(int *percent)
+{
+    QString output;
+    if (!runCommandText(QStringLiteral("top"), QStringList { QStringLiteral("-bn1") }, &output, 1000))
+        return false;
+
+    const QStringList lines = output.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+    for (const QString &line : lines)
+    {
+        if (!line.contains(QStringLiteral("Cpu(s)"), Qt::CaseInsensitive))
+            continue;
+
+        const QRegularExpression idlePattern(QStringLiteral(R"(([0-9]+(?:\.[0-9]+)?)\s*id)"));
+        const QRegularExpressionMatch match = idlePattern.match(line);
+        if (!match.hasMatch())
+            return false;
+
+        bool ok = false;
+        const double idle = match.captured(1).toDouble(&ok);
+        if (!ok)
+            return false;
+
+        if (percent)
+            *percent = qBound(0, qRound(100.0 - idle), 100);
+        return true;
+    }
+
+    return false;
+}
+
+bool readRamUsagePercent(int *percent)
+{
+    QString output;
+    if (!runCommandText(QStringLiteral("free"), QStringList(), &output, 1000))
+        return false;
+
+    const QStringList lines = output.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+    for (const QString &line : lines)
+    {
+        if (!line.startsWith(QStringLiteral("Mem:")))
+            continue;
+
+        const QStringList fields = line.split(QRegularExpression(QStringLiteral(R"(\s+)")), Qt::SkipEmptyParts);
+        if (fields.size() < 3)
+            return false;
+
+        bool totalOk = false;
+        bool usedOk = false;
+        const double totalKb = fields.at(1).toDouble(&totalOk);
+        const double usedKb = fields.at(2).toDouble(&usedOk);
+        if (!totalOk || !usedOk || totalKb <= 0.0)
+            return false;
+
+        if (percent)
+            *percent = qBound(0, qRound((usedKb / totalKb) * 100.0), 100);
+        return true;
+    }
+
+    return false;
+}
+
+bool readDiskUsage(const QString &path, QString *usageText, int *percent)
+{
+    const QString targetPath = path.trimmed().isEmpty() ? QStringLiteral("/") : path.trimmed();
+    QString output;
+    if (!runCommandText(QStringLiteral("df"), QStringList { QStringLiteral("-h"), QStringLiteral("--output=used,size,pcent"), targetPath }, &output, 1200))
+        return false;
+
+    const QStringList lines = output.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+    if (lines.size() < 2)
+        return false;
+
+    const QStringList fields = lines.at(1).split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
+    if (fields.size() < 3)
+        return false;
+
+    if (usageText)
+        *usageText = QStringLiteral("%1 / %2").arg(fields.at(0), fields.at(1));
+
+    if (percent)
+    {
+        QString p = fields.at(2).trimmed();
+        if (p.endsWith(QLatin1Char('%')))
+            p.chop(1);
+        bool ok = false;
+        const int parsed = p.toInt(&ok);
+        if (!ok)
+            return false;
+        *percent = qBound(0, parsed, 100);
+    }
+
+    return true;
+}
+
+bool processRunning(const QString &processName)
+{
+    QString output;
+    return runCommandText(QStringLiteral("pgrep"), QStringList { QStringLiteral("-x"), processName }, &output, 250);
+}
+
+bool commandAvailable(const QString &program)
+{
+    QString output;
+    return runCommandText(QStringLiteral("sh"), QStringList { QStringLiteral("-lc"), QStringLiteral("command -v %1").arg(program) }, &output, 250) && !output.trimmed().isEmpty();
+}
+
+bool stopProcessByName(const QString &processName)
+{
+    if (runCommandText(QStringLiteral("pkill"), QStringList { QStringLiteral("-x"), processName }, nullptr, 350))
+        return true;
+
+    return runCommandText(QStringLiteral("killall"), QStringList { processName }, nullptr, 350);
+}
+
 bool bluetoothPoweredFromRfkill(bool *available)
 {
     if (available)
@@ -138,7 +254,93 @@ bool bluetoothPoweredFromRfkill(bool *available)
     return output.contains(QStringLiteral("Soft blocked: no"), Qt::CaseInsensitive)
         || output.contains(QStringLiteral("Hard blocked: no"), Qt::CaseInsensitive);
 }
+
+bool systemSupportsBacklightAdjustment()
+{
+    QDir backlightDir(QStringLiteral("/sys/class/backlight"));
+    const QStringList entries = backlightDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    return !entries.isEmpty();
 }
+}
+
+QVariantList ValenzBridge::controlCenterDiskUsageOptions() const
+{
+    QVariantList options;
+
+    auto appendEntry = [&options](const QJsonObject &device, const auto &appendEntryRef) -> void {
+        const QString type = device.value(QStringLiteral("type")).toString().trimmed().toLower();
+        const QString mountPoint = device.value(QStringLiteral("mountpoint")).toString().trimmed();
+        const QString pathValue = device.value(QStringLiteral("path")).toString().trimmed();
+        const QString label = device.value(QStringLiteral("label")).toString().trimmed();
+
+        if (type == QLatin1String("part") && !mountPoint.isEmpty())
+        {
+            const QString display = label.isEmpty() ? mountPoint : QStringLiteral("%1 (%2)").arg(label, mountPoint);
+            options.push_back(QVariantMap {
+                {QStringLiteral("path"), mountPoint},
+                {QStringLiteral("label"), label.isEmpty() ? mountPoint : label},
+                {QStringLiteral("display"), display},
+                {QStringLiteral("device"), pathValue},
+            });
+        }
+
+        const QJsonArray children = device.value(QStringLiteral("children")).toArray();
+        for (const QJsonValue &childValue : children)
+            appendEntryRef(childValue.toObject(), appendEntryRef);
+    };
+
+    QString output;
+    if (!runCommandText(QStringLiteral("lsblk"), QStringList { QStringLiteral("-J"), QStringLiteral("-o"), QStringLiteral("PATH,LABEL,MOUNTPOINT,TYPE"), QStringLiteral("-e"), QStringLiteral("7") }, &output, 1500))
+    {
+        options.push_back(QVariantMap {
+            {QStringLiteral("path"), QStringLiteral("/")},
+            {QStringLiteral("label"), QStringLiteral("Root")},
+            {QStringLiteral("display"), QStringLiteral("Root (/)")},
+        });
+        return options;
+    }
+
+    const QJsonDocument document = QJsonDocument::fromJson(output.toUtf8());
+    if (!document.isObject())
+        return options;
+
+    const QJsonArray blockDevices = document.object().value(QStringLiteral("blockdevices")).toArray();
+    for (const QJsonValue &deviceValue : blockDevices)
+        appendEntry(deviceValue.toObject(), appendEntry);
+
+    const QString currentPath = m_controlCenterDiskUsagePath.trimmed().isEmpty() ? QStringLiteral("/") : m_controlCenterDiskUsagePath.trimmed();
+    bool hasCurrentPath = false;
+    for (const QVariant &entryVariant : options)
+    {
+        const QVariantMap entry = entryVariant.toMap();
+        if (entry.value(QStringLiteral("path")).toString() == currentPath)
+        {
+            hasCurrentPath = true;
+            break;
+        }
+    }
+
+    if (!hasCurrentPath)
+    {
+        options.prepend(QVariantMap {
+            {QStringLiteral("path"), currentPath},
+            {QStringLiteral("label"), QStringLiteral("Current")},
+            {QStringLiteral("display"), QStringLiteral("Current (%1)").arg(currentPath)},
+        });
+    }
+
+    if (options.isEmpty())
+    {
+        options.push_back(QVariantMap {
+            {QStringLiteral("path"), QStringLiteral("/")},
+            {QStringLiteral("label"), QStringLiteral("Root")},
+            {QStringLiteral("display"), QStringLiteral("Root (/)")},
+        });
+    }
+
+    return options;
+}
+
 
 void ValenzBridge::initializeControlCenterRuntime()
 {
@@ -161,7 +363,9 @@ void ValenzBridge::refreshControlCenterRuntimeState()
     refreshControlCenterNetworkState();
     refreshControlCenterBluetoothState();
     refreshControlCenterVolumeState();
+    refreshControlCenterBrightnessState();
     refreshControlCenterBatteryState();
+    refreshControlCenterNightLightState();
     refreshControlCenterPowerProfileState();
 }
 
@@ -227,6 +431,82 @@ void ValenzBridge::refreshControlCenterVolumeState()
     setControlCenterVolumePercentage(QStringLiteral("%1%").arg(percent));
 }
 
+void ValenzBridge::setControlCenterVolumePercentageFromSlider(int percent)
+{
+    percent = qBound(0, percent, 100);
+    if (!commandAvailable(QStringLiteral("wpctl")))
+        return;
+
+    const QString percentText = QStringLiteral("%1%").arg(percent);
+    const bool ok = runCommandText(QStringLiteral("wpctl"), QStringList { QStringLiteral("set-volume"), QStringLiteral("@DEFAULT_AUDIO_SINK@"), percentText }, nullptr, 1200);
+    if (ok)
+    {
+        if (percent <= 0)
+            runCommandText(QStringLiteral("wpctl"), QStringList { QStringLiteral("set-mute"), QStringLiteral("@DEFAULT_AUDIO_SINK@"), QStringLiteral("1") }, nullptr, 1200);
+        else
+            runCommandText(QStringLiteral("wpctl"), QStringList { QStringLiteral("set-mute"), QStringLiteral("@DEFAULT_AUDIO_SINK@"), QStringLiteral("0") }, nullptr, 1200);
+    }
+
+    refreshControlCenterVolumeState();
+}
+
+void ValenzBridge::setControlCenterBrightnessPercentageFromSlider(int percent)
+{
+    percent = qBound(0, percent, 100);
+    if (!m_controlCenterBrightnessAvailable)
+        return;
+
+    if (!commandAvailable(QStringLiteral("brightnessctl")))
+        return;
+
+    const QString percentText = QStringLiteral("%1%").arg(percent);
+    const bool ok = runCommandText(QStringLiteral("brightnessctl"), QStringList { QStringLiteral("set"), percentText, QStringLiteral("--quiet") }, nullptr, 1200);
+    qDebug().noquote() << "ValenzBridge::setControlCenterBrightnessPercentageFromSlider" << percentText << ok;
+    refreshControlCenterBrightnessState();
+}
+
+void ValenzBridge::setControlCenterNightLightEnabled(bool enabled)
+{
+    if (!m_controlCenterNightLightAvailable)
+    {
+        if (m_controlCenterNightLightEnabled && !enabled)
+        {
+            qDebug().noquote() << "ValenzBridge::setControlCenterNightLightEnabled forcing off; hyprsunset unavailable";
+            m_controlCenterNightLightEnabled = false;
+            Q_EMIT controlCenterNightLightEnabledChanged(m_controlCenterNightLightEnabled);
+        }
+        else
+        {
+            qDebug().noquote() << "ValenzBridge::setControlCenterNightLightEnabled ignored; hyprsunset unavailable";
+        }
+        return;
+    }
+
+    if (m_controlCenterNightLightEnabled == enabled)
+        return;
+
+    qDebug().noquote() << "ValenzBridge::setControlCenterNightLightEnabled" << m_controlCenterNightLightEnabled << "->" << enabled;
+
+    if (enabled)
+    {
+        if (!processRunning(QStringLiteral("hyprsunset")))
+        {
+            const bool started = QProcess::startDetached(QStringLiteral("hyprsunset"));
+            qDebug().noquote() << "ValenzBridge::setControlCenterNightLightEnabled start hyprsunset" << started;
+            if (!started)
+                return;
+        }
+    }
+    else
+    {
+        const bool stopped = stopProcessByName(QStringLiteral("hyprsunset"));
+        qDebug().noquote() << "ValenzBridge::setControlCenterNightLightEnabled stop hyprsunset" << stopped;
+    }
+
+    m_controlCenterNightLightEnabled = enabled;
+    Q_EMIT controlCenterNightLightEnabledChanged(m_controlCenterNightLightEnabled);
+}
+
 void ValenzBridge::executeControlCenterPowerCommand()
 {
     const QString command = normalizePowerCommand(m_controlCenterPowerCommand);
@@ -235,6 +515,80 @@ void ValenzBridge::executeControlCenterPowerCommand()
 
     if (command.compare(QStringLiteral("wlogout"), Qt::CaseInsensitive) != 0)
         QProcess::startDetached(QStringLiteral("/bin/sh"), QStringList { QStringLiteral("-lc"), QStringLiteral("wlogout") });
+}
+
+void ValenzBridge::refreshControlCenterNightLightState()
+{
+    const bool available = commandAvailable(QStringLiteral("hyprsunset"));
+    setControlCenterNightLightAvailable(available);
+
+    if (!available)
+    {
+        setControlCenterNightLightEnabled(false);
+        return;
+    }
+
+    setControlCenterNightLightEnabled(processRunning(QStringLiteral("hyprsunset")));
+}
+
+void ValenzBridge::refreshControlCenterBrightnessState()
+{
+    const bool available = commandAvailable(QStringLiteral("brightnessctl")) && systemSupportsBacklightAdjustment();
+    setControlCenterBrightnessAvailable(available);
+
+    if (!available)
+    {
+        setControlCenterBrightnessPercentage(QStringLiteral("0%"));
+        return;
+    }
+
+    QString output;
+    if (!runCommandText(QStringLiteral("brightnessctl"), QStringList { QStringLiteral("info") }, &output, 1200))
+    {
+        setControlCenterBrightnessAvailable(false);
+        setControlCenterBrightnessPercentage(QStringLiteral("0%"));
+        return;
+    }
+
+    QRegularExpressionMatch match = QRegularExpression(QStringLiteral(R"(([0-9]+(?:\.[0-9]+)?)\s*%)")).match(output);
+    if (!match.hasMatch())
+    {
+        setControlCenterBrightnessAvailable(false);
+        setControlCenterBrightnessPercentage(QStringLiteral("0%"));
+        return;
+    }
+
+    const int percent = qBound(0, static_cast<int>(std::lround(match.captured(1).toDouble())), 100);
+    setControlCenterBrightnessPercentage(QStringLiteral("%1%").arg(percent));
+}
+
+void ValenzBridge::refreshControlCenterSystemResources()
+{
+    refreshControlCenterSystemResourcesState();
+}
+
+void ValenzBridge::refreshControlCenterSystemResourcesState()
+{
+    int cpuPercent = 0;
+    if (readCpuUsagePercent(&cpuPercent))
+        setControlCenterCpuPercentage(cpuPercent);
+
+    int ramPercent = 0;
+    if (readRamUsagePercent(&ramPercent))
+        setControlCenterRamPercentage(ramPercent);
+
+    QString diskText;
+    int diskPercent = 0;
+    if (readDiskUsage(m_controlCenterDiskUsagePath, &diskText, &diskPercent))
+    {
+        setControlCenterDiskUsageText(diskText);
+        setControlCenterDiskUsagePercentage(diskPercent);
+    }
+    else
+    {
+        setControlCenterDiskUsageText(QString());
+        setControlCenterDiskUsagePercentage(0);
+    }
 }
 
 void ValenzBridge::refreshControlCenterBatteryState()

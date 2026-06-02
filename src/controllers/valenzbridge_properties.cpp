@@ -426,10 +426,22 @@ void ValenzBridge::setControlCenterPowerProfileCurrent(const QString &profile)
     if (m_controlCenterPowerProfileCurrent == normalized)
         return;
 
+
+    QProcess process;
+    process.start(QStringLiteral("powerprofilesctl"), QStringList { QStringLiteral("set"), normalized });
+    if (!process.waitForStarted(250))
+        return;
+    if (!process.waitForFinished(1200) || process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
+    {
+        refreshControlCenterPowerProfileState();
+        return;
+    }
+
     m_controlCenterPowerProfileCurrent = normalized;
     persistControlCenterState();
     Q_EMIT controlCenterPowerProfileCurrentChanged(m_controlCenterPowerProfileCurrent);
 }
+
 
 QString ValenzBridge::controlCenterVolumePercentage() const
 {
@@ -473,6 +485,95 @@ void ValenzBridge::setControlCenterBatteryPercentage(const QString &value)
 
     m_controlCenterBatteryPercentage = normalized;
     Q_EMIT controlCenterBatteryPercentageChanged(m_controlCenterBatteryPercentage);
+}
+
+int ValenzBridge::controlCenterCpuPercentage() const
+{
+    return m_controlCenterCpuPercentage;
+}
+
+void ValenzBridge::setControlCenterCpuPercentage(int percent)
+{
+    const int normalized = qBound(0, percent, 100);
+    if (m_controlCenterCpuPercentage == normalized)
+        return;
+
+    m_controlCenterCpuPercentage = normalized;
+    Q_EMIT controlCenterCpuPercentageChanged(m_controlCenterCpuPercentage);
+}
+
+int ValenzBridge::controlCenterRamPercentage() const
+{
+    return m_controlCenterRamPercentage;
+}
+
+void ValenzBridge::setControlCenterRamPercentage(int percent)
+{
+    const int normalized = qBound(0, percent, 100);
+    if (m_controlCenterRamPercentage == normalized)
+        return;
+
+    m_controlCenterRamPercentage = normalized;
+    Q_EMIT controlCenterRamPercentageChanged(m_controlCenterRamPercentage);
+}
+
+int ValenzBridge::controlCenterDiskUsagePercentage() const
+{
+    return m_controlCenterDiskUsagePercentage;
+}
+
+void ValenzBridge::setControlCenterDiskUsagePercentage(int percent)
+{
+    const int normalized = qBound(0, percent, 100);
+    if (m_controlCenterDiskUsagePercentage == normalized)
+        return;
+
+    m_controlCenterDiskUsagePercentage = normalized;
+    Q_EMIT controlCenterDiskUsagePercentageChanged(m_controlCenterDiskUsagePercentage);
+}
+
+QString ValenzBridge::controlCenterDiskUsageText() const
+{
+    return m_controlCenterDiskUsageText;
+}
+
+void ValenzBridge::setControlCenterDiskUsageText(const QString &text)
+{
+    const QString normalized = text.trimmed();
+    if (m_controlCenterDiskUsageText == normalized)
+        return;
+
+    m_controlCenterDiskUsageText = normalized;
+    Q_EMIT controlCenterDiskUsageTextChanged(m_controlCenterDiskUsageText);
+}
+
+QString ValenzBridge::controlCenterBrightnessPercentage() const
+{
+    return m_controlCenterBrightnessPercentage;
+}
+
+void ValenzBridge::setControlCenterBrightnessPercentage(const QString &value)
+{
+    const QString normalized = normalizeBatteryPercentage(value);
+    if (m_controlCenterBrightnessPercentage == normalized)
+        return;
+
+    m_controlCenterBrightnessPercentage = normalized;
+    Q_EMIT controlCenterBrightnessPercentageChanged(m_controlCenterBrightnessPercentage);
+}
+
+bool ValenzBridge::controlCenterBrightnessAvailable() const
+{
+    return m_controlCenterBrightnessAvailable;
+}
+
+void ValenzBridge::setControlCenterBrightnessAvailable(bool available)
+{
+    if (m_controlCenterBrightnessAvailable == available)
+        return;
+
+    m_controlCenterBrightnessAvailable = available;
+    Q_EMIT controlCenterBrightnessAvailableChanged(m_controlCenterBrightnessAvailable);
 }
 
 QString ValenzBridge::controlCenterNetworkState() const
@@ -560,6 +661,25 @@ void ValenzBridge::setControlCenterBatteryOnAcPower(bool onAcPower)
     Q_EMIT controlCenterBatteryOnAcPowerChanged(m_controlCenterBatteryOnAcPower);
 }
 
+bool ValenzBridge::controlCenterNightLightEnabled() const
+{
+    return m_controlCenterNightLightEnabled;
+}
+
+bool ValenzBridge::controlCenterNightLightAvailable() const
+{
+    return m_controlCenterNightLightAvailable;
+}
+
+void ValenzBridge::setControlCenterNightLightAvailable(bool available)
+{
+    if (m_controlCenterNightLightAvailable == available)
+        return;
+
+    m_controlCenterNightLightAvailable = available;
+    Q_EMIT controlCenterNightLightAvailableChanged(m_controlCenterNightLightAvailable);
+}
+
 QString ValenzBridge::controlCenterPowerCommand() const
 {
     return m_controlCenterPowerCommand;
@@ -574,6 +694,28 @@ void ValenzBridge::setControlCenterPowerCommand(const QString &command)
     m_controlCenterPowerCommand = normalized;
     persistControlCenterState();
     Q_EMIT controlCenterPowerCommandChanged(m_controlCenterPowerCommand);
+}
+
+QString ValenzBridge::controlCenterDiskUsagePath() const
+{
+    return m_controlCenterDiskUsagePath;
+}
+
+void ValenzBridge::setControlCenterDiskUsagePath(const QString &path)
+{
+    QString normalized = path.trimmed();
+    if (normalized.isEmpty())
+        normalized = QStringLiteral("/");
+    if (!normalized.startsWith(QLatin1Char('/')))
+        normalized.prepend(QLatin1Char('/'));
+
+    if (m_controlCenterDiskUsagePath == normalized)
+        return;
+
+    m_controlCenterDiskUsagePath = normalized;
+    persistControlCenterState();
+    refreshControlCenterSystemResourcesState();
+    Q_EMIT controlCenterDiskUsagePathChanged(m_controlCenterDiskUsagePath);
 }
 
 void ValenzBridge::trace(const QString &source, const QString &action, const QString &detail)

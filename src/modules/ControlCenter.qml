@@ -32,8 +32,34 @@ Dialog
     readonly property int _minPanelWidth: Maui.Handy.isMobile ? _baseUnit * 16 : _baseUnit * 20
     property bool _cellularEnabled: false
     readonly property bool _dndEnabled: controlCenter.notificationsControllerRef ? controlCenter.notificationsControllerRef.dndEnabled : false
-    property bool _nightLightEnabled: true
+    readonly property bool _nightLightEnabled: controlCenter.bridge ? controlCenter.bridge.controlCenterNightLightEnabled : false
+    readonly property bool _nightLightAvailable: controlCenter.bridge ? controlCenter.bridge.controlCenterNightLightAvailable : false
+    readonly property int _volumePercentage:
+    {
+        const text = controlCenter.bridge ? controlCenter.bridge.controlCenterVolumePercentage : "0%"
+        const parsed = parseInt(String(text || "").trim(), 10)
+        return isNaN(parsed) ? 0 : Math.max(0, Math.min(100, parsed))
+    }
+    readonly property int _brightnessPercentage:
+    {
+        const text = controlCenter.bridge ? controlCenter.bridge.controlCenterBrightnessPercentage : "0%"
+        const parsed = parseInt(String(text || "").trim(), 10)
+        return isNaN(parsed) ? 0 : Math.max(0, Math.min(100, parsed))
+    }
+    readonly property bool _brightnessAvailable: controlCenter.bridge ? controlCenter.bridge.controlCenterBrightnessAvailable : false
+    readonly property string _powerProfileIconName:
+    {
+        const profile = controlCenter.bridge ? String(controlCenter.bridge.controlCenterPowerProfileCurrent).toLowerCase() : "balanced"
+        switch (profile)
+        {
+            case "performance": return "power-profile-performance"
+            case "power-saver": return "power-profile-power-saver"
+            case "balanced":
+            default: return "power-profile-balanced"
+        }
+    }
     property int _geometryRevision: 0
+    property bool _systemResourcesRefreshActive: false
     readonly property real _targetY:
     {
         const overlayItem = controlCenter.overlayItem
@@ -122,6 +148,81 @@ Dialog
             return "Cellular"
         return "Home_Network"
     }
+
+    function _commitVolumeFromSlider()
+    {
+        if (controlCenter.bridge)
+            controlCenter.bridge.setControlCenterVolumePercentageFromSlider(Math.round(_volumeSlider.value))
+    }
+
+    function _commitBrightnessFromSlider()
+    {
+        if (controlCenter.bridge && controlCenter._brightnessAvailable)
+            controlCenter.bridge.setControlCenterBrightnessPercentageFromSlider(Math.round(_brightnessSlider.value))
+    }
+
+    function _controlCenterCpuPercentage()
+    {
+        const bridge = controlCenter.bridge
+        if (!bridge)
+            return 0
+        return Math.max(0, Math.min(100, Number(bridge.controlCenterCpuPercentage) || 0))
+    }
+
+    function _controlCenterRamPercentage()
+    {
+        const bridge = controlCenter.bridge
+        if (!bridge)
+            return 0
+        return Math.max(0, Math.min(100, Number(bridge.controlCenterRamPercentage) || 0))
+    }
+
+    function _controlCenterDiskUsageText()
+    {
+        const bridge = controlCenter.bridge
+        if (!bridge)
+            return "-- / --"
+        const text = String(bridge.controlCenterDiskUsageText || "").trim()
+        return text.length > 0 ? text : "-- / --"
+    }
+
+    function _controlCenterDiskUsagePercentage()
+    {
+        const bridge = controlCenter.bridge
+        if (!bridge)
+            return 0
+        return Math.max(0, Math.min(100, Number(bridge.controlCenterDiskUsagePercentage) || 0))
+    }
+
+    Timer
+    {
+        id: _volumeApplyTimer
+        interval: 150
+        repeat: false
+        onTriggered: controlCenter._commitVolumeFromSlider()
+    }
+
+    Timer
+    {
+        id: _brightnessApplyTimer
+        interval: 150
+        repeat: false
+        onTriggered: controlCenter._commitBrightnessFromSlider()
+    }
+
+    Timer
+    {
+        id: _systemResourcesRefreshTimer
+        interval: 1000
+        repeat: true
+        running: controlCenter._systemResourcesRefreshActive
+        onTriggered:
+        {
+            if (controlCenter.bridge)
+                controlCenter.bridge.refreshControlCenterSystemResources()
+        }
+    }
+
     modal: false
     focus: true
     standardButtons: Dialog.NoButton
@@ -186,6 +287,18 @@ Dialog
     onOpened:
     {
         Qt.callLater(_touchGeometryRevision)
+        _systemResourcesRefreshActive = true
+        if (bridge)
+            bridge.refreshControlCenterSystemResources()
+    }
+    onClosed:
+    {
+        _systemResourcesRefreshActive = false
+    }
+    onVisibleChanged:
+    {
+        if (!visible)
+            _systemResourcesRefreshActive = false
     }
     anchors.centerIn: undefined
     x:
@@ -478,6 +591,9 @@ Dialog
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
+                        visible: true
+                        enabled: controlCenter._nightLightAvailable
+                        opacity: enabled ? 1.0 : 0.55
 
                         RowLayout
                         {
@@ -496,7 +612,7 @@ Dialog
                             {
                                 spacing: 0
                                 Label { text: "Night Light"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
-                                Label { text: controlCenter._nightLightEnabled ? "On" : "Off"; color: Maui.Theme.disabledTextColor }
+                                Label { text: controlCenter._nightLightAvailable ? (controlCenter._nightLightEnabled ? "On" : "Off") : "Unavailable"; color: Maui.Theme.disabledTextColor }
                             }
 
                             Item { Layout.fillWidth: true }
@@ -504,7 +620,12 @@ Dialog
                             Switch
                             {
                                 checked: controlCenter._nightLightEnabled
-                                onToggled: controlCenter._nightLightEnabled = checked
+                                enabled: controlCenter._nightLightAvailable
+                                onToggled:
+                                {
+                                    if (controlCenter.bridge)
+                                        controlCenter.bridge.controlCenterNightLightEnabled = checked
+                                }
                             }
                         }
                     }
@@ -568,7 +689,7 @@ Dialog
 
                             Label
                             {
-                                text: "\uf0e7"
+                                text: controlCenter._powerProfileIconName === "power-profile-performance" ? "\uf0e7" : (controlCenter._powerProfileIconName === "power-profile-power-saver" ? "\uf06c" : "\ueeb2")
                                 font.family: controlCenter._nerdFontFamily
                                 font.pixelSize: controlCenter._glyphSize
                                 color: Maui.Theme.textColor
@@ -705,10 +826,40 @@ Dialog
                             }
                             Slider
                             {
+                                id: _volumeSlider
                                 Layout.fillWidth: true
                                 from: 0
                                 to: 100
-                                value: 62
+                                value: controlCenter._volumePercentage
+                                onMoved:
+                                {
+                                    _volumeApplyTimer.restart()
+                                }
+                                onPressedChanged:
+                                {
+                                    if (!pressed)
+                                    {
+                                        _volumeApplyTimer.stop()
+                                        controlCenter._commitVolumeFromSlider()
+                                    }
+                                }
+                                Connections
+                                {
+                                    target: controlCenter.bridge
+                                    enabled: !!controlCenter.bridge
+
+                                    function onControlCenterVolumePercentageChanged()
+                                    {
+                                        if (!_volumeSlider.pressed)
+                                            _volumeSlider.value = controlCenter._volumePercentage
+                                    }
+
+                                    function onControlCenterVolumeMutedChanged()
+                                    {
+                                        if (!_volumeSlider.pressed)
+                                            _volumeSlider.value = controlCenter._volumePercentage
+                                    }
+                                }
                             }
                             Label
                             {
@@ -728,6 +879,8 @@ Dialog
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
+                        enabled: controlCenter._brightnessAvailable
+                        opacity: enabled ? 1.0 : 0.55
 
                         RowLayout
                         {
@@ -742,10 +895,42 @@ Dialog
                             }
                             Slider
                             {
+                                id: _brightnessSlider
                                 Layout.fillWidth: true
                                 from: 0
                                 to: 100
-                                value: 70
+                                value: controlCenter._brightnessPercentage
+                                enabled: controlCenter._brightnessAvailable
+                                onMoved:
+                                {
+                                    _brightnessApplyTimer.restart()
+                                }
+                                onPressedChanged:
+                                {
+                                    if (!pressed)
+                                    {
+                                        _brightnessApplyTimer.stop()
+                                        controlCenter._commitBrightnessFromSlider()
+                                    }
+                                }
+                                Connections
+                                {
+                                    target: controlCenter.bridge
+                                    enabled: !!controlCenter.bridge
+
+                                    function onControlCenterBrightnessPercentageChanged()
+                                    {
+                                        if (!_brightnessSlider.pressed)
+                                            _brightnessSlider.value = controlCenter._brightnessPercentage
+                                    }
+
+                                    function onControlCenterBrightnessAvailableChanged()
+                                    {
+                                        _brightnessSlider.enabled = controlCenter._brightnessAvailable
+                                        if (!_brightnessSlider.pressed)
+                                            _brightnessSlider.value = controlCenter._brightnessPercentage
+                                    }
+                                }
                             }
                             Label
                             {
@@ -777,14 +962,14 @@ Dialog
                                 spacing: Maui.Style.space.small
                                 Label { text: "\uf2db"; font.family: controlCenter._nerdFontFamily; font.pixelSize: controlCenter._glyphSize; color: Maui.Theme.textColor }
                                 Label { text: "CPU"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
-                                Label { text: "25%"; color: Maui.Theme.disabledTextColor }
+                                Label { text: controlCenter._controlCenterCpuPercentage() + "%"; color: Maui.Theme.disabledTextColor }
                             }
                             ProgressBar
                             {
                                 Layout.fillWidth: true
                                 from: 0
                                 to: 100
-                                value: 25
+                                value: controlCenter._controlCenterCpuPercentage()
                             }
 
                             RowLayout
@@ -793,14 +978,14 @@ Dialog
                                 spacing: Maui.Style.space.small
                                 Label { text: "\uefc5"; font.family: controlCenter._nerdFontFamily; font.pixelSize: controlCenter._glyphSize; color: Maui.Theme.textColor }
                                 Label { text: "RAM"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
-                                Label { text: "60%"; color: Maui.Theme.disabledTextColor }
+                                Label { text: controlCenter._controlCenterRamPercentage() + "%"; color: Maui.Theme.disabledTextColor }
                             }
                             ProgressBar
                             {
                                 Layout.fillWidth: true
                                 from: 0
                                 to: 100
-                                value: 60
+                                value: controlCenter._controlCenterRamPercentage()
                             }
 
                             RowLayout
@@ -809,14 +994,14 @@ Dialog
                                 spacing: Maui.Style.space.small
                                 Label { text: "\uf0a0"; font.family: controlCenter._nerdFontFamily; font.pixelSize: controlCenter._glyphSize; color: Maui.Theme.textColor }
                                 Label { text: "Disk"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
-                                Label { text: "512GB / 1TB"; color: Maui.Theme.disabledTextColor }
+                                Label { text: controlCenter._controlCenterDiskUsageText(); color: Maui.Theme.disabledTextColor }
                             }
                             ProgressBar
                             {
                                 Layout.fillWidth: true
                                 from: 0
                                 to: 100
-                                value: 50
+                                value: controlCenter._controlCenterDiskUsagePercentage()
                             }
                         }
                 }

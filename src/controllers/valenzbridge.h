@@ -5,6 +5,7 @@
 #include <QString>
 #include <QStringList>
 #include <QtGlobal>
+#include <QVariantList>
 #include <QVariantMap>
 
 class QLocalSocket;
@@ -37,13 +38,22 @@ class ValenzBridge : public QObject
     Q_PROPERTY(QString controlCenterVolumePercentage READ controlCenterVolumePercentage WRITE setControlCenterVolumePercentage NOTIFY controlCenterVolumePercentageChanged FINAL)
     Q_PROPERTY(bool controlCenterBatteryCharging READ controlCenterBatteryCharging WRITE setControlCenterBatteryCharging NOTIFY controlCenterBatteryChargingChanged FINAL)
     Q_PROPERTY(QString controlCenterBatteryPercentage READ controlCenterBatteryPercentage WRITE setControlCenterBatteryPercentage NOTIFY controlCenterBatteryPercentageChanged FINAL)
+    Q_PROPERTY(int controlCenterCpuPercentage READ controlCenterCpuPercentage WRITE setControlCenterCpuPercentage NOTIFY controlCenterCpuPercentageChanged FINAL)
+    Q_PROPERTY(int controlCenterRamPercentage READ controlCenterRamPercentage WRITE setControlCenterRamPercentage NOTIFY controlCenterRamPercentageChanged FINAL)
+    Q_PROPERTY(int controlCenterDiskUsagePercentage READ controlCenterDiskUsagePercentage WRITE setControlCenterDiskUsagePercentage NOTIFY controlCenterDiskUsagePercentageChanged FINAL)
+    Q_PROPERTY(QString controlCenterDiskUsageText READ controlCenterDiskUsageText WRITE setControlCenterDiskUsageText NOTIFY controlCenterDiskUsageTextChanged FINAL)
+    Q_PROPERTY(QString controlCenterBrightnessPercentage READ controlCenterBrightnessPercentage WRITE setControlCenterBrightnessPercentage NOTIFY controlCenterBrightnessPercentageChanged FINAL)
+    Q_PROPERTY(bool controlCenterBrightnessAvailable READ controlCenterBrightnessAvailable WRITE setControlCenterBrightnessAvailable NOTIFY controlCenterBrightnessAvailableChanged FINAL)
     Q_PROPERTY(QString controlCenterNetworkState READ controlCenterNetworkState WRITE setControlCenterNetworkState NOTIFY controlCenterNetworkStateChanged FINAL)
     Q_PROPERTY(bool controlCenterBluetoothEnabled READ controlCenterBluetoothEnabled WRITE setControlCenterBluetoothEnabled NOTIFY controlCenterBluetoothEnabledChanged FINAL)
     Q_PROPERTY(bool controlCenterBluetoothAvailable READ controlCenterBluetoothAvailable WRITE setControlCenterBluetoothAvailable NOTIFY controlCenterBluetoothAvailableChanged FINAL)
     Q_PROPERTY(bool controlCenterVolumeMuted READ controlCenterVolumeMuted WRITE setControlCenterVolumeMuted NOTIFY controlCenterVolumeMutedChanged FINAL)
     Q_PROPERTY(bool controlCenterBatteryAvailable READ controlCenterBatteryAvailable WRITE setControlCenterBatteryAvailable NOTIFY controlCenterBatteryAvailableChanged FINAL)
     Q_PROPERTY(bool controlCenterBatteryOnAcPower READ controlCenterBatteryOnAcPower WRITE setControlCenterBatteryOnAcPower NOTIFY controlCenterBatteryOnAcPowerChanged FINAL)
+    Q_PROPERTY(bool controlCenterNightLightEnabled READ controlCenterNightLightEnabled WRITE setControlCenterNightLightEnabled NOTIFY controlCenterNightLightEnabledChanged FINAL)
+    Q_PROPERTY(bool controlCenterNightLightAvailable READ controlCenterNightLightAvailable WRITE setControlCenterNightLightAvailable NOTIFY controlCenterNightLightAvailableChanged FINAL)
     Q_PROPERTY(QString controlCenterPowerCommand READ controlCenterPowerCommand WRITE setControlCenterPowerCommand NOTIFY controlCenterPowerCommandChanged FINAL)
+    Q_PROPERTY(QString controlCenterDiskUsagePath READ controlCenterDiskUsagePath WRITE setControlCenterDiskUsagePath NOTIFY controlCenterDiskUsagePathChanged FINAL)
     Q_PROPERTY(bool agendaInstalled READ agendaInstalled NOTIFY agendaInstalledChanged FINAL)
     Q_PROPERTY(QString weatherIconName READ weatherIconName WRITE setWeatherIconName NOTIFY weatherIconNameChanged FINAL)
     Q_PROPERTY(QString weatherTemperature READ weatherTemperature WRITE setWeatherTemperature NOTIFY weatherTemperatureChanged FINAL)
@@ -100,6 +110,18 @@ public:
     void setControlCenterBatteryCharging(bool charging);
     QString controlCenterBatteryPercentage() const;
     void setControlCenterBatteryPercentage(const QString &value);
+    int controlCenterCpuPercentage() const;
+    void setControlCenterCpuPercentage(int percent);
+    int controlCenterRamPercentage() const;
+    void setControlCenterRamPercentage(int percent);
+    int controlCenterDiskUsagePercentage() const;
+    void setControlCenterDiskUsagePercentage(int percent);
+    QString controlCenterDiskUsageText() const;
+    void setControlCenterDiskUsageText(const QString &text);
+    QString controlCenterBrightnessPercentage() const;
+    void setControlCenterBrightnessPercentage(const QString &value);
+    bool controlCenterBrightnessAvailable() const;
+    void setControlCenterBrightnessAvailable(bool available);
     QString controlCenterNetworkState() const;
     void setControlCenterNetworkState(const QString &state);
     bool controlCenterBluetoothEnabled() const;
@@ -112,8 +134,14 @@ public:
     void setControlCenterBatteryAvailable(bool available);
     bool controlCenterBatteryOnAcPower() const;
     void setControlCenterBatteryOnAcPower(bool onAcPower);
+    bool controlCenterNightLightEnabled() const;
+    void setControlCenterNightLightEnabled(bool enabled);
+    bool controlCenterNightLightAvailable() const;
+    void setControlCenterNightLightAvailable(bool available);
     QString controlCenterPowerCommand() const;
     void setControlCenterPowerCommand(const QString &command);
+    QString controlCenterDiskUsagePath() const;
+    void setControlCenterDiskUsagePath(const QString &path);
     bool agendaInstalled() const;
     QString weatherIconName() const;
     void setWeatherIconName(const QString &iconName);
@@ -133,6 +161,8 @@ public:
 
     Q_INVOKABLE void trace(const QString &source, const QString &action, const QString &detail = QString());
     Q_INVOKABLE void executeControlCenterPowerCommand();
+    Q_INVOKABLE void setControlCenterVolumePercentageFromSlider(int percent);
+    Q_INVOKABLE void setControlCenterBrightnessPercentageFromSlider(int percent);
     Q_INVOKABLE void goToPreviousWorkspace();
     Q_INVOKABLE void goToNextWorkspace();
     Q_INVOKABLE bool refreshWorkspaceState();
@@ -140,6 +170,8 @@ public:
     Q_INVOKABLE void mediaTogglePlayPause();
     Q_INVOKABLE void mediaNextTrack();
     Q_INVOKABLE QString configFilePath() const;
+    Q_INVOKABLE QVariantList controlCenterDiskUsageOptions() const;
+    Q_INVOKABLE void refreshControlCenterSystemResources();
     Q_INVOKABLE void refreshWeather();
 
 Q_SIGNALS:
@@ -157,6 +189,7 @@ Q_SIGNALS:
     void focusedWindowTitleChanged(const QString &title);
     void focusedWindowIconNameChanged(const QString &iconName);
     void controlCenterPowerCommandChanged(const QString &command);
+    void controlCenterDiskUsagePathChanged(const QString &path);
     void controlCenterIconModeChanged(const QString &mode);
     void prototypeNetworkStateChanged(const QString &state);
     void prototypeBluetoothStateChanged(const QString &state);
@@ -166,12 +199,20 @@ Q_SIGNALS:
     void controlCenterVolumePercentageChanged(const QString &value);
     void controlCenterBatteryChargingChanged(bool charging);
     void controlCenterBatteryPercentageChanged(const QString &value);
+    void controlCenterCpuPercentageChanged(int percent);
+    void controlCenterRamPercentageChanged(int percent);
+    void controlCenterDiskUsagePercentageChanged(int percent);
+    void controlCenterDiskUsageTextChanged(const QString &text);
+    void controlCenterBrightnessPercentageChanged(const QString &value);
+    void controlCenterBrightnessAvailableChanged(bool available);
     void controlCenterNetworkStateChanged(const QString &state);
     void controlCenterBluetoothEnabledChanged(bool enabled);
     void controlCenterBluetoothAvailableChanged(bool available);
     void controlCenterVolumeMutedChanged(bool muted);
     void controlCenterBatteryAvailableChanged(bool available);
     void controlCenterBatteryOnAcPowerChanged(bool onAcPower);
+    void controlCenterNightLightEnabledChanged(bool enabled);
+    void controlCenterNightLightAvailableChanged(bool available);
     void agendaInstalledChanged(bool installed);
     void weatherIconNameChanged(const QString &iconName);
     void weatherTemperatureChanged(const QString &temperature);
@@ -221,7 +262,10 @@ private:
     void refreshControlCenterNetworkState();
     void refreshControlCenterBluetoothState();
     void refreshControlCenterVolumeState();
+    void refreshControlCenterSystemResourcesState();
     void refreshControlCenterBatteryState();
+    void refreshControlCenterBrightnessState();
+    void refreshControlCenterNightLightState();
     void refreshControlCenterPowerProfileState();
 
     bool m_enabled = true;
@@ -247,12 +291,21 @@ private:
     bool m_controlCenterVolumeMuted = false;
     bool m_controlCenterBatteryCharging = false;
     QString m_controlCenterBatteryPercentage;
+    int m_controlCenterCpuPercentage = 0;
+    int m_controlCenterRamPercentage = 0;
+    int m_controlCenterDiskUsagePercentage = 0;
+    QString m_controlCenterDiskUsageText;
+    QString m_controlCenterBrightnessPercentage = QStringLiteral("0%");
+    bool m_controlCenterBrightnessAvailable = false;
     QString m_controlCenterNetworkState = QStringLiteral("offline");
     bool m_controlCenterBluetoothEnabled = false;
     bool m_controlCenterBluetoothAvailable = false;
     bool m_controlCenterBatteryAvailable = false;
     bool m_controlCenterBatteryOnAcPower = false;
+    bool m_controlCenterNightLightEnabled = false;
+    bool m_controlCenterNightLightAvailable = false;
     QString m_controlCenterPowerCommand = QStringLiteral("wlogout");
+    QString m_controlCenterDiskUsagePath = QStringLiteral("/");
     bool m_agendaInstalled = false;
     QString m_weatherIconName = QStringLiteral("weather-severe-alert");
     QString m_weatherTemperature = QStringLiteral("--°C");

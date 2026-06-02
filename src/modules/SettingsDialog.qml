@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Controls as QQC
 
 import org.mauikit.controls as Maui
 
@@ -8,6 +9,7 @@ Maui.SettingsDialog
     id: control
 
     property QtObject bridge
+    property var _diskUsageOptionsModel: []
 
     onAboutToShow:
     {
@@ -16,6 +18,8 @@ Maui.SettingsDialog
         _unitCombo.currentIndex = control.bridge && control.bridge.weatherTemperatureUnit === "fahrenheit" ? 1 : 0
         _refreshSpin.value = control.bridge ? control.bridge.weatherRefreshMinutes : 20
         _powerCommandField.text = control.bridge ? control.bridge.controlCenterPowerCommand : "wlogout"
+        _refreshDiskUsageOptions()
+        _syncDiskUsagePathCombo()
     }
 
     function _formattedCoordinate(value)
@@ -60,6 +64,37 @@ Maui.SettingsDialog
         bridge.controlCenterPowerCommand = command.length > 0 ? command : "wlogout"
     }
 
+    function _refreshDiskUsageOptions()
+    {
+        _diskUsageOptionsModel = control.bridge ? control.bridge.controlCenterDiskUsageOptions() : []
+    }
+
+    function _syncDiskUsagePathCombo()
+    {
+        if (!control.bridge)
+            return
+
+        const options = _diskUsageOptionsModel
+        const currentPath = control.bridge.controlCenterDiskUsagePath || "/"
+        for (let i = 0; i < options.length; ++i) {
+            if ((options[i].path || "/") === currentPath) {
+                _diskUsageCombo.currentIndex = i
+                return
+            }
+        }
+
+        if (options.length > 0)
+            _diskUsageCombo.currentIndex = 0
+    }
+
+    function _applyDiskUsagePath(path)
+    {
+        if (!bridge)
+            return
+
+        bridge.controlCenterDiskUsagePath = String(path || "/")
+    }
+
     Maui.SectionGroup
     {
         title: "Modules"
@@ -98,6 +133,57 @@ Maui.SettingsDialog
                 placeholderText: "wlogout"
                 selectByMouse: true
                 onEditingFinished: control._applyPowerCommand(text)
+            }
+        }
+
+        Maui.FlexSectionItem
+        {
+            label1.text: "Disk Usage Partition"
+            label2.text: "Choose the mounted partition the system resources card should monitor."
+
+            QQC.ComboBox
+            {
+                id: _diskUsageCombo
+                readonly property string _fallbackLabel: "Select Partition"
+                implicitWidth: Math.max(Maui.Style.units.gridUnit * 11, 260)
+                currentIndex: -1
+                enabled: _diskUsageOptionsModel.length > 0
+                model: _diskUsageOptionsModel
+                textRole: "display"
+                valueRole: "path"
+                displayText: currentIndex === -1 ? _fallbackLabel : currentText
+                delegate: QQC.ItemDelegate
+                {
+                    required property var modelData
+                    width: ListView.view ? ListView.view.width : _diskUsageCombo.width
+                    text: modelData && modelData.display ? modelData.display : (modelData && modelData.path ? modelData.path : "")
+                }
+                popup.width:
+                {
+                    const popupContentWidth = popup.contentItem ? popup.contentItem.implicitWidth : 0
+                    const popupFrameWidth = popup.leftPadding + popup.rightPadding
+                    return Math.max(_diskUsageCombo.width, popupContentWidth + popupFrameWidth)
+                }
+                Component.onCompleted:
+                {
+                    if (control.bridge)
+                        control._syncDiskUsagePathCombo()
+                }
+                Connections
+                {
+                    target: control.bridge
+                    enabled: !!control.bridge
+
+                    function onControlCenterDiskUsagePathChanged()
+                    {
+                        control._syncDiskUsagePathCombo()
+                    }
+                }
+                onActivated:
+                {
+                    if (currentIndex >= 0)
+                        control._applyDiskUsagePath(currentValue)
+                }
             }
         }
     }
@@ -155,18 +241,47 @@ Maui.SettingsDialog
             label1.text: "Temperature Unit"
             label2.text: "Select output units for weather values."
 
-            ComboBox
+            QQC.ComboBox
             {
                 id: _unitCombo
+                readonly property string _fallbackLabel: "Celsius"
                 implicitWidth: Math.max(Maui.Style.units.gridUnit * 7, 160)
+                currentIndex: -1
                 model: ["Celsius", "Fahrenheit"]
-                currentIndex: control.bridge && control.bridge.weatherTemperatureUnit === "fahrenheit" ? 1 : 0
-                onActivated: (index) =>
+                displayText: currentIndex === -1 ? _fallbackLabel : currentText
+                delegate: QQC.ItemDelegate
+                {
+                    required property string modelData
+                    width: ListView.view ? ListView.view.width : _unitCombo.width
+                    text: modelData
+                }
+                popup.width:
+                {
+                    const popupContentWidth = popup.contentItem ? popup.contentItem.implicitWidth : 0
+                    const popupFrameWidth = popup.leftPadding + popup.rightPadding
+                    return Math.max(_unitCombo.width, popupContentWidth + popupFrameWidth)
+                }
+                Component.onCompleted:
+                {
+                    if (control.bridge)
+                        _unitCombo.currentIndex = control.bridge.weatherTemperatureUnit === "fahrenheit" ? 1 : 0
+                }
+                Connections
+                {
+                    target: control.bridge
+                    enabled: !!control.bridge
+
+                    function onWeatherTemperatureUnitChanged()
+                    {
+                        _unitCombo.currentIndex = control.bridge.weatherTemperatureUnit === "fahrenheit" ? 1 : 0
+                    }
+                }
+                onActivated:
                 {
                     if (!control.bridge)
                         return
 
-                    control.bridge.weatherTemperatureUnit = index === 1 ? "fahrenheit" : "celsius"
+                    control.bridge.weatherTemperatureUnit = currentIndex === 1 ? "fahrenheit" : "celsius"
                 }
             }
         }

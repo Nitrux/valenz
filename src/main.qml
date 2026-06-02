@@ -165,6 +165,8 @@ Maui.ApplicationWindow
     readonly property string controlCenterVolumePercentageText: root.cleanText(valenzBridge ? valenzBridge.controlCenterVolumePercentage : "")
     readonly property bool controlCenterBatteryCharging: valenzBridge ? valenzBridge.controlCenterBatteryCharging : false
     readonly property string controlCenterBatteryPercentageText: root.cleanText(valenzBridge ? valenzBridge.controlCenterBatteryPercentage : "")
+    readonly property string controlCenterBrightnessPercentageText: root.cleanText(valenzBridge ? valenzBridge.controlCenterBrightnessPercentage : "")
+    readonly property bool controlCenterBrightnessAvailable: valenzBridge ? valenzBridge.controlCenterBrightnessAvailable : false
     readonly property string controlCenterNetworkState:
     {
         const state = root.cleanText(valenzBridge ? valenzBridge.controlCenterNetworkState : "offline").toLowerCase()
@@ -459,7 +461,12 @@ Maui.ApplicationWindow
                     MenuItem
                     {
                         text: "About"
-                        onTriggered: root.traceMenu("dialog/about")
+                        icon.name: "documentinfo"
+                        onTriggered:
+                        {
+                            root.traceMenu("dialog/about")
+                            Maui.App.aboutDialog()
+                        }
                     }
                 }
             }

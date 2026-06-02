@@ -49,6 +49,7 @@ constexpr auto kControlCenterVolumePercentageKey = "ControlCenter/volumePercenta
 constexpr auto kControlCenterBatteryStateKey = "ControlCenter/batteryState";
 constexpr auto kControlCenterBatteryPercentageKey = "ControlCenter/batteryPercentage";
 constexpr auto kControlCenterPowerCommandKey = "ControlCenter/powerCommand";
+constexpr auto kControlCenterDiskUsagePathKey = "ControlCenter/diskUsagePath";
 constexpr auto kWeatherLatitudeKey = "Weather/latitude";
 constexpr auto kWeatherLongitudeKey = "Weather/longitude";
 constexpr auto kWeatherTemperatureUnitKey = "Weather/temperatureUnit";
@@ -77,6 +78,7 @@ constexpr auto kLegacyControlCenterVolumePercentageKey = "controlCenter/volumePe
 constexpr auto kLegacyControlCenterBatteryStateKey = "controlCenter/batteryState";
 constexpr auto kLegacyControlCenterBatteryPercentageKey = "controlCenter/batteryPercentage";
 constexpr auto kLegacyControlCenterPowerCommandKey = "controlCenter/powerCommand";
+constexpr auto kLegacyControlCenterDiskUsagePathKey = "controlCenter/diskUsagePath";
 constexpr auto kWeatherRefreshMinMinutes = 5;
 constexpr auto kWeatherRefreshMaxMinutes = 180;
 
@@ -141,29 +143,8 @@ QString normalizeBatteryPercentage(const QString &value)
 
 QStringList normalizePowerProfiles(const QVariant &value)
 {
-    QStringList profiles;
-
-    if (value.metaType().id() == QMetaType::QStringList)
-        profiles = value.toStringList();
-    else
-        profiles = value.toString().split(QLatin1Char(','), Qt::SkipEmptyParts);
-
-    QStringList normalized;
-    normalized.reserve(profiles.size());
-
-    for (const QString &profile : profiles)
-    {
-        const QString trimmed = profile.trimmed();
-        if (trimmed.isEmpty() || normalized.contains(trimmed, Qt::CaseInsensitive))
-            continue;
-
-        normalized << trimmed;
-    }
-
-    if (normalized.isEmpty())
-        normalized << QStringLiteral("power-saver") << QStringLiteral("balanced") << QStringLiteral("performance");
-
-    return normalized;
+    Q_UNUSED(value)
+    return QStringList { QStringLiteral("performance"), QStringLiteral("balanced"), QStringLiteral("power-saver") };
 }
 
 QString normalizeCurrentPowerProfile(const QString &value, const QStringList &profiles)

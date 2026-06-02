@@ -106,6 +106,9 @@ Dialog
         if (raw.length === 0)
             return ""
 
+        if (raw.startsWith("qrc:/app/valenz/modules/"))
+            return raw.substring(raw.lastIndexOf("/") + 1)
+
         if (raw.startsWith("/"))
             return "file://" + raw
 

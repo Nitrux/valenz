@@ -82,6 +82,7 @@ void ValenzBridge::initializeConfig()
     ensureKey(QString::fromLatin1(kWeatherTemperatureUnitKey), QString(), "celsius");
     ensureKey(QString::fromLatin1(kWeatherRefreshMinutesKey), QString(), 20);
     ensureKey(QString::fromLatin1(kMprisAlwaysVisibleKey), QString(), false);
+    ensureKey(QString::fromLatin1(kControlCenterDiskUsagePathKey), QString::fromLatin1(kLegacyControlCenterDiskUsagePathKey), "/");
 
     userSettings.remove("ControlCenter/batteryIconName");
     userSettings.remove("controlCenter/batteryIconName");
@@ -108,6 +109,11 @@ void ValenzBridge::initializeConfig()
     m_controlCenterBatteryCharging = normalizeControlCenterBatteryCharging(userSettings.value(kControlCenterBatteryStateKey, "battery"));
     m_controlCenterBatteryPercentage = normalizeBatteryPercentage(userSettings.value(kControlCenterBatteryPercentageKey, "0%").toString());
     m_controlCenterPowerCommand = normalizePowerCommand(userSettings.value(kControlCenterPowerCommandKey, "wlogout").toString());
+    m_controlCenterDiskUsagePath = userSettings.value(kControlCenterDiskUsagePathKey, "/").toString().trimmed();
+    if (m_controlCenterDiskUsagePath.isEmpty())
+        m_controlCenterDiskUsagePath = QStringLiteral("/");
+    if (!m_controlCenterDiskUsagePath.startsWith(QLatin1Char('/')))
+        m_controlCenterDiskUsagePath.prepend(QLatin1Char('/'));
     m_mprisAlwaysVisible = userSettings.value(kMprisAlwaysVisibleKey, false).toBool();
 
 
@@ -138,6 +144,7 @@ void ValenzBridge::persistControlCenterState() const
     userSettings.setValue(kControlCenterBatteryStateKey, m_controlCenterBatteryCharging ? "charging" : "battery");
     userSettings.setValue(kControlCenterBatteryPercentageKey, m_controlCenterBatteryPercentage);
     userSettings.setValue(kControlCenterPowerCommandKey, m_controlCenterPowerCommand);
+    userSettings.setValue(kControlCenterDiskUsagePathKey, m_controlCenterDiskUsagePath);
     userSettings.sync();
 }
 
