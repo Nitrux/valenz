@@ -30,9 +30,9 @@ class ValenzBridge : public QObject
     Q_PROPERTY(QString focusedWindowIconName READ focusedWindowIconName WRITE setFocusedWindowIconName NOTIFY focusedWindowIconNameChanged FINAL)
     Q_PROPERTY(QString userRealName READ userRealName CONSTANT)
     Q_PROPERTY(QString controlCenterIconMode READ controlCenterIconMode WRITE setControlCenterIconMode NOTIFY controlCenterIconModeChanged FINAL)
-    Q_PROPERTY(QString prototypeNetworkState READ prototypeNetworkState WRITE setPrototypeNetworkState NOTIFY prototypeNetworkStateChanged FINAL)
-    Q_PROPERTY(QString prototypeBluetoothState READ prototypeBluetoothState WRITE setPrototypeBluetoothState NOTIFY prototypeBluetoothStateChanged FINAL)
-    Q_PROPERTY(QString prototypeVolumeState READ prototypeVolumeState WRITE setPrototypeVolumeState NOTIFY prototypeVolumeStateChanged FINAL)
+    Q_PROPERTY(QString controlCenterNetworkMode READ controlCenterNetworkMode WRITE setControlCenterNetworkMode NOTIFY controlCenterNetworkModeChanged FINAL)
+    Q_PROPERTY(QString controlCenterBluetoothState READ controlCenterBluetoothState WRITE setControlCenterBluetoothState NOTIFY controlCenterBluetoothStateChanged FINAL)
+    Q_PROPERTY(QString controlCenterVolumeState READ controlCenterVolumeState WRITE setControlCenterVolumeState NOTIFY controlCenterVolumeStateChanged FINAL)
     Q_PROPERTY(QStringList controlCenterPowerProfiles READ controlCenterPowerProfiles WRITE setControlCenterPowerProfiles NOTIFY controlCenterPowerProfilesChanged FINAL)
     Q_PROPERTY(QString controlCenterPowerProfileCurrent READ controlCenterPowerProfileCurrent WRITE setControlCenterPowerProfileCurrent NOTIFY controlCenterPowerProfileCurrentChanged FINAL)
     Q_PROPERTY(QString controlCenterVolumePercentage READ controlCenterVolumePercentage WRITE setControlCenterVolumePercentage NOTIFY controlCenterVolumePercentageChanged FINAL)
@@ -94,12 +94,12 @@ public:
     QString userRealName() const;
     QString controlCenterIconMode() const;
     void setControlCenterIconMode(const QString &mode);
-    QString prototypeNetworkState() const;
-    void setPrototypeNetworkState(const QString &state);
-    QString prototypeBluetoothState() const;
-    void setPrototypeBluetoothState(const QString &state);
-    QString prototypeVolumeState() const;
-    void setPrototypeVolumeState(const QString &state);
+    QString controlCenterNetworkMode() const;
+    void setControlCenterNetworkMode(const QString &state);
+    QString controlCenterBluetoothState() const;
+    void setControlCenterBluetoothState(const QString &state);
+    QString controlCenterVolumeState() const;
+    void setControlCenterVolumeState(const QString &state);
     QStringList controlCenterPowerProfiles() const;
     void setControlCenterPowerProfiles(const QStringList &profiles);
     QString controlCenterPowerProfileCurrent() const;
@@ -191,9 +191,9 @@ Q_SIGNALS:
     void controlCenterPowerCommandChanged(const QString &command);
     void controlCenterDiskUsagePathChanged(const QString &path);
     void controlCenterIconModeChanged(const QString &mode);
-    void prototypeNetworkStateChanged(const QString &state);
-    void prototypeBluetoothStateChanged(const QString &state);
-    void prototypeVolumeStateChanged(const QString &state);
+    void controlCenterNetworkModeChanged(const QString &state);
+    void controlCenterBluetoothStateChanged(const QString &state);
+    void controlCenterVolumeStateChanged(const QString &state);
     void controlCenterPowerProfilesChanged(const QStringList &profiles);
     void controlCenterPowerProfileCurrentChanged(const QString &profile);
     void controlCenterVolumePercentageChanged(const QString &value);
@@ -282,9 +282,9 @@ private:
     QString m_focusedWindowIconName;
     QString m_userRealName;
     QString m_controlCenterIconMode;
-    QString m_prototypeNetworkState;
-    QString m_prototypeBluetoothState;
-    QString m_prototypeVolumeState;
+    QString m_controlCenterNetworkMode;
+    QString m_controlCenterBluetoothState;
+    QString m_controlCenterVolumeState;
     QStringList m_controlCenterPowerProfiles;
     QString m_controlCenterPowerProfileCurrent;
     QString m_controlCenterVolumePercentage;

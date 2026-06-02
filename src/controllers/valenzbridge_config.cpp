@@ -50,9 +50,6 @@ void ValenzBridge::initializeConfig()
     };
     ensureKey(QString::fromLatin1(kFocusedWindowIconNameKey), QString::fromLatin1(kLegacyFocusedWindowIconNameKey), "application-x-executable");
     ensureKey(QString::fromLatin1(kControlCenterIconModeKey), QString::fromLatin1(kLegacyControlCenterIconModeKey), "auto");
-    ensureKey(QString::fromLatin1(kControlCenterPrototypeNetworkStateKey), QString::fromLatin1(kLegacyControlCenterPrototypeNetworkStateKey), "auto");
-    ensureKey(QString::fromLatin1(kControlCenterPrototypeBluetoothStateKey), QString::fromLatin1(kLegacyControlCenterPrototypeBluetoothStateKey), "auto");
-    ensureKey(QString::fromLatin1(kControlCenterPrototypeVolumeStateKey), QString::fromLatin1(kLegacyControlCenterPrototypeVolumeStateKey), "auto");
     ensureKey(QString::fromLatin1(kControlCenterPowerProfilesKey), QString::fromLatin1(kLegacyControlCenterPowerProfilesKey),
               QStringList { QStringLiteral("power-saver"), QStringLiteral("balanced"), QStringLiteral("performance") });
     ensureKey(QString::fromLatin1(kControlCenterPowerProfileCurrentKey), QString::fromLatin1(kLegacyControlCenterPowerProfileCurrentKey), "balanced");
@@ -87,7 +84,6 @@ void ValenzBridge::initializeConfig()
     userSettings.remove("ControlCenter/batteryIconName");
     userSettings.remove("controlCenter/batteryIconName");
     userSettings.remove("ControlCenter/powerProfileIconName");
-    userSettings.remove("controlCenter/powerProfileIconName");
     userSettings.remove("Window/focusedWindowTitle");
     userSettings.remove("window/title");
 
@@ -96,9 +92,9 @@ void ValenzBridge::initializeConfig()
     m_focusedWindowIconName = userSettings.value(kFocusedWindowIconNameKey, "application-x-executable").toString();
     m_userRealName = systemUserRealName();
     m_controlCenterIconMode = userSettings.value(kControlCenterIconModeKey, "auto").toString();
-    m_prototypeNetworkState = normalizePrototypeNetworkState(userSettings.value(kControlCenterPrototypeNetworkStateKey, "auto").toString());
-    m_prototypeBluetoothState = normalizePrototypeBluetoothState(userSettings.value(kControlCenterPrototypeBluetoothStateKey, "auto").toString());
-    m_prototypeVolumeState = normalizePrototypeVolumeState(userSettings.value(kControlCenterPrototypeVolumeStateKey, "auto").toString());
+    m_controlCenterNetworkMode = QStringLiteral("auto");
+    m_controlCenterBluetoothState = QStringLiteral("auto");
+    m_controlCenterVolumeState = QStringLiteral("auto");
     m_controlCenterPowerProfiles = normalizePowerProfiles(userSettings.value(kControlCenterPowerProfilesKey,
                                                                              QStringList { QStringLiteral("power-saver"),
                                                                                            QStringLiteral("balanced"),
@@ -135,9 +131,6 @@ void ValenzBridge::persistControlCenterState() const
 
     QSettings userSettings(m_userConfigPath, QSettings::IniFormat);
     userSettings.setValue(kControlCenterIconModeKey, m_controlCenterIconMode);
-    userSettings.setValue(kControlCenterPrototypeNetworkStateKey, m_prototypeNetworkState);
-    userSettings.setValue(kControlCenterPrototypeBluetoothStateKey, m_prototypeBluetoothState);
-    userSettings.setValue(kControlCenterPrototypeVolumeStateKey, m_prototypeVolumeState);
     userSettings.setValue(kControlCenterPowerProfilesKey, m_controlCenterPowerProfiles);
     userSettings.setValue(kControlCenterPowerProfileCurrentKey, m_controlCenterPowerProfileCurrent);
     userSettings.setValue(kControlCenterVolumePercentageKey, m_controlCenterVolumePercentage);

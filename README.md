@@ -1,10 +1,12 @@
-# Valenz | [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+# Valenz
 
-Valenz is a status bar for Nitrux built with MauiKit. Phasellus non eros mollis, gravida ipsum et, posuere sapien. Etiam massa sem, ornare quis ante ac, porta sagittis ligula. Vestibulum auctor metus quis tortor vehicula ultricies. 
+Valenz is a QML-based status bar designed for Wayland compositors.
 
 ## Features
 
-- n/a
+- Live media, workspace, tray, and notification controls.
+- Control Center indicators for network, Bluetooth, volume, battery, power profile, and night light.
+- Weather, calendar, and system resource widgets.
 
 ## Requirements
 
@@ -14,25 +16,14 @@ Valenz is a status bar for Nitrux built with MauiKit. Phasellus non eros mollis,
 
 ```
 mauikit (>= 4.0.3)
+mauikit-system (>= 4.0.3)
 qt6 (>= 6.9.2)
 ```
 
-# Usage
+## Licensing
 
-```sh
-foo
-```
+The license for this repository and its contents is BSD-3-Clause.
 
-# Licensing
+## Issues
 
-The license for this repository and its contents is **BSD-3-Clause**.
-
-# Issues
-
-If you find problems with the contents of this repository, please create an issue and use the **🐞 Bug report** template.
-
-## Submitting a bug report
-
-Before submitting a bug, you should look at the [existing bug reports](https://github.com/Nitrux/valenz/issues) to verify that no one has reported the bug already.
-
-©2026 Nitrux Latinoamericana S.C.
+If you find problems with the contents of this repository, please create an issue and use the Bug report template.

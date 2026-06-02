@@ -9,7 +9,7 @@ import org.mauikit.controls as Maui
 Maui.ApplicationWindow
 {
     id: root
-    title: "Valenz Prototype"
+    title: "Valenz"
     color: "transparent"
     background: null
 
@@ -56,80 +56,6 @@ Maui.ApplicationWindow
         return Screen.pixelDensity * 25.4
     }
 
-    function controlCenterPrototypeNetworkState()
-    {
-        const state = String(valenzBridge ? valenzBridge.prototypeNetworkState : "auto").trim().toLowerCase()
-        switch (state)
-        {
-            case "wired":
-            case "wireless":
-            case "hotspot":
-            case "vpn":
-            case "cellular":
-            case "offline":
-                return state
-            default:
-                return "auto"
-        }
-    }
-
-    function controlCenterPrototypeBluetoothState()
-    {
-        const state = String(valenzBridge ? valenzBridge.prototypeBluetoothState : "auto").trim().toLowerCase()
-        return (state === "on" || state === "off") ? state : "auto"
-    }
-
-    function controlCenterPrototypeVolumeState()
-    {
-        const state = String(valenzBridge ? valenzBridge.prototypeVolumeState : "auto").trim().toLowerCase()
-        switch (state)
-        {
-            case "muted":
-            case "low":
-            case "medium":
-            case "high":
-                return state
-            default:
-                return "auto"
-        }
-    }
-
-    function controlCenterButtonGlyph(iconName)
-    {
-        switch (iconName)
-        {
-            // Cask-style FA glyphs (4-hex escapes) render consistently in QML.
-            case "network-wired": return "\uF0E8"
-            case "network-wireless": return "\uF1EB"
-            case "network-wireless-hotspot": return "\uF1EB"
-            case "network-vpn": return "\uF023"
-            case "network-cellular-3g": return "\uF10B"
-            case "network-disconnect": return "\uF127"
-            case "bluetooth-active": return "\uF294"
-            case "bluetooth-disabled": return "\uF293"
-            case "audio-volume-muted": return "\uF026"
-            case "audio-volume-high": return "\uF028"
-            case "audio-volume-medium": return "\uF027"
-            case "audio-volume-low": return "\uF026"
-            case "battery": return "\uF240"
-            case "battery-full": return "\uF240"
-            case "battery-100": return "\uF240"
-            case "battery-good": return "\uF241"
-            case "battery-080": return "\uF241"
-            case "battery-medium": return "\uF242"
-            case "battery-060": return "\uF242"
-            case "battery-040": return "\uF242"
-            case "battery-low": return "\uF243"
-            case "battery-caution": return "\uF243"
-            case "battery-020": return "\uF243"
-            case "battery-empty": return "\uF244"
-            case "battery-missing": return "\uF244"
-            case "battery-000": return "\uF244"
-            case "battery-charging": return "\uEEA1"
-            case "battery-full-charging": return "\uEEA1"
-            case "battery-good-charging": return "\uEEA1"
-            case "battery-medium-charging": return "\uEEA1"
-            case "battery-low-charging": return "\uEEA1"
             case "battery-caution-charging": return "\uEEA1"
             case "battery-charging-080": return "\uEEA1"
             case "battery-charging-060": return "\uEEA1"

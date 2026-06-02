@@ -35,21 +35,16 @@
 #include <cmath>
 #include <utility>
 
-namespace
-{
-constexpr auto kDistroConfigPath = "/etc/valenz/valenz.conf";
-constexpr auto kFocusedWindowIconNameKey = "Window/focusedWindowIconName";
-constexpr auto kControlCenterIconModeKey = "ControlCenter/iconMode";
-constexpr auto kControlCenterPrototypeNetworkStateKey = "ControlCenter/prototypeNetworkState";
-constexpr auto kControlCenterPrototypeBluetoothStateKey = "ControlCenter/prototypeBluetoothState";
-constexpr auto kControlCenterPrototypeVolumeStateKey = "ControlCenter/prototypeVolumeState";
-constexpr auto kControlCenterPowerProfilesKey = "ControlCenter/powerProfiles";
-constexpr auto kControlCenterPowerProfileCurrentKey = "ControlCenter/powerProfileCurrent";
-constexpr auto kControlCenterVolumePercentageKey = "ControlCenter/volumePercentage";
 constexpr auto kControlCenterBatteryStateKey = "ControlCenter/batteryState";
 constexpr auto kControlCenterBatteryPercentageKey = "ControlCenter/batteryPercentage";
 constexpr auto kControlCenterPowerCommandKey = "ControlCenter/powerCommand";
 constexpr auto kControlCenterDiskUsagePathKey = "ControlCenter/diskUsagePath";
+constexpr auto kDistroConfigPath = "/etc/valenz/valenz.conf";
+constexpr auto kFocusedWindowIconNameKey = "Window/focusedWindowIconName";
+constexpr auto kControlCenterIconModeKey = "ControlCenter/iconMode";
+constexpr auto kControlCenterPowerProfilesKey = "ControlCenter/powerProfiles";
+constexpr auto kControlCenterPowerProfileCurrentKey = "ControlCenter/powerProfileCurrent";
+constexpr auto kControlCenterVolumePercentageKey = "ControlCenter/volumePercentage";
 constexpr auto kWeatherLatitudeKey = "Weather/latitude";
 constexpr auto kWeatherLongitudeKey = "Weather/longitude";
 constexpr auto kWeatherTemperatureUnitKey = "Weather/temperatureUnit";
@@ -69,9 +64,6 @@ constexpr auto kMprisPlaybackTickMs = 250;
 
 constexpr auto kLegacyFocusedWindowIconNameKey = "window/iconName";
 constexpr auto kLegacyControlCenterIconModeKey = "controlCenter/iconMode";
-constexpr auto kLegacyControlCenterPrototypeNetworkStateKey = "controlCenter/prototypeNetworkState";
-constexpr auto kLegacyControlCenterPrototypeBluetoothStateKey = "controlCenter/prototypeBluetoothState";
-constexpr auto kLegacyControlCenterPrototypeVolumeStateKey = "controlCenter/prototypeVolumeState";
 constexpr auto kLegacyControlCenterPowerProfilesKey = "controlCenter/powerProfiles";
 constexpr auto kLegacyControlCenterPowerProfileCurrentKey = "controlCenter/powerProfileCurrent";
 constexpr auto kLegacyControlCenterVolumePercentageKey = "controlCenter/volumePercentage";
@@ -82,7 +74,7 @@ constexpr auto kLegacyControlCenterDiskUsagePathKey = "controlCenter/diskUsagePa
 constexpr auto kWeatherRefreshMinMinutes = 5;
 constexpr auto kWeatherRefreshMaxMinutes = 180;
 
-QString normalizePrototypeNetworkState(const QString &value)
+QString normalizeControlCenterNetworkMode(const QString &value)
 {
     const QString normalized = value.trimmed().toLower();
     if (normalized == QLatin1String("wired") || normalized == QLatin1String("wireless")
@@ -96,7 +88,7 @@ QString normalizePrototypeNetworkState(const QString &value)
     return QStringLiteral("auto");
 }
 
-QString normalizePrototypeBluetoothState(const QString &value)
+QString normalizeControlCenterBluetoothState(const QString &value)
 {
     const QString normalized = value.trimmed().toLower();
     if (normalized == QLatin1String("on") || normalized == QLatin1String("off")
@@ -108,7 +100,7 @@ QString normalizePrototypeBluetoothState(const QString &value)
     return QStringLiteral("auto");
 }
 
-QString normalizePrototypeVolumeState(const QString &value)
+QString normalizeControlCenterVolumeState(const QString &value)
 {
     const QString normalized = value.trimmed().toLower();
     if (normalized == QLatin1String("muted") || normalized == QLatin1String("low")

@@ -129,13 +129,13 @@ Dialog
 
     function _networkModeTitle()
     {
-        const state = controlCenter.bridge ? String(controlCenter.bridge.prototypeNetworkState).toLowerCase() : "wireless"
+        const state = controlCenter.bridge ? String(controlCenter.bridge.controlCenterNetworkMode).toLowerCase() : "wireless"
         return state === "wired" ? "Wired" : "WiFi"
     }
 
     function _networkModeSubtitle()
     {
-        const state = controlCenter.bridge ? String(controlCenter.bridge.prototypeNetworkState).toLowerCase() : "wireless"
+        const state = controlCenter.bridge ? String(controlCenter.bridge.controlCenterNetworkMode).toLowerCase() : "wireless"
         if (state === "offline")
             return "Off"
         if (state === "wired")
@@ -146,7 +146,7 @@ Dialog
             return "VPN"
         if (state === "cellular")
             return "Cellular"
-        return "Home_Network"
+        return "Connected"
     }
 
     function _commitVolumeFromSlider()
@@ -509,7 +509,7 @@ Dialog
 
                             Switch
                             {
-                                checked: controlCenter.bridge ? controlCenter.bridge.prototypeNetworkState !== "offline" : true
+                                checked: controlCenter.bridge ? controlCenter.bridge.controlCenterNetworkMode !== "offline" : true
                                 onToggled:
                                 {
                                     if (!controlCenter.bridge)
@@ -517,12 +517,12 @@ Dialog
 
                                     if (checked)
                                     {
-                                        const state = String(controlCenter.bridge.prototypeNetworkState).toLowerCase()
-                                        controlCenter.bridge.prototypeNetworkState = state === "wired" ? "wired" : "wireless"
+                                        const state = String(controlCenter.bridge.controlCenterNetworkMode).toLowerCase()
+                                        controlCenter.bridge.controlCenterNetworkMode = state === "wired" ? "wired" : "wireless"
                                     }
                                     else
                                     {
-                                        controlCenter.bridge.prototypeNetworkState = "offline"
+                                        controlCenter.bridge.controlCenterNetworkMode = "offline"
                                     }
                                 }
                             }
@@ -565,7 +565,7 @@ Dialog
                                 }
                                 Label
                                 {
-                                    text: controlCenter.bridge && !controlCenter.bridge.controlCenterBluetoothAvailable ? "Unavailable" : (controlCenter.bridge && controlCenter.bridge.prototypeBluetoothState === "off" ? "Off" : "On")
+                                    text: controlCenter.bridge && !controlCenter.bridge.controlCenterBluetoothAvailable ? "Unavailable" : (controlCenter.bridge && controlCenter.bridge.controlCenterBluetoothState === "off" ? "Off" : "On")
                                     color: Maui.Theme.disabledTextColor
                                 }
                             }
@@ -574,11 +574,11 @@ Dialog
 
                             Switch
                             {
-                                checked: controlCenter.bridge ? (controlCenter.bridge.controlCenterBluetoothAvailable && controlCenter.bridge.prototypeBluetoothState !== "off") : false
+                                checked: controlCenter.bridge ? (controlCenter.bridge.controlCenterBluetoothAvailable && controlCenter.bridge.controlCenterBluetoothState !== "off") : false
                                 onToggled:
                                 {
                                     if (controlCenter.bridge)
-                                        controlCenter.bridge.prototypeBluetoothState = checked ? "on" : "off"
+                                        controlCenter.bridge.controlCenterBluetoothState = checked ? "on" : "off"
                                 }
                             }
                         }

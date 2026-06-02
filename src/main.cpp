@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
 
     // Ensure MauiKit core is initialized so Maui QML resources are available.
     MauiApp::instance();
-    // TODO: Replace this placeholder with a Valenz-specific app icon.
+    // TODO: Replace this themed icon with a Valenz-specific asset later.
     MauiApp::instance()->setIconName(QStringLiteral("preferences-system-windows"));
 
     QQmlApplicationEngine engine;

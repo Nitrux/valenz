@@ -342,52 +342,52 @@ void ValenzBridge::setControlCenterIconMode(const QString &mode)
     Q_EMIT controlCenterIconModeChanged(m_controlCenterIconMode);
 }
 
-QString ValenzBridge::prototypeNetworkState() const
+QString ValenzBridge::controlCenterNetworkMode() const
 {
-    return m_prototypeNetworkState;
+    return m_controlCenterNetworkMode;
 }
 
-void ValenzBridge::setPrototypeNetworkState(const QString &state)
+void ValenzBridge::setControlCenterNetworkMode(const QString &state)
 {
-    const QString normalized = normalizePrototypeNetworkState(state);
-    if (m_prototypeNetworkState == normalized)
+    const QString normalized = normalizeControlCenterNetworkMode(state);
+    if (m_controlCenterNetworkMode == normalized)
         return;
 
-    m_prototypeNetworkState = normalized;
+    m_controlCenterNetworkMode = normalized;
     persistControlCenterState();
-    Q_EMIT prototypeNetworkStateChanged(m_prototypeNetworkState);
+    Q_EMIT controlCenterNetworkModeChanged(m_controlCenterNetworkMode);
 }
 
-QString ValenzBridge::prototypeBluetoothState() const
+QString ValenzBridge::controlCenterBluetoothState() const
 {
-    return m_prototypeBluetoothState;
+    return m_controlCenterBluetoothState;
 }
 
-void ValenzBridge::setPrototypeBluetoothState(const QString &state)
+void ValenzBridge::setControlCenterBluetoothState(const QString &state)
 {
-    const QString normalized = normalizePrototypeBluetoothState(state);
-    if (m_prototypeBluetoothState == normalized)
+    const QString normalized = normalizeControlCenterBluetoothState(state);
+    if (m_controlCenterBluetoothState == normalized)
         return;
 
-    m_prototypeBluetoothState = normalized;
+    m_controlCenterBluetoothState = normalized;
     persistControlCenterState();
-    Q_EMIT prototypeBluetoothStateChanged(m_prototypeBluetoothState);
+    Q_EMIT controlCenterBluetoothStateChanged(m_controlCenterBluetoothState);
 }
 
-QString ValenzBridge::prototypeVolumeState() const
+QString ValenzBridge::controlCenterVolumeState() const
 {
-    return m_prototypeVolumeState;
+    return m_controlCenterVolumeState;
 }
 
-void ValenzBridge::setPrototypeVolumeState(const QString &state)
+void ValenzBridge::setControlCenterVolumeState(const QString &state)
 {
-    const QString normalized = normalizePrototypeVolumeState(state);
-    if (m_prototypeVolumeState == normalized)
+    const QString normalized = normalizeControlCenterVolumeState(state);
+    if (m_controlCenterVolumeState == normalized)
         return;
 
-    m_prototypeVolumeState = normalized;
+    m_controlCenterVolumeState = normalized;
     persistControlCenterState();
-    Q_EMIT prototypeVolumeStateChanged(m_prototypeVolumeState);
+    Q_EMIT controlCenterVolumeStateChanged(m_controlCenterVolumeState);
 }
 
 QStringList ValenzBridge::controlCenterPowerProfiles() const
@@ -583,7 +583,7 @@ QString ValenzBridge::controlCenterNetworkState() const
 
 void ValenzBridge::setControlCenterNetworkState(const QString &state)
 {
-    const QString normalized = normalizePrototypeNetworkState(state);
+    const QString normalized = normalizeControlCenterNetworkMode(state);
     if (m_controlCenterNetworkState == normalized)
         return;
 
