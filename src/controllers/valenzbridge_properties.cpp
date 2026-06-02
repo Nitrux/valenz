@@ -322,6 +322,11 @@ void ValenzBridge::setFocusedWindowIconName(const QString &iconName)
     Q_EMIT focusedWindowIconNameChanged(m_focusedWindowIconName);
 }
 
+QString ValenzBridge::userRealName() const
+{
+    return m_userRealName;
+}
+
 QString ValenzBridge::controlCenterIconMode() const
 {
     return m_controlCenterIconMode;
@@ -499,6 +504,20 @@ void ValenzBridge::setControlCenterBluetoothEnabled(bool enabled)
     Q_EMIT controlCenterBluetoothEnabledChanged(m_controlCenterBluetoothEnabled);
 }
 
+bool ValenzBridge::controlCenterBluetoothAvailable() const
+{
+    return m_controlCenterBluetoothAvailable;
+}
+
+void ValenzBridge::setControlCenterBluetoothAvailable(bool available)
+{
+    if (m_controlCenterBluetoothAvailable == available)
+        return;
+
+    m_controlCenterBluetoothAvailable = available;
+    Q_EMIT controlCenterBluetoothAvailableChanged(m_controlCenterBluetoothAvailable);
+}
+
 bool ValenzBridge::controlCenterVolumeMuted() const
 {
     return m_controlCenterVolumeMuted;
@@ -539,6 +558,22 @@ void ValenzBridge::setControlCenterBatteryOnAcPower(bool onAcPower)
 
     m_controlCenterBatteryOnAcPower = onAcPower;
     Q_EMIT controlCenterBatteryOnAcPowerChanged(m_controlCenterBatteryOnAcPower);
+}
+
+QString ValenzBridge::controlCenterPowerCommand() const
+{
+    return m_controlCenterPowerCommand;
+}
+
+void ValenzBridge::setControlCenterPowerCommand(const QString &command)
+{
+    const QString normalized = normalizePowerCommand(command);
+    if (m_controlCenterPowerCommand == normalized)
+        return;
+
+    m_controlCenterPowerCommand = normalized;
+    persistControlCenterState();
+    Q_EMIT controlCenterPowerCommandChanged(m_controlCenterPowerCommand);
 }
 
 void ValenzBridge::trace(const QString &source, const QString &action, const QString &detail)

@@ -15,6 +15,7 @@ Maui.SettingsDialog
         _longitudeField.text = control._formattedCoordinate(control.bridge ? control.bridge.weatherLongitude : 0)
         _unitCombo.currentIndex = control.bridge && control.bridge.weatherTemperatureUnit === "fahrenheit" ? 1 : 0
         _refreshSpin.value = control.bridge ? control.bridge.weatherRefreshMinutes : 20
+        _powerCommandField.text = control.bridge ? control.bridge.controlCenterPowerCommand : "wlogout"
     }
 
     function _formattedCoordinate(value)
@@ -50,6 +51,15 @@ Maui.SettingsDialog
         bridge.weatherLongitude = parsed
     }
 
+    function _applyPowerCommand(text)
+    {
+        if (!bridge)
+            return
+
+        const command = String(text).trim()
+        bridge.controlCenterPowerCommand = command.length > 0 ? command : "wlogout"
+    }
+
     Maui.SectionGroup
     {
         title: "Modules"
@@ -67,6 +77,27 @@ Maui.SettingsDialog
                     if (control.bridge)
                         control.bridge.mprisAlwaysVisible = checked
                 }
+            }
+        }
+    }
+
+    Maui.SectionGroup
+    {
+        title: "Control Center"
+
+        Maui.FlexSectionItem
+        {
+            label1.text: "Power Command"
+            label2.text: "Command executed when the Power button is pressed. Defaults to wlogout."
+
+            Maui.TextField
+            {
+                id: _powerCommandField
+                implicitWidth: Math.max(Maui.Style.units.gridUnit * 11, 260)
+                text: control.bridge ? control.bridge.controlCenterPowerCommand : "wlogout"
+                placeholderText: "wlogout"
+                selectByMouse: true
+                onEditingFinished: control._applyPowerCommand(text)
             }
         }
     }

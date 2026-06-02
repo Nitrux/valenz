@@ -139,6 +139,7 @@ Maui.ApplicationWindow
             case "power-profile-balanced": return "\uEEB2"
             case "power-profile-power-saver": return "\uF06C"
             case "notifications": return "\uF0F3"
+            case "notifications-disabled": return "\uF0A2"
             default: return "\uF128"
         }
     }
@@ -170,6 +171,7 @@ Maui.ApplicationWindow
         return (state === "wired" || state === "wireless" || state === "offline") ? state : "offline"
     }
     readonly property bool controlCenterBluetoothEnabled: valenzBridge ? valenzBridge.controlCenterBluetoothEnabled : false
+    readonly property bool controlCenterBluetoothAvailable: valenzBridge ? valenzBridge.controlCenterBluetoothAvailable : false
     readonly property bool controlCenterVolumeMuted: valenzBridge ? valenzBridge.controlCenterVolumeMuted : false
     readonly property bool controlCenterBatteryAvailable: valenzBridge ? valenzBridge.controlCenterBatteryAvailable : false
     readonly property bool controlCenterBatteryOnAcPower: valenzBridge ? valenzBridge.controlCenterBatteryOnAcPower : false
@@ -258,6 +260,7 @@ Maui.ApplicationWindow
         anchorButton: _controlCenterButton
         rootWindow: root
         bridge: valenzBridge
+        notificationsControllerRef: notificationsController
     }
 
     NotificationsCenter
@@ -303,6 +306,7 @@ Maui.ApplicationWindow
 
         function onTransientNotification(id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey)
         {
+            console.log("main.onTransientNotification", id, sourceName, "dnd=", notificationsController ? notificationsController.dndEnabled : false, "centerVisible=", _notificationsCenterPopup.visible, "bubbleVisible=", _notificationsBubble.visible)
             if (_notificationsCenterPopup.visible)
                 return
 
@@ -408,6 +412,7 @@ Maui.ApplicationWindow
                 useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
                 networkIconName: root.controlCenterNetworkIconName
                 bluetoothIconName: root.controlCenterBluetoothIconName
+                bluetoothAvailable: root.controlCenterBluetoothAvailable
                 volumeIconName: root.controlCenterVolumeIconName
                 volumePercentageText: root.controlCenterVolumePercentageText
                 batteryIconName: root.controlCenterBatteryIconName

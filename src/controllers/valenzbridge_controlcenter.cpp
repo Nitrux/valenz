@@ -118,11 +118,17 @@ QString networkStateFromNmcliStatus()
     return QStringLiteral("offline");
 }
 
-bool bluetoothPoweredFromRfkill()
+bool bluetoothPoweredFromRfkill(bool *available)
 {
+    if (available)
+        *available = false;
+
     QString output;
     if (!runCommandText(QStringLiteral("rfkill"), QStringList { QStringLiteral("list"), QStringLiteral("bluetooth") }, &output))
         return false;
+
+    if (available)
+        *available = true;
 
     if (output.contains(QStringLiteral("Soft blocked: yes"), Qt::CaseInsensitive))
         return false;
@@ -175,16 +181,26 @@ void ValenzBridge::refreshControlCenterNetworkState()
 
 void ValenzBridge::refreshControlCenterBluetoothState()
 {
-    QString output;
-    if (runCommandText(QStringLiteral("bluetoothctl"), QStringList { QStringLiteral("show") }, &output))
+    QString listOutput;
+    if (!runCommandText(QStringLiteral("bluetoothctl"), QStringList { QStringLiteral("list") }, &listOutput) || listOutput.trimmed().isEmpty())
     {
-        const bool powered = output.contains(QStringLiteral("Powered: yes"), Qt::CaseInsensitive);
-        setControlCenterBluetoothEnabled(powered);
+        setControlCenterBluetoothAvailable(false);
+        setControlCenterBluetoothEnabled(false);
         return;
     }
 
-    setControlCenterBluetoothEnabled(bluetoothPoweredFromRfkill());
+    setControlCenterBluetoothAvailable(true);
+
+    QString showOutput;
+    if (runCommandText(QStringLiteral("bluetoothctl"), QStringList { QStringLiteral("show") }, &showOutput))
+    {
+        setControlCenterBluetoothEnabled(showOutput.contains(QStringLiteral("Powered: yes"), Qt::CaseInsensitive));
+        return;
+    }
+
+    setControlCenterBluetoothEnabled(false);
 }
+
 
 void ValenzBridge::refreshControlCenterVolumeState()
 {
@@ -209,6 +225,16 @@ void ValenzBridge::refreshControlCenterVolumeState()
 
     setControlCenterVolumeMuted(muted);
     setControlCenterVolumePercentage(QStringLiteral("%1%").arg(percent));
+}
+
+void ValenzBridge::executeControlCenterPowerCommand()
+{
+    const QString command = normalizePowerCommand(m_controlCenterPowerCommand);
+    if (QProcess::startDetached(QStringLiteral("/bin/sh"), QStringList { QStringLiteral("-lc"), command }))
+        return;
+
+    if (command.compare(QStringLiteral("wlogout"), Qt::CaseInsensitive) != 0)
+        QProcess::startDetached(QStringLiteral("/bin/sh"), QStringList { QStringLiteral("-lc"), QStringLiteral("wlogout") });
 }
 
 void ValenzBridge::refreshControlCenterBatteryState()

@@ -76,6 +76,7 @@ void ValenzBridge::initializeConfig()
     }
 
     ensureKey(QString::fromLatin1(kControlCenterBatteryPercentageKey), QString::fromLatin1(kLegacyControlCenterBatteryPercentageKey), "0%");
+    ensureKey(QString::fromLatin1(kControlCenterPowerCommandKey), QString::fromLatin1(kLegacyControlCenterPowerCommandKey), "wlogout");
     ensureKey(QString::fromLatin1(kWeatherLatitudeKey), QString(), 40.7128);
     ensureKey(QString::fromLatin1(kWeatherLongitudeKey), QString(), -74.0060);
     ensureKey(QString::fromLatin1(kWeatherTemperatureUnitKey), QString(), "celsius");
@@ -92,6 +93,7 @@ void ValenzBridge::initializeConfig()
     userSettings.sync();
     m_focusedWindowTitle.clear();
     m_focusedWindowIconName = userSettings.value(kFocusedWindowIconNameKey, "application-x-executable").toString();
+    m_userRealName = systemUserRealName();
     m_controlCenterIconMode = userSettings.value(kControlCenterIconModeKey, "auto").toString();
     m_prototypeNetworkState = normalizePrototypeNetworkState(userSettings.value(kControlCenterPrototypeNetworkStateKey, "auto").toString());
     m_prototypeBluetoothState = normalizePrototypeBluetoothState(userSettings.value(kControlCenterPrototypeBluetoothStateKey, "auto").toString());
@@ -105,6 +107,7 @@ void ValenzBridge::initializeConfig()
     m_controlCenterVolumePercentage = normalizeBatteryPercentage(userSettings.value(kControlCenterVolumePercentageKey, "50%").toString());
     m_controlCenterBatteryCharging = normalizeControlCenterBatteryCharging(userSettings.value(kControlCenterBatteryStateKey, "battery"));
     m_controlCenterBatteryPercentage = normalizeBatteryPercentage(userSettings.value(kControlCenterBatteryPercentageKey, "0%").toString());
+    m_controlCenterPowerCommand = normalizePowerCommand(userSettings.value(kControlCenterPowerCommandKey, "wlogout").toString());
     m_mprisAlwaysVisible = userSettings.value(kMprisAlwaysVisibleKey, false).toBool();
 
 
@@ -134,6 +137,7 @@ void ValenzBridge::persistControlCenterState() const
     userSettings.setValue(kControlCenterVolumePercentageKey, m_controlCenterVolumePercentage);
     userSettings.setValue(kControlCenterBatteryStateKey, m_controlCenterBatteryCharging ? "charging" : "battery");
     userSettings.setValue(kControlCenterBatteryPercentageKey, m_controlCenterBatteryPercentage);
+    userSettings.setValue(kControlCenterPowerCommandKey, m_controlCenterPowerCommand);
     userSettings.sync();
 }
 

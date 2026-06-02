@@ -2,6 +2,7 @@
 #include "valenzbridge_p.h"
 
 #include <QDBusConnection>
+#include <QDebug>
 #include <QDBusMessage>
 #include <QStringList>
 #include <QTimer>
@@ -222,14 +223,19 @@ void NotificationsController::refreshTimestamps()
 void NotificationsController::setDndEnabled(bool enabled)
 {
     if (m_dndEnabled == enabled)
+    {
+        qDebug().noquote() << "NotificationsController::setDndEnabled unchanged" << enabled;
         return;
+    }
 
+    qDebug().noquote() << "NotificationsController::setDndEnabled" << m_dndEnabled << "->" << enabled;
     m_dndEnabled = enabled;
     Q_EMIT dndEnabledChanged(m_dndEnabled);
 }
 
 void NotificationsController::toggleDnd()
 {
+    qDebug().noquote() << "NotificationsController::toggleDnd" << m_dndEnabled << "->" << !m_dndEnabled;
     setDndEnabled(!m_dndEnabled);
 }
 
@@ -243,9 +249,6 @@ uint NotificationsController::Notify(const QString &appName,
                                      int timeout)
 {
     Q_UNUSED(timeout)
-
-    if (m_dndEnabled)
-        return 0;
 
     NotificationEntry entry;
     entry.id = replacesId > 0 ? replacesId : m_nextId++;
@@ -269,11 +272,16 @@ uint NotificationsController::Notify(const QString &appName,
     entry.actionKey = chooseActionKey(actions);
 
     const int replaceRow = replacesId > 0 ? indexOfId(replacesId) : -1;
+    const bool suppressTransient = m_dndEnabled;
+    if (suppressTransient)
+        qDebug().noquote() << "NotificationsController::Notify stored but bubble suppressed by DND" << appName << summary;
+
     if (replaceRow >= 0)
     {
         m_entries[replaceRow] = entry;
         Q_EMIT dataChanged(index(replaceRow, 0), index(replaceRow, 0));
-        Q_EMIT transientNotification(entry.id, entry.sourceName, entry.messageText, relativeTimestamp(entry.createdAt), entry.iconName, entry.urgencyLevel, entry.actionText, entry.actionKey);
+        if (!suppressTransient)
+            Q_EMIT transientNotification(entry.id, entry.sourceName, entry.messageText, relativeTimestamp(entry.createdAt), entry.iconName, entry.urgencyLevel, entry.actionText, entry.actionKey);
         return entry.id;
     }
 
@@ -282,7 +290,8 @@ uint NotificationsController::Notify(const QString &appName,
     m_entries.prepend(entry);
     endInsertRows();
     Q_EMIT countChanged(m_entries.size());
-    Q_EMIT transientNotification(entry.id, entry.sourceName, entry.messageText, relativeTimestamp(entry.createdAt), entry.iconName, entry.urgencyLevel, entry.actionText, entry.actionKey);
+    if (!suppressTransient)
+        Q_EMIT transientNotification(entry.id, entry.sourceName, entry.messageText, relativeTimestamp(entry.createdAt), entry.iconName, entry.urgencyLevel, entry.actionText, entry.actionKey);
     return entry.id;
 }
 

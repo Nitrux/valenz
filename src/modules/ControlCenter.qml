@@ -13,6 +13,7 @@ Dialog
     property Item anchorButton
     property var rootWindow
     property QtObject bridge
+    property QtObject notificationsControllerRef
     property Item overlayItem: controlCenter.parent
 
     Maui.Theme.colorSet: Maui.Theme.View
@@ -30,7 +31,7 @@ Dialog
     readonly property int _toolActionMinSize: Math.max(28, Maui.Style.toolBarHeightAlt)
     readonly property int _minPanelWidth: Maui.Handy.isMobile ? _baseUnit * 16 : _baseUnit * 20
     property bool _cellularEnabled: false
-    property bool _dndEnabled: false
+    readonly property bool _dndEnabled: controlCenter.notificationsControllerRef ? controlCenter.notificationsControllerRef.dndEnabled : false
     property bool _nightLightEnabled: true
     property int _geometryRevision: 0
     readonly property real _targetY:
@@ -329,7 +330,7 @@ Dialog
 
                             Label
                             {
-                                text: "Alex R."
+                                text: controlCenter.bridge ? controlCenter.bridge.userRealName : "User"
                                 color: Maui.Theme.textColor
                                 font.weight: Font.DemiBold
                                 verticalAlignment: Text.AlignVCenter
@@ -354,7 +355,7 @@ Dialog
                                 onClicked:
                                 {
                                     if (controlCenter.bridge)
-                                        controlCenter.bridge.trace("controlCenter", "shortcut_power")
+                                        controlCenter.bridge.executeControlCenterPowerCommand()
                                 }
                             }
                         }
@@ -367,6 +368,9 @@ Dialog
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
+                        visible: true
+                        enabled: controlCenter.bridge ? controlCenter.bridge.controlCenterNetworkState === "wireless" : false
+                        opacity: enabled ? 1.0 : 0.55
 
                         RowLayout
                         {
@@ -419,6 +423,9 @@ Dialog
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
+                        visible: true
+                        enabled: controlCenter.bridge ? controlCenter.bridge.controlCenterBluetoothAvailable : false
+                        opacity: enabled ? 1.0 : 0.55
 
                         RowLayout
                         {
@@ -445,7 +452,7 @@ Dialog
                                 }
                                 Label
                                 {
-                                    text: controlCenter.bridge && controlCenter.bridge.prototypeBluetoothState === "off" ? "Off" : "On"
+                                    text: controlCenter.bridge && !controlCenter.bridge.controlCenterBluetoothAvailable ? "Unavailable" : (controlCenter.bridge && controlCenter.bridge.prototypeBluetoothState === "off" ? "Off" : "On")
                                     color: Maui.Theme.disabledTextColor
                                 }
                             }
@@ -454,7 +461,7 @@ Dialog
 
                             Switch
                             {
-                                checked: controlCenter.bridge ? controlCenter.bridge.prototypeBluetoothState !== "off" : true
+                                checked: controlCenter.bridge ? (controlCenter.bridge.controlCenterBluetoothAvailable && controlCenter.bridge.prototypeBluetoothState !== "off") : false
                                 onToggled:
                                 {
                                     if (controlCenter.bridge)
@@ -535,7 +542,12 @@ Dialog
                             Switch
                             {
                                 checked: controlCenter._dndEnabled
-                                onToggled: controlCenter._dndEnabled = checked
+                                onToggled:
+                                {
+                                    console.log("ControlCenter DND toggle", checked, "controller=", controlCenter.notificationsControllerRef ? controlCenter.notificationsControllerRef.dndEnabled : "null")
+                                    if (controlCenter.notificationsControllerRef)
+                                        controlCenter.notificationsControllerRef.dndEnabled = checked
+                                }
                             }
                         }
                     }

@@ -12,6 +12,7 @@ ToolButton
     property bool useSystemThemeIcons: true
     property string networkIconName
     property string bluetoothIconName
+    property bool bluetoothAvailable: false
     property string volumeIconName
     property string volumePercentageText
     property string batteryIconName
@@ -29,6 +30,7 @@ ToolButton
     display: ToolButton.IconOnly
     checked: popupVisible
     padding: Maui.Style.space.small
+
     function togglePopup()
     {
         if (!controlCenterButton.popup)
@@ -99,6 +101,7 @@ ToolButton
         Item
         {
             Layout.alignment: Qt.AlignVCenter
+            visible: controlCenterButton.bluetoothAvailable
             width: 20
             height: 20
 

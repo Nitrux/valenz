@@ -28,6 +28,8 @@
 #include <QSettings>
 #include <QSet>
 #include <QStandardPaths>
+#include <pwd.h>
+#include <unistd.h>
 #include <QUrlQuery>
 #include <QtGlobal>
 #include <cmath>
@@ -46,6 +48,7 @@ constexpr auto kControlCenterPowerProfileCurrentKey = "ControlCenter/powerProfil
 constexpr auto kControlCenterVolumePercentageKey = "ControlCenter/volumePercentage";
 constexpr auto kControlCenterBatteryStateKey = "ControlCenter/batteryState";
 constexpr auto kControlCenterBatteryPercentageKey = "ControlCenter/batteryPercentage";
+constexpr auto kControlCenterPowerCommandKey = "ControlCenter/powerCommand";
 constexpr auto kWeatherLatitudeKey = "Weather/latitude";
 constexpr auto kWeatherLongitudeKey = "Weather/longitude";
 constexpr auto kWeatherTemperatureUnitKey = "Weather/temperatureUnit";
@@ -73,6 +76,7 @@ constexpr auto kLegacyControlCenterPowerProfileCurrentKey = "controlCenter/power
 constexpr auto kLegacyControlCenterVolumePercentageKey = "controlCenter/volumePercentage";
 constexpr auto kLegacyControlCenterBatteryStateKey = "controlCenter/batteryState";
 constexpr auto kLegacyControlCenterBatteryPercentageKey = "controlCenter/batteryPercentage";
+constexpr auto kLegacyControlCenterPowerCommandKey = "controlCenter/powerCommand";
 constexpr auto kWeatherRefreshMinMinutes = 5;
 constexpr auto kWeatherRefreshMaxMinutes = 180;
 
@@ -225,6 +229,12 @@ int normalizeWeatherRefreshMinutes(const QVariant &value)
     return qBound(kWeatherRefreshMinMinutes, parsed, kWeatherRefreshMaxMinutes);
 }
 
+QString normalizePowerCommand(const QString &value)
+{
+    const QString trimmed = value.trimmed();
+    return trimmed.isEmpty() ? QStringLiteral("wlogout") : trimmed;
+}
+
 QString weatherIconFromCode(int weatherCode, bool isDay)
 {
     Q_UNUSED(isDay)
@@ -287,6 +297,37 @@ QString weatherLabelFromCode(int weatherCode)
     case 99: return QStringLiteral("Thunderstorm");
     default: return QStringLiteral("Unknown");
     }
+}
+
+QString systemUserRealName()
+{
+#if defined(Q_OS_UNIX)
+    const struct passwd *userInfo = getpwuid(getuid());
+    if (!userInfo)
+        return QStringLiteral("User");
+
+    const QByteArray userName = userInfo->pw_name ? QByteArray(userInfo->pw_name) : QByteArray();
+    QString realName = userInfo->pw_gecos ? QString::fromLocal8Bit(userInfo->pw_gecos) : QString();
+    realName = realName.section(QLatin1Char(','), 0, 0).trimmed();
+
+    if (realName.contains(QLatin1Char('&')) && !userName.isEmpty())
+    {
+        QString replacement = QString::fromLocal8Bit(userName);
+        if (!replacement.isEmpty())
+        {
+            replacement[0] = replacement[0].toUpper();
+            realName.replace(QLatin1Char('&'), replacement);
+            realName = realName.trimmed();
+        }
+    }
+
+    if (!realName.isEmpty())
+        return realName;
+
+    if (!userName.isEmpty())
+        return QString::fromLocal8Bit(userName);
+#endif
+    return QStringLiteral("User");
 }
 
 QVariant unwrapMprisVariant(const QVariant &value)

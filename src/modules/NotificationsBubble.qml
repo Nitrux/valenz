@@ -145,6 +145,7 @@ Dialog
 
     function showNotification(idValue, sourceNameValue, messageTextValue, timestampTextValue, iconNameValue, urgencyLevelValue, actionTextValue, actionKeyValue)
     {
+        console.log("NotificationsBubble.showNotification", idValue, sourceNameValue, "dnd=", controller ? controller.dndEnabled : false, "popupVisible=", notificationsPopup ? notificationsPopup.visible : false)
         if (notificationsPopup && notificationsPopup.visible)
             return
 
@@ -189,6 +190,7 @@ Dialog
 
     function dismissBubble()
     {
+        console.log("NotificationsBubble.dismissBubble", "visible=", visible, "popupVisible=", notificationsPopup ? notificationsPopup.visible : false, "controllerDnd=", controller ? controller.dndEnabled : false)
         _autoCloseTimer.stop()
         if (visible)
             close()
@@ -355,6 +357,18 @@ Dialog
 
         function onAboutToShow() { notificationsBubble.dismissBubble() }
         function onOpened() { notificationsBubble.dismissBubble() }
+    }
+
+    Connections
+    {
+        target: notificationsBubble.controller
+
+        function onDndEnabledChanged()
+        {
+            console.log("NotificationsBubble.onDndEnabledChanged", notificationsBubble.controller ? notificationsBubble.controller.dndEnabled : false)
+            if (notificationsBubble.controller && notificationsBubble.controller.dndEnabled)
+                notificationsBubble.dismissBubble()
+        }
     }
 
     background: Rectangle

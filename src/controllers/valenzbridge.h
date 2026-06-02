@@ -27,6 +27,7 @@ class ValenzBridge : public QObject
     Q_PROPERTY(bool mprisAlwaysVisible READ mprisAlwaysVisible WRITE setMprisAlwaysVisible NOTIFY mprisAlwaysVisibleChanged FINAL)
     Q_PROPERTY(QString focusedWindowTitle READ focusedWindowTitle WRITE setFocusedWindowTitle NOTIFY focusedWindowTitleChanged FINAL)
     Q_PROPERTY(QString focusedWindowIconName READ focusedWindowIconName WRITE setFocusedWindowIconName NOTIFY focusedWindowIconNameChanged FINAL)
+    Q_PROPERTY(QString userRealName READ userRealName CONSTANT)
     Q_PROPERTY(QString controlCenterIconMode READ controlCenterIconMode WRITE setControlCenterIconMode NOTIFY controlCenterIconModeChanged FINAL)
     Q_PROPERTY(QString prototypeNetworkState READ prototypeNetworkState WRITE setPrototypeNetworkState NOTIFY prototypeNetworkStateChanged FINAL)
     Q_PROPERTY(QString prototypeBluetoothState READ prototypeBluetoothState WRITE setPrototypeBluetoothState NOTIFY prototypeBluetoothStateChanged FINAL)
@@ -38,9 +39,11 @@ class ValenzBridge : public QObject
     Q_PROPERTY(QString controlCenterBatteryPercentage READ controlCenterBatteryPercentage WRITE setControlCenterBatteryPercentage NOTIFY controlCenterBatteryPercentageChanged FINAL)
     Q_PROPERTY(QString controlCenterNetworkState READ controlCenterNetworkState WRITE setControlCenterNetworkState NOTIFY controlCenterNetworkStateChanged FINAL)
     Q_PROPERTY(bool controlCenterBluetoothEnabled READ controlCenterBluetoothEnabled WRITE setControlCenterBluetoothEnabled NOTIFY controlCenterBluetoothEnabledChanged FINAL)
+    Q_PROPERTY(bool controlCenterBluetoothAvailable READ controlCenterBluetoothAvailable WRITE setControlCenterBluetoothAvailable NOTIFY controlCenterBluetoothAvailableChanged FINAL)
     Q_PROPERTY(bool controlCenterVolumeMuted READ controlCenterVolumeMuted WRITE setControlCenterVolumeMuted NOTIFY controlCenterVolumeMutedChanged FINAL)
     Q_PROPERTY(bool controlCenterBatteryAvailable READ controlCenterBatteryAvailable WRITE setControlCenterBatteryAvailable NOTIFY controlCenterBatteryAvailableChanged FINAL)
     Q_PROPERTY(bool controlCenterBatteryOnAcPower READ controlCenterBatteryOnAcPower WRITE setControlCenterBatteryOnAcPower NOTIFY controlCenterBatteryOnAcPowerChanged FINAL)
+    Q_PROPERTY(QString controlCenterPowerCommand READ controlCenterPowerCommand WRITE setControlCenterPowerCommand NOTIFY controlCenterPowerCommandChanged FINAL)
     Q_PROPERTY(bool agendaInstalled READ agendaInstalled NOTIFY agendaInstalledChanged FINAL)
     Q_PROPERTY(QString weatherIconName READ weatherIconName WRITE setWeatherIconName NOTIFY weatherIconNameChanged FINAL)
     Q_PROPERTY(QString weatherTemperature READ weatherTemperature WRITE setWeatherTemperature NOTIFY weatherTemperatureChanged FINAL)
@@ -78,6 +81,7 @@ public:
     void setFocusedWindowTitle(const QString &title);
     QString focusedWindowIconName() const;
     void setFocusedWindowIconName(const QString &iconName);
+    QString userRealName() const;
     QString controlCenterIconMode() const;
     void setControlCenterIconMode(const QString &mode);
     QString prototypeNetworkState() const;
@@ -100,12 +104,16 @@ public:
     void setControlCenterNetworkState(const QString &state);
     bool controlCenterBluetoothEnabled() const;
     void setControlCenterBluetoothEnabled(bool enabled);
+    bool controlCenterBluetoothAvailable() const;
+    void setControlCenterBluetoothAvailable(bool available);
     bool controlCenterVolumeMuted() const;
     void setControlCenterVolumeMuted(bool muted);
     bool controlCenterBatteryAvailable() const;
     void setControlCenterBatteryAvailable(bool available);
     bool controlCenterBatteryOnAcPower() const;
     void setControlCenterBatteryOnAcPower(bool onAcPower);
+    QString controlCenterPowerCommand() const;
+    void setControlCenterPowerCommand(const QString &command);
     bool agendaInstalled() const;
     QString weatherIconName() const;
     void setWeatherIconName(const QString &iconName);
@@ -124,6 +132,7 @@ public:
     void setWeatherRefreshMinutes(int minutes);
 
     Q_INVOKABLE void trace(const QString &source, const QString &action, const QString &detail = QString());
+    Q_INVOKABLE void executeControlCenterPowerCommand();
     Q_INVOKABLE void goToPreviousWorkspace();
     Q_INVOKABLE void goToNextWorkspace();
     Q_INVOKABLE bool refreshWorkspaceState();
@@ -147,6 +156,7 @@ Q_SIGNALS:
     void mprisAlwaysVisibleChanged(bool alwaysVisible);
     void focusedWindowTitleChanged(const QString &title);
     void focusedWindowIconNameChanged(const QString &iconName);
+    void controlCenterPowerCommandChanged(const QString &command);
     void controlCenterIconModeChanged(const QString &mode);
     void prototypeNetworkStateChanged(const QString &state);
     void prototypeBluetoothStateChanged(const QString &state);
@@ -158,6 +168,7 @@ Q_SIGNALS:
     void controlCenterBatteryPercentageChanged(const QString &value);
     void controlCenterNetworkStateChanged(const QString &state);
     void controlCenterBluetoothEnabledChanged(bool enabled);
+    void controlCenterBluetoothAvailableChanged(bool available);
     void controlCenterVolumeMutedChanged(bool muted);
     void controlCenterBatteryAvailableChanged(bool available);
     void controlCenterBatteryOnAcPowerChanged(bool onAcPower);
@@ -225,6 +236,7 @@ private:
     bool m_mprisAlwaysVisible = false;
     QString m_focusedWindowTitle;
     QString m_focusedWindowIconName;
+    QString m_userRealName;
     QString m_controlCenterIconMode;
     QString m_prototypeNetworkState;
     QString m_prototypeBluetoothState;
@@ -237,8 +249,10 @@ private:
     QString m_controlCenterBatteryPercentage;
     QString m_controlCenterNetworkState = QStringLiteral("offline");
     bool m_controlCenterBluetoothEnabled = false;
+    bool m_controlCenterBluetoothAvailable = false;
     bool m_controlCenterBatteryAvailable = false;
     bool m_controlCenterBatteryOnAcPower = false;
+    QString m_controlCenterPowerCommand = QStringLiteral("wlogout");
     bool m_agendaInstalled = false;
     QString m_weatherIconName = QStringLiteral("weather-severe-alert");
     QString m_weatherTemperature = QStringLiteral("--°C");
