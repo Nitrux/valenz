@@ -67,18 +67,19 @@ ToolButton
 
             Maui.Icon
             {
+                id: _notificationIcon
                 anchors.centerIn: parent
                 width: 16
                 height: 16
                 source: notificationsCenterButton.iconName
                 color: notificationsCenterButton.activeContentColor
-                visible: notificationsCenterButton.useSystemThemeIcons
+                visible: notificationsCenterButton.useSystemThemeIcons && valid
             }
 
             Label
             {
                 anchors.centerIn: parent
-                visible: !notificationsCenterButton.useSystemThemeIcons
+                visible: !notificationsCenterButton.useSystemThemeIcons || !_notificationIcon.valid
                 text: notificationsCenterButton.glyphForIcon ? notificationsCenterButton.glyphForIcon(notificationsCenterButton.iconName) : ""
                 color: notificationsCenterButton.activeContentColor
                 font.family: "Symbols Nerd Font"

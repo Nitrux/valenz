@@ -3,6 +3,8 @@ set(valenz_SRCS
     controllers/valenzbridge.cpp
     controllers/valenzbridge_properties.cpp
     controllers/valenzbridge_controlcenter.cpp
+    controllers/valenzbridge_controlcenter_runtime.cpp
+    ../../mauikit-system-src/libs/system/src/code/mauikit_system_control.cpp
     controllers/valenzbridge_workspace.cpp
     controllers/valenzbridge_mpris.cpp
     controllers/valenzbridge_weather.cpp
@@ -48,6 +50,10 @@ qt_add_qml_module(${PROJECT_NAME}
     modules/NotificationsBubble.qml
     RESOURCES
     assets/cover.png)
+
+target_include_directories(${PROJECT_NAME}
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../mauikit-system-src/libs/system/src/code)
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE

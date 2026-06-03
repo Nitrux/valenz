@@ -45,8 +45,8 @@ Maui.ApplicationWindow
 
     function controlCenterIconMode()
     {
-        const mode = String(valenzBridge ? valenzBridge.controlCenterIconMode : "auto").trim().toLowerCase()
-        return mode.length > 0 ? mode : "auto"
+        const mode = String(valenzBridge ? valenzBridge.controlCenterIconMode : "system16").trim().toLowerCase()
+        return (mode === "nerd") ? "nerd" : "system16"
     }
 
     function controlCenterScreenDpi()
@@ -56,6 +56,41 @@ Maui.ApplicationWindow
         return Screen.pixelDensity * 25.4
     }
 
+    function controlCenterButtonGlyphName(iconName)
+    {
+        switch (iconName)
+        {
+            case "network-wired": return "\uF0E8"
+            case "network-wireless": return "\uF1EB"
+            case "network-wireless-hotspot": return "\uF1EB"
+            case "network-vpn": return "\uF023"
+            case "network-cellular-3g": return "\uF10B"
+            case "network-disconnect": return "\uF127"
+            case "bluetooth-active": return "\uF294"
+            case "bluetooth-disabled": return "\uF293"
+            case "audio-volume-muted": return "\uF026"
+            case "audio-volume-high": return "\uF028"
+            case "audio-volume-medium": return "\uF027"
+            case "audio-volume-low": return "\uF026"
+            case "battery": return "\uF240"
+            case "battery-full": return "\uF240"
+            case "battery-100": return "\uF240"
+            case "battery-good": return "\uF241"
+            case "battery-080": return "\uF241"
+            case "battery-medium": return "\uF242"
+            case "battery-060": return "\uF242"
+            case "battery-040": return "\uF242"
+            case "battery-low": return "\uF243"
+            case "battery-caution": return "\uF243"
+            case "battery-020": return "\uF243"
+            case "battery-empty": return "\uF244"
+            case "battery-missing": return "\uF244"
+            case "battery-000": return "\uF244"
+            case "battery-charging": return "\uEEA1"
+            case "battery-full-charging": return "\uEEA1"
+            case "battery-good-charging": return "\uEEA1"
+            case "battery-medium-charging": return "\uEEA1"
+            case "battery-low-charging": return "\uEEA1"
             case "battery-caution-charging": return "\uEEA1"
             case "battery-charging-080": return "\uEEA1"
             case "battery-charging-060": return "\uEEA1"
@@ -68,6 +103,11 @@ Maui.ApplicationWindow
             case "notifications-disabled": return "\uF0A2"
             default: return "\uF128"
         }
+    }
+
+    function controlCenterButtonGlyph(iconName)
+    {
+        return root.controlCenterButtonGlyphName(iconName)
     }
 
     function controlCenterButtonGlyphColor(kind)
@@ -164,11 +204,7 @@ Maui.ApplicationWindow
     readonly property bool controlCenterUseSystemThemeIcons:
         {
             const mode = root.controlCenterIconMode()
-            if (mode === "system16")
-                return true
-            if (mode === "nerd")
-                return false
-            return root.controlCenterScreenDpi() <= 120
+            return mode !== "nerd"
         }
 
 

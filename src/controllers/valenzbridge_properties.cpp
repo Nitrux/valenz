@@ -1,5 +1,6 @@
 #include "valenzbridge.h"
 #include "valenzbridge_p.h"
+#include "mauikit_system_control.h"
 
 bool ValenzBridge::enabled() const
 {
@@ -334,10 +335,11 @@ QString ValenzBridge::controlCenterIconMode() const
 
 void ValenzBridge::setControlCenterIconMode(const QString &mode)
 {
-    if (m_controlCenterIconMode == mode)
+    const QString normalized = MauiKitSystem::normalizeControlCenterIconMode(mode);
+    if (m_controlCenterIconMode == normalized)
         return;
 
-    m_controlCenterIconMode = mode;
+    m_controlCenterIconMode = normalized;
     persistControlCenterState();
     Q_EMIT controlCenterIconModeChanged(m_controlCenterIconMode);
 }
@@ -349,12 +351,11 @@ QString ValenzBridge::controlCenterNetworkMode() const
 
 void ValenzBridge::setControlCenterNetworkMode(const QString &state)
 {
-    const QString normalized = normalizeControlCenterNetworkMode(state);
+    const QString normalized = MauiKitSystem::normalizeControlCenterNetworkMode(state);
     if (m_controlCenterNetworkMode == normalized)
         return;
 
     m_controlCenterNetworkMode = normalized;
-    persistControlCenterState();
     Q_EMIT controlCenterNetworkModeChanged(m_controlCenterNetworkMode);
 }
 
@@ -365,12 +366,11 @@ QString ValenzBridge::controlCenterBluetoothState() const
 
 void ValenzBridge::setControlCenterBluetoothState(const QString &state)
 {
-    const QString normalized = normalizeControlCenterBluetoothState(state);
+    const QString normalized = MauiKitSystem::normalizeControlCenterBluetoothState(state);
     if (m_controlCenterBluetoothState == normalized)
         return;
 
     m_controlCenterBluetoothState = normalized;
-    persistControlCenterState();
     Q_EMIT controlCenterBluetoothStateChanged(m_controlCenterBluetoothState);
 }
 
@@ -381,12 +381,11 @@ QString ValenzBridge::controlCenterVolumeState() const
 
 void ValenzBridge::setControlCenterVolumeState(const QString &state)
 {
-    const QString normalized = normalizeControlCenterVolumeState(state);
+    const QString normalized = MauiKitSystem::normalizeControlCenterVolumeState(state);
     if (m_controlCenterVolumeState == normalized)
         return;
 
     m_controlCenterVolumeState = normalized;
-    persistControlCenterState();
     Q_EMIT controlCenterVolumeStateChanged(m_controlCenterVolumeState);
 }
 
@@ -407,7 +406,6 @@ void ValenzBridge::setControlCenterPowerProfiles(const QStringList &profiles)
 
     m_controlCenterPowerProfiles = normalizedProfiles;
     m_controlCenterPowerProfileCurrent = normalizedCurrent;
-    persistControlCenterState();
 
     if (profilesChanged)
         Q_EMIT controlCenterPowerProfilesChanged(m_controlCenterPowerProfiles);
@@ -426,19 +424,13 @@ void ValenzBridge::setControlCenterPowerProfileCurrent(const QString &profile)
     if (m_controlCenterPowerProfileCurrent == normalized)
         return;
 
-
-    QProcess process;
-    process.start(QStringLiteral("powerprofilesctl"), QStringList { QStringLiteral("set"), normalized });
-    if (!process.waitForStarted(250))
-        return;
-    if (!process.waitForFinished(1200) || process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
+    if (!MauiKitSystem::setCurrentPowerProfile(normalized))
     {
         refreshControlCenterPowerProfileState();
         return;
     }
 
     m_controlCenterPowerProfileCurrent = normalized;
-    persistControlCenterState();
     Q_EMIT controlCenterPowerProfileCurrentChanged(m_controlCenterPowerProfileCurrent);
 }
 
@@ -450,7 +442,7 @@ QString ValenzBridge::controlCenterVolumePercentage() const
 
 void ValenzBridge::setControlCenterVolumePercentage(const QString &value)
 {
-    const QString normalized = normalizeBatteryPercentage(value);
+    const QString normalized = MauiKitSystem::normalizeBatteryPercentage(value);
     if (m_controlCenterVolumePercentage == normalized)
         return;
 
@@ -479,7 +471,7 @@ QString ValenzBridge::controlCenterBatteryPercentage() const
 
 void ValenzBridge::setControlCenterBatteryPercentage(const QString &value)
 {
-    const QString normalized = normalizeBatteryPercentage(value);
+    const QString normalized = MauiKitSystem::normalizeBatteryPercentage(value);
     if (m_controlCenterBatteryPercentage == normalized)
         return;
 
@@ -554,7 +546,7 @@ QString ValenzBridge::controlCenterBrightnessPercentage() const
 
 void ValenzBridge::setControlCenterBrightnessPercentage(const QString &value)
 {
-    const QString normalized = normalizeBatteryPercentage(value);
+    const QString normalized = MauiKitSystem::normalizeBatteryPercentage(value);
     if (m_controlCenterBrightnessPercentage == normalized)
         return;
 
@@ -583,7 +575,7 @@ QString ValenzBridge::controlCenterNetworkState() const
 
 void ValenzBridge::setControlCenterNetworkState(const QString &state)
 {
-    const QString normalized = normalizeControlCenterNetworkMode(state);
+    const QString normalized = MauiKitSystem::normalizeControlCenterNetworkMode(state);
     if (m_controlCenterNetworkState == normalized)
         return;
 

@@ -10,6 +10,10 @@ Maui.SettingsDialog
 
     property QtObject bridge
     property var _diskUsageOptionsModel: []
+    property var _iconModeOptionsModel: [
+        {"value": "system16", "display": "System Icons"},
+        {"value": "nerd", "display": "Glyph Icons"}
+    ]
 
     onAboutToShow:
     {
@@ -20,6 +24,7 @@ Maui.SettingsDialog
         _powerCommandField.text = control.bridge ? control.bridge.controlCenterPowerCommand : "wlogout"
         _refreshDiskUsageOptions()
         _syncDiskUsagePathCombo()
+        _syncIconModeCombo()
     }
 
     function _formattedCoordinate(value)
@@ -62,6 +67,32 @@ Maui.SettingsDialog
 
         const command = String(text).trim()
         bridge.controlCenterPowerCommand = command.length > 0 ? command : "wlogout"
+    }
+
+    function _syncIconModeCombo()
+    {
+        if (!control.bridge)
+            return
+
+        const mode = String(control.bridge.controlCenterIconMode || "system16").trim().toLowerCase()
+        for (let i = 0; i < _iconModeOptionsModel.length; ++i) {
+            if ((_iconModeOptionsModel[i].value || "auto") === mode) {
+                _iconModeCombo.currentIndex = i
+                return
+            }
+        }
+
+        if (_iconModeOptionsModel.length > 0)
+            _iconModeCombo.currentIndex = 0
+    }
+
+    function _applyIconMode(mode)
+    {
+        if (!bridge)
+            return
+
+        const value = String(mode || "system16").trim().toLowerCase()
+        bridge.controlCenterIconMode = value === "nerd" ? "nerd" : "system16"
     }
 
     function _refreshDiskUsageOptions()
@@ -119,6 +150,56 @@ Maui.SettingsDialog
     Maui.SectionGroup
     {
         title: "Control Center"
+
+        Maui.FlexSectionItem
+        {
+            label1.text: "Icon Mode"
+            label2.text: "Choose whether Control Center buttons use system icons or glyphs."
+
+            QQC.ComboBox
+            {
+                id: _iconModeCombo
+                readonly property string _fallbackLabel: "System Icons"
+                implicitWidth: Math.max(Maui.Style.units.gridUnit * 11, 260)
+                currentIndex: -1
+                model: _iconModeOptionsModel
+                textRole: "display"
+                valueRole: "value"
+                displayText: currentIndex === -1 ? _fallbackLabel : currentText
+                delegate: QQC.ItemDelegate
+                {
+                    required property var modelData
+                    width: ListView.view ? ListView.view.width : _iconModeCombo.width
+                    text: modelData && modelData.display ? modelData.display : (modelData && modelData.value ? modelData.value : "")
+                }
+                popup.width:
+                {
+                    const popupContentWidth = popup.contentItem ? popup.contentItem.implicitWidth : 0
+                    const popupFrameWidth = popup.leftPadding + popup.rightPadding
+                    return Math.max(_iconModeCombo.width, popupContentWidth + popupFrameWidth)
+                }
+                Component.onCompleted:
+                {
+                    if (control.bridge)
+                        control._syncIconModeCombo()
+                }
+                Connections
+                {
+                    target: control.bridge
+                    enabled: !!control.bridge
+
+                    function onControlCenterIconModeChanged()
+                    {
+                        control._syncIconModeCombo()
+                    }
+                }
+                onActivated:
+                {
+                    if (currentIndex >= 0)
+                        control._applyIconMode(currentValue)
+                }
+            }
+        }
 
         Maui.FlexSectionItem
         {

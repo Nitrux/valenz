@@ -1,5 +1,6 @@
 #include "valenzbridge.h"
 #include "valenzbridge_p.h"
+#include "mauikit_system_control.h"
 
 QString ValenzBridge::configFilePath() const
 {
@@ -48,32 +49,8 @@ void ValenzBridge::initializeConfig()
 
         userSettings.setValue(newKey, defaultValue);
     };
-    ensureKey(QString::fromLatin1(kFocusedWindowIconNameKey), QString::fromLatin1(kLegacyFocusedWindowIconNameKey), "application-x-executable");
-    ensureKey(QString::fromLatin1(kControlCenterIconModeKey), QString::fromLatin1(kLegacyControlCenterIconModeKey), "auto");
-    ensureKey(QString::fromLatin1(kControlCenterPowerProfilesKey), QString::fromLatin1(kLegacyControlCenterPowerProfilesKey),
-              QStringList { QStringLiteral("power-saver"), QStringLiteral("balanced"), QStringLiteral("performance") });
-    ensureKey(QString::fromLatin1(kControlCenterPowerProfileCurrentKey), QString::fromLatin1(kLegacyControlCenterPowerProfileCurrentKey), "balanced");
-    ensureKey(QString::fromLatin1(kControlCenterVolumePercentageKey), QString::fromLatin1(kLegacyControlCenterVolumePercentageKey), "50%");
+    ensureKey(QString::fromLatin1(kControlCenterIconModeKey), QString::fromLatin1(kLegacyControlCenterIconModeKey), QStringLiteral("system16"));
 
-    if (!userSettings.contains(kControlCenterBatteryStateKey))
-    {
-        if (userSettings.contains(kLegacyControlCenterBatteryStateKey))
-        {
-            userSettings.setValue(kControlCenterBatteryStateKey, userSettings.value(kLegacyControlCenterBatteryStateKey));
-            userSettings.remove(kLegacyControlCenterBatteryStateKey);
-        }
-        else
-        {
-            const QVariant legacyBatteryIcon = userSettings.contains("ControlCenter/batteryIconName")
-                                                   ? userSettings.value("ControlCenter/batteryIconName")
-                                                   : userSettings.value("controlCenter/batteryIconName");
-            userSettings.setValue(kControlCenterBatteryStateKey,
-                                  normalizeControlCenterBatteryCharging(legacyBatteryIcon) ? "charging" : "battery");
-        }
-    }
-
-    ensureKey(QString::fromLatin1(kControlCenterBatteryPercentageKey), QString::fromLatin1(kLegacyControlCenterBatteryPercentageKey), "0%");
-    ensureKey(QString::fromLatin1(kControlCenterPowerCommandKey), QString::fromLatin1(kLegacyControlCenterPowerCommandKey), "wlogout");
     ensureKey(QString::fromLatin1(kWeatherLatitudeKey), QString(), 40.7128);
     ensureKey(QString::fromLatin1(kWeatherLongitudeKey), QString(), -74.0060);
     ensureKey(QString::fromLatin1(kWeatherTemperatureUnitKey), QString(), "celsius");
@@ -87,23 +64,29 @@ void ValenzBridge::initializeConfig()
     userSettings.remove("Window/focusedWindowTitle");
     userSettings.remove("window/title");
 
+    const QString focusedWindowIconName = userSettings.value(QString::fromLatin1(kFocusedWindowIconNameKey),
+                                                              userSettings.value(QString::fromLatin1(kLegacyFocusedWindowIconNameKey),
+                                                                                 QStringLiteral("application-x-executable")))
+                                               .toString()
+                                               .trimmed();
+    userSettings.remove(QString::fromLatin1(kFocusedWindowIconNameKey));
+    userSettings.remove(QString::fromLatin1(kLegacyFocusedWindowIconNameKey));
+
     userSettings.sync();
     m_focusedWindowTitle.clear();
-    m_focusedWindowIconName = userSettings.value(kFocusedWindowIconNameKey, "application-x-executable").toString();
-    m_userRealName = systemUserRealName();
-    m_controlCenterIconMode = userSettings.value(kControlCenterIconModeKey, "auto").toString();
+    m_focusedWindowIconName = focusedWindowIconName.isEmpty() ? QStringLiteral("application-x-executable") : focusedWindowIconName;
+    m_userRealName = MauiKitSystem::systemUserRealName();
+    m_controlCenterIconMode = normalizeControlCenterIconMode(userSettings.value(kControlCenterIconModeKey, QStringLiteral("system16")).toString());
     m_controlCenterNetworkMode = QStringLiteral("auto");
     m_controlCenterBluetoothState = QStringLiteral("auto");
     m_controlCenterVolumeState = QStringLiteral("auto");
-    m_controlCenterPowerProfiles = normalizePowerProfiles(userSettings.value(kControlCenterPowerProfilesKey,
-                                                                             QStringList { QStringLiteral("power-saver"),
-                                                                                           QStringLiteral("balanced"),
-                                                                                           QStringLiteral("performance") }));
-    m_controlCenterPowerProfileCurrent = normalizeCurrentPowerProfile(userSettings.value(kControlCenterPowerProfileCurrentKey, "balanced").toString(),
-                                                                      m_controlCenterPowerProfiles);
-    m_controlCenterVolumePercentage = normalizeBatteryPercentage(userSettings.value(kControlCenterVolumePercentageKey, "50%").toString());
-    m_controlCenterBatteryCharging = normalizeControlCenterBatteryCharging(userSettings.value(kControlCenterBatteryStateKey, "battery"));
-    m_controlCenterBatteryPercentage = normalizeBatteryPercentage(userSettings.value(kControlCenterBatteryPercentageKey, "0%").toString());
+    m_controlCenterPowerProfiles = QStringList { QStringLiteral("power-saver"),
+                                                  QStringLiteral("balanced"),
+                                                  QStringLiteral("performance") };
+    m_controlCenterPowerProfileCurrent = QStringLiteral("balanced");
+    m_controlCenterVolumePercentage = QStringLiteral("50%");
+    m_controlCenterBatteryCharging = false;
+    m_controlCenterBatteryPercentage = QStringLiteral("0%");
     m_controlCenterPowerCommand = normalizePowerCommand(userSettings.value(kControlCenterPowerCommandKey, "wlogout").toString());
     m_controlCenterDiskUsagePath = userSettings.value(kControlCenterDiskUsagePathKey, "/").toString().trimmed();
     if (m_controlCenterDiskUsagePath.isEmpty())
@@ -131,11 +114,6 @@ void ValenzBridge::persistControlCenterState() const
 
     QSettings userSettings(m_userConfigPath, QSettings::IniFormat);
     userSettings.setValue(kControlCenterIconModeKey, m_controlCenterIconMode);
-    userSettings.setValue(kControlCenterPowerProfilesKey, m_controlCenterPowerProfiles);
-    userSettings.setValue(kControlCenterPowerProfileCurrentKey, m_controlCenterPowerProfileCurrent);
-    userSettings.setValue(kControlCenterVolumePercentageKey, m_controlCenterVolumePercentage);
-    userSettings.setValue(kControlCenterBatteryStateKey, m_controlCenterBatteryCharging ? "charging" : "battery");
-    userSettings.setValue(kControlCenterBatteryPercentageKey, m_controlCenterBatteryPercentage);
     userSettings.setValue(kControlCenterPowerCommandKey, m_controlCenterPowerCommand);
     userSettings.setValue(kControlCenterDiskUsagePathKey, m_controlCenterDiskUsagePath);
     userSettings.sync();
