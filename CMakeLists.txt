@@ -14,8 +14,7 @@ set(CMAKE_AUTORCC ON)
 
 set(REQUIRED_QT_VERSION 6.9)
 set(REQUIRED_KF_VERSION 6.13.0)
-set(REQUIRED_MAUI_VERSION 4.0.4)
-set(REQUIRED_MAUI_CALENDAR_VERSION 4.0.4)
+set(REQUIRED_MAUIKIT_VERSION 4.0.4)
 
 include(CheckCXXCompilerFlag)
 include(FeatureSummary)
@@ -36,8 +35,8 @@ endif()
 find_package(Qt6 ${REQUIRED_QT_VERSION} REQUIRED NO_MODULE COMPONENTS Core DBus Gui Network Qml Quick QuickControls2)
 find_package(KF6CoreAddons ${REQUIRED_KF_VERSION} REQUIRED)
 find_package(KF6I18n ${REQUIRED_KF_VERSION} REQUIRED)
-find_package(MauiKit4 ${REQUIRED_MAUI_VERSION} REQUIRED)
-find_package(MauiKitCalendar4 ${REQUIRED_MAUI_CALENDAR_VERSION} REQUIRED)
+find_package(MauiKit4 ${REQUIRED_MAUIKIT_VERSION} REQUIRED)
+find_package(MauiKitCalendar4 ${REQUIRED_MAUIKIT_VERSION} REQUIRED)
 
 # Qt 6.8+ policy: generate qmldir files for extra QML subdirectories (e.g. src/modules).
 qt_policy(SET QTP0004 NEW)
