@@ -15,8 +15,9 @@ Valenz is a QML-based status bar designed for Nitrux.
 ### Runtime Requirements
 
 ```
-mauikit (>= 4.0.3)
-mauikit-system (>= 4.0.3)
+mauikit (>= 4.0.4)
+mauikit-system (>= 4.0.4)
+mauikit-calendar (>= 4.0.4)
 hyprland (>= 0.55.1)
 qt6 (>= 6.9.2)
 ```

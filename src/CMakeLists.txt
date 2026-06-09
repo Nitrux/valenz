@@ -59,6 +59,7 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE
     MauiKit4
     MauiKit4::Calendar
+    MauiKitSystem::Control
     KF6::I18n
     Qt6::Core
     Qt6::DBus
