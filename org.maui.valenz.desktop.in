@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Valenz
+Comment=Status bar for Nitrux built with MauiKit
+Exec=valenz
+Icon=preferences-system-windows
+Terminal=false
+Categories=System;Utility;
+StartupWMClass=org.maui.valenz

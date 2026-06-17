@@ -3,27 +3,37 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Window
 
 import org.mauikit.controls as Maui
 
-Maui.ApplicationWindow
+Window
 {
     id: root
+    readonly property int barHeight: 56
+    visible: false
+    width: Screen.width
+    height: barHeight
+    minimumHeight: barHeight
+    maximumHeight: barHeight
+    flags: Qt.FramelessWindowHint | Qt.Tool
     title: "Valenz"
     color: "transparent"
-    background: null
 
     Maui.WindowBlur
     {
         view: root
-        geometry: Qt.rect(0, 0, root.width, root.height)
+        geometry: Qt.rect(0, 0, root.width, barHeight)
         windowRadius: Maui.Style.radiusV
         enabled: true
     }
 
     Rectangle
     {
-        anchors.fill: parent
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        height: barHeight
         color: Maui.Theme.backgroundColor
         opacity: 0.76
         radius: Maui.Style.radiusV
@@ -220,7 +230,7 @@ Maui.ApplicationWindow
     ControlCenter
     {
         id: _controlCenterPopup
-        parent: Overlay.overlay
+        parent: root.contentItem
         anchorButton: _controlCenterButton
         rootWindow: root
         bridge: valenzBridge
@@ -231,7 +241,7 @@ Maui.ApplicationWindow
     {
         id: _notificationsCenterPopup
         controller: notificationsController
-        parent: Overlay.overlay
+        parent: root.contentItem
         anchorButton: _notificationsCenterButton
         rootWindow: root
         useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
@@ -240,7 +250,7 @@ Maui.ApplicationWindow
     NotificationsBubble
     {
         id: _notificationsBubble
-        parent: Overlay.overlay
+        parent: root.contentItem
         anchorButton: _notificationsCenterButton
         rootWindow: root
         controller: notificationsController
@@ -251,7 +261,7 @@ Maui.ApplicationWindow
     CalendarPopup
     {
         id: _calendarPopup
-        parent: Overlay.overlay
+        parent: root.contentItem
         anchorItem: _weatherClock
         rootWindow: root
         bridge: valenzBridge
@@ -260,7 +270,7 @@ Maui.ApplicationWindow
     SettingsDialog
     {
         id: _settingsDialog
-        parent: Overlay.overlay
+        parent: root.contentItem
         bridge: valenzBridge
     }
 
@@ -281,7 +291,10 @@ Maui.ApplicationWindow
     Maui.PageLayout
     {
         id: _pageLayout
-        anchors.fill: parent
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        height: barHeight
         clip: true
 
         split: false

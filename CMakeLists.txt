@@ -38,11 +38,22 @@ find_package(KF6I18n ${REQUIRED_KF_VERSION} REQUIRED)
 find_package(MauiKit4 ${REQUIRED_MAUIKIT_VERSION} REQUIRED)
 find_package(MauiKitCalendar4 ${REQUIRED_MAUIKIT_VERSION} REQUIRED)
 find_package(MauiKitSystemControl ${REQUIRED_MAUIKIT_VERSION} REQUIRED)
+find_package(LayerShellQt 6.0 REQUIRED)
 
 # Qt 6.8+ policy: generate qmldir files for extra QML subdirectories (e.g. src/modules).
 qt_policy(SET QTP0004 NEW)
 
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/org.maui.valenz.desktop.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/org.maui.valenz.desktop"
+    @ONLY
+)
+
 add_subdirectory(src)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/org.maui.valenz.desktop"
+    DESTINATION share/applications)
 
 if(NOT TARGET uninstall)
     configure_file(

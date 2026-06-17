@@ -6,20 +6,62 @@
 #include <QSurfaceFormat>
 #include <QDate>
 #include <QIcon>
+#include <QWindow>
 #include <QUrl>
+#include <QMargins>
+#include <QScreen>
+#include <QStandardPaths>
+
+#include <LayerShellQt/Shell>
+#include <LayerShellQt/Window>
 
 #include <KAboutData>
 #include <KLocalizedContext>
 #include <KLocalizedString>
 
 #include <MauiKit4/Core/mauiapp.h>
-
 #include "controllers/valenzbridge_notifications.h"
 #include "controllers/valenzbridge_systray.h"
 #include "controllers/valenzbridge.h"
 
+static void configureLayerShellWindow(QWindow *window)
+{
+    if (!window)
+        return;
+
+    auto *layerShellWindow = LayerShellQt::Window::get(window);
+    if (!layerShellWindow)
+        return;
+
+    layerShellWindow->setScope(QStringLiteral("org.maui.valenz"));
+    layerShellWindow->setLayer(LayerShellQt::Window::LayerOverlay);
+    layerShellWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityNone);
+    const int exclusiveZone = window->property("barHeight").toInt();
+    layerShellWindow->setExclusiveZone(exclusiveZone > 0 ? exclusiveZone : window->height());
+    layerShellWindow->setWantsToBeOnActiveScreen(true);
+    layerShellWindow->setScreen(window->screen());
+
+    LayerShellQt::Window::Anchors anchors;
+    anchors |= LayerShellQt::Window::AnchorTop;
+    anchors |= LayerShellQt::Window::AnchorLeft;
+    anchors |= LayerShellQt::Window::AnchorRight;
+    layerShellWindow->setAnchors(anchors);
+    layerShellWindow->setDesiredSize(QSize(window->width(), window->height()));
+    layerShellWindow->setMargins(QMargins(0, 0, 0, 0));
+}
+
+static QString desktopFileNameForPortal()
+{
+    static const QString desktopFile = QStringLiteral("org.maui.valenz.desktop");
+    return QStandardPaths::locate(QStandardPaths::ApplicationsLocation, desktopFile).isEmpty()
+        ? QString()
+        : QStringLiteral("org.maui.valenz");
+}
+
 int main(int argc, char *argv[])
 {
+    KLocalizedString::setApplicationDomain("valenz");
+
     QSurfaceFormat format;
     format.setAlphaBufferSize(8);
     QSurfaceFormat::setDefaultFormat(format);
@@ -41,13 +83,16 @@ int main(int argc, char *argv[])
     app.setWindowIcon(QIcon::fromTheme(QStringLiteral("preferences-system-windows")));
     app.setOrganizationName(QStringLiteral("Maui"));
 
+    const QString desktopFileName = desktopFileNameForPortal();
+    if (!desktopFileName.isEmpty())
+        app.setDesktopFileName(desktopFileName);
+
     aboutData.setProductName(QByteArrayLiteral("nitrux/valenz"));
     aboutData.setOrganizationDomain(QByteArrayLiteral("org.maui.valenz"));
-    aboutData.setDesktopFileName(QByteArrayLiteral("org.maui.valenz"));
+    if (!desktopFileName.isEmpty())
+        aboutData.setDesktopFileName(desktopFileName.toUtf8());
     aboutData.setProgramLogo(app.windowIcon());
     KAboutData::setApplicationData(aboutData);
-
-    KLocalizedString::setApplicationDomain("valenz");
 
     // Ensure MauiKit core is initialized so Maui QML resources are available.
     MauiApp::instance();
@@ -69,7 +114,14 @@ int main(int argc, char *argv[])
     {
         if (!obj && url == objUrl)
             QCoreApplication::exit(-1);
-    }, Qt::QueuedConnection);
+        if (obj && url == objUrl) {
+            if (auto *window = qobject_cast<QWindow *>(obj)) {
+                window->close();
+                configureLayerShellWindow(window);
+                window->show();
+            }
+        }
+    });
 
     engine.load(url);
 

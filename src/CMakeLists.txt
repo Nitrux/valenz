@@ -61,6 +61,7 @@ target_link_libraries(${PROJECT_NAME}
     MauiKit4::Calendar
     MauiKitSystem::Control
     KF6::I18n
+    LayerShellQt::Interface
     Qt6::Core
     Qt6::DBus
     Qt6::Gui

@@ -8,6 +8,7 @@ import org.mauikit.calendar as Kalendar
 
 Dialog
 {
+
     id: calendarPopup
 
     property Item anchorItem

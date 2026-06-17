@@ -8,6 +8,7 @@ import org.mauikit.controls as Maui
 
 Dialog
 {
+
     id: controlCenter
 
     property Item anchorButton

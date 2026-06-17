@@ -6,6 +6,7 @@ import org.mauikit.controls as Maui
 
 Maui.SettingsDialog
 {
+
     id: control
 
     property QtObject bridge

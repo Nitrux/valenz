@@ -7,6 +7,7 @@ import org.mauikit.controls as Maui
 
 Dialog
 {
+
     id: notificationsBubble
 
     property Item anchorButton
