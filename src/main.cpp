@@ -7,6 +7,7 @@
 #include <QDate>
 #include <QIcon>
 #include <QWindow>
+#include <QObject>
 #include <QUrl>
 #include <QMargins>
 #include <QScreen>
@@ -23,6 +24,38 @@
 #include "controllers/valenzbridge_notifications.h"
 #include "controllers/valenzbridge_systray.h"
 #include "controllers/valenzbridge.h"
+
+class LayerShellPopupHelper : public QObject
+{
+    Q_OBJECT
+
+public:
+    explicit LayerShellPopupHelper(QObject *parent = nullptr) : QObject(parent) {}
+
+    Q_INVOKABLE void configurePopupWindow(QWindow *window, const QString &scope, bool keyboardOnDemand)
+    {
+        if (!window)
+            return;
+
+        auto *layerShellWindow = LayerShellQt::Window::get(window);
+        if (!layerShellWindow)
+            return;
+
+        layerShellWindow->setScope(scope);
+        layerShellWindow->setLayer(LayerShellQt::Window::LayerTop);
+        layerShellWindow->setKeyboardInteractivity(keyboardOnDemand
+                                                        ? LayerShellQt::Window::KeyboardInteractivityOnDemand
+                                                        : LayerShellQt::Window::KeyboardInteractivityNone);
+        layerShellWindow->setWantsToBeOnActiveScreen(true);
+        layerShellWindow->setScreen(window->screen());
+
+        LayerShellQt::Window::Anchors anchors{};
+        layerShellWindow->setAnchors(anchors);
+        layerShellWindow->setExclusiveZone(0);
+        layerShellWindow->setDesiredSize(QSize(window->width(), window->height()));
+        layerShellWindow->setMargins(QMargins(0, 0, 0, 0));
+    }
+};
 
 static void configureLayerShellWindow(QWindow *window)
 {
@@ -101,6 +134,8 @@ int main(int argc, char *argv[])
 
     QQmlApplicationEngine engine;
     engine.rootContext()->setContextObject(new KLocalizedContext(&engine));
+    LayerShellPopupHelper layerShellPopupHelper;
+    engine.rootContext()->setContextProperty(QStringLiteral("layerShellHelper"), &layerShellPopupHelper);
     ValenzBridge valenzBridge;
     SystemTrayController systemTrayController;
     NotificationsController notificationsController;
@@ -127,3 +162,5 @@ int main(int argc, char *argv[])
 
     return app.exec();
 }
+
+#include "main.moc"

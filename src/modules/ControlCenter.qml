@@ -3,10 +3,11 @@ import QtQuick.Controls
 import QtQuick.Controls 2.15 as QQC
 import QtQuick.Layouts
 import QtQuick.Effects
+import QtQuick.Window
 
 import org.mauikit.controls as Maui
 
-Dialog
+Window
 {
 
     id: controlCenter
@@ -15,9 +16,18 @@ Dialog
     property var rootWindow
     property QtObject bridge
     property QtObject notificationsControllerRef
-    property Item overlayItem: controlCenter.parent
+    property Item overlayItem
 
     Maui.Theme.colorSet: Maui.Theme.View
+
+    Component.onCompleted:
+    {
+        if (layerShellHelper)
+            layerShellHelper.configurePopupWindow(controlCenter, "org.maui.valenz.controlcenter", true)
+    }
+    color: "transparent"
+    flags: Qt.FramelessWindowHint | Qt.Tool
+
 
     readonly property int _baseUnit: Math.max(20, Maui.Style.units.gridUnit)
     readonly property int _margin: Math.max(Maui.Style.contentMargins, Maui.Style.space.medium)
@@ -79,13 +89,13 @@ Dialog
     }
     readonly property real _availableHeightFromAnchor:
     {
-        const overlayItem = controlCenter.overlayItem
-        if (!overlayItem)
+        const screenGeometry = controlCenter._screenGeometry()
+        if (!screenGeometry || screenGeometry.height <= 0)
             return _panel.implicitHeight
 
         const minY = _margin
         const startY = Math.max(minY, _targetY)
-        return Math.max(0, overlayItem.height - startY - _margin)
+        return Math.max(0, screenGeometry.height - startY - _margin)
     }
 
     function _touchGeometryRevision()
@@ -95,7 +105,7 @@ Dialog
 
     function _anchorPointInOverlay(offsetX, offsetY)
     {
-        const overlayItem = controlCenter.parent
+        const overlayItem = controlCenter.overlayItem
         if (!overlayItem || !anchorButton)
             return null
 
@@ -115,6 +125,16 @@ Dialog
             return mappedPoint
 
         return null
+    }
+
+    function _screenGeometry()
+    {
+        const screen = controlCenter.rootWindow ? controlCenter.rootWindow.screen : null
+        if (screen && screen.availableGeometry && screen.availableGeometry.width > 0 && screen.availableGeometry.height > 0)
+            return screen.availableGeometry
+        if (screen && screen.geometry && screen.geometry.width > 0 && screen.geometry.height > 0)
+            return screen.geometry
+        return Qt.rect(0, 0, 0, 0)
     }
 
     function _powerProfileLabel(profileName)
@@ -224,93 +244,55 @@ Dialog
         }
     }
 
-    modal: false
-    focus: true
-    standardButtons: Dialog.NoButton
-    closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-    padding: 0
-    transformOrigin: Item.TopRight
+    signal aboutToShow()
+    signal opened()
+    signal closed()
 
-    enter: Transition
+    function open()
     {
-        ParallelAnimation
-        {
-            NumberAnimation
-            {
-                property: "opacity"
-                from: 0.0
-                to: 1.0
-                duration: 170
-                easing.type: Easing.OutCubic
-            }
+        if (visible)
+            return
 
-            NumberAnimation
-            {
-                property: "scale"
-                from: 0.96
-                to: 1.0
-                duration: 170
-                easing.type: Easing.OutCubic
-            }
-        }
+        aboutToShow()
+        visible = true
+        requestActivate()
     }
 
-    exit: Transition
+    function close()
     {
-        ParallelAnimation
-        {
-            NumberAnimation
-            {
-                property: "opacity"
-                from: 1.0
-                to: 0.0
-                duration: 130
-                easing.type: Easing.OutCubic
-            }
+        if (!visible)
+            return
 
-            NumberAnimation
-            {
-                property: "scale"
-                from: 1.0
-                to: 0.97
-                duration: 130
-                easing.type: Easing.OutCubic
-            }
-        }
+        visible = false
     }
 
     width: Math.max(_panel.implicitWidth, _minPanelWidth)
     height: Math.min(_panel.implicitHeight, _availableHeightFromAnchor)
-    onAboutToShow:
-    {
-        _touchGeometryRevision()
-    }
-    onOpened:
-    {
-        Qt.callLater(_touchGeometryRevision)
-        _systemResourcesRefreshActive = true
-        if (bridge)
-            bridge.refreshControlCenterSystemResources()
-    }
-    onClosed:
-    {
-        _systemResourcesRefreshActive = false
-    }
     onVisibleChanged:
     {
-        if (!visible)
+        if (visible)
+        {
+            opened()
+            Qt.callLater(_touchGeometryRevision)
+            _systemResourcesRefreshActive = true
+            if (bridge)
+                bridge.refreshControlCenterSystemResources()
+        }
+        else
+        {
+            closed()
             _systemResourcesRefreshActive = false
+        }
     }
-    anchors.centerIn: undefined
     x:
     {
         const dep = _geometryRevision
-        const overlayItem = controlCenter.overlayItem
-        if (!overlayItem)
+        const screenGeometry = controlCenter._screenGeometry()
+        if (!screenGeometry || screenGeometry.width <= 0)
             return 0
 
         const minX = _margin
-        const maxX = Math.max(minX, overlayItem.width - width - _margin)
+        const maxX = Math.max(minX, screenGeometry.width - width - _margin)
         let targetX = maxX
 
         if (anchorButton)
@@ -364,14 +346,10 @@ Dialog
         function onWindowStateChanged() { controlCenter._touchGeometryRevision() }
     }
 
-    background: Rectangle
-    {
-        color: Qt.alpha(controlCenter._panelColor, 0)
-    }
-
-    contentItem: Rectangle
+    Rectangle
     {
         id: _panel
+        anchors.fill: parent
         implicitWidth: Math.max(controlCenter._minPanelWidth, _panelContent.implicitWidth + (controlCenter._panelInsetX * 2))
         implicitHeight: _panelContent.implicitHeight + (controlCenter._panelInsetY * 2)
         radius: Maui.Style.radiusV

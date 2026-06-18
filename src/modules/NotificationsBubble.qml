@@ -2,16 +2,17 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
 import QtQuick.Layouts
+import QtQuick.Window
 
 import org.mauikit.controls as Maui
 
-Dialog
+Window
 {
 
     id: notificationsBubble
 
     property Item anchorButton
-    property Item overlayItem: notificationsBubble.parent
+    property Item overlayItem
     property QtObject rootWindow
     property QtObject controller
     property var notificationsPopup
@@ -37,8 +38,8 @@ Dialog
     readonly property int _preferredPanelWidth: Maui.Handy.isMobile ? _baseUnit * 16 : _baseUnit * 20
     readonly property real _targetY:
     {
-        const overlay = notificationsBubble.overlayItem
-        if (!overlay)
+        const screenGeometry = notificationsBubble._screenGeometry()
+        if (!screenGeometry || screenGeometry.height <= 0)
             return _margin
 
         let targetY = Math.max(Maui.Style.toolBarHeightAlt, Maui.Style.units.gridUnit * 2) + _margin
@@ -53,11 +54,22 @@ Dialog
     }
     readonly property real _availableWidth:
     {
-        const overlay = notificationsBubble.overlayItem
-        if (!overlay)
+        const screenGeometry = notificationsBubble._screenGeometry()
+        if (!screenGeometry || screenGeometry.width <= 0)
             return _preferredPanelWidth
-        return Math.max(0, overlay.width - (_margin * 2))
+        return Math.max(0, screenGeometry.width - (_margin * 2))
     }
+    readonly property real _availableHeightFromAnchor:
+    {
+        const screenGeometry = notificationsBubble._screenGeometry()
+        if (!screenGeometry || screenGeometry.height <= 0)
+            return _panel.implicitHeight
+
+        const minY = _margin
+        const startY = Math.max(minY, _targetY)
+        return Math.max(0, screenGeometry.height - startY - _margin)
+    }
+
     readonly property int _timeoutMs:
     {
         if (urgencyLevel >= 2)
@@ -68,6 +80,15 @@ Dialog
     }
 
     Maui.Theme.colorSet: Maui.Theme.View
+
+    Component.onCompleted:
+    {
+        if (layerShellHelper)
+            layerShellHelper.configurePopupWindow(notificationsBubble, "org.maui.valenz.bubble", false)
+    }
+    color: "transparent"
+    flags: Qt.FramelessWindowHint | Qt.Tool
+
 
     function _touchGeometryRevision()
     {
@@ -96,6 +117,16 @@ Dialog
             return mappedPoint
 
         return null
+    }
+
+    function _screenGeometry()
+    {
+        const screen = notificationsBubble.rootWindow ? notificationsBubble.rootWindow.screen : null
+        if (screen && screen.availableGeometry && screen.availableGeometry.width > 0 && screen.availableGeometry.height > 0)
+            return screen.availableGeometry
+        if (screen && screen.geometry && screen.geometry.width > 0 && screen.geometry.height > 0)
+            return screen.geometry
+        return Qt.rect(0, 0, 0, 0)
     }
 
     function _notificationGlyph(iconNameValue)
@@ -218,59 +249,26 @@ Dialog
             _touchGeometryRevision()
     }
 
-    modal: false
-    focus: false
-    padding: 0
-    standardButtons: Dialog.NoButton
-    closePolicy: Popup.NoAutoClose
-    transformOrigin: Item.TopRight
+    signal aboutToShow()
+    signal opened()
+    signal closed()
 
-    enter: Transition
+    function open()
     {
-        ParallelAnimation
-        {
-            NumberAnimation
-            {
-                property: "opacity"
-                from: 0.0
-                to: 1.0
-                duration: 170
-                easing.type: Easing.OutCubic
-            }
+        if (visible)
+            return
 
-            NumberAnimation
-            {
-                property: "scale"
-                from: 0.96
-                to: 1.0
-                duration: 170
-                easing.type: Easing.OutCubic
-            }
-        }
+        aboutToShow()
+        visible = true
+        requestActivate()
     }
 
-    exit: Transition
+    function close()
     {
-        ParallelAnimation
-        {
-            NumberAnimation
-            {
-                property: "opacity"
-                from: 1.0
-                to: 0.0
-                duration: 130
-                easing.type: Easing.OutCubic
-            }
+        if (!visible)
+            return
 
-            NumberAnimation
-            {
-                property: "scale"
-                from: 1.0
-                to: 0.97
-                duration: 130
-                easing.type: Easing.OutCubic
-            }
-        }
+        visible = false
     }
 
     width:
@@ -280,19 +278,18 @@ Dialog
 
         return Math.min(_preferredPanelWidth, _availableWidth)
     }
-    height: _panel.implicitHeight
+    height: Math.min(_panel.implicitHeight, _availableHeightFromAnchor)
 
-    anchors.centerIn: undefined
 
     x:
     {
         const dep = _geometryRevision
-        const overlay = notificationsBubble.overlayItem
-        if (!overlay)
+        const screenGeometry = notificationsBubble._screenGeometry()
+        if (!screenGeometry || screenGeometry.width <= 0)
             return 0
 
         const minX = _margin
-        const maxX = Math.max(minX, overlay.width - width - _margin)
+        const maxX = Math.max(minX, screenGeometry.width - width - _margin)
         let targetX = maxX
 
         if (anchorButton)
@@ -359,8 +356,11 @@ Dialog
     {
         target: notificationsBubble.notificationsPopup
 
-        function onAboutToShow() { notificationsBubble.dismissBubble() }
-        function onOpened() { notificationsBubble.dismissBubble() }
+        function onVisibleChanged()
+        {
+            if (notificationsBubble.notificationsPopup && notificationsBubble.notificationsPopup.visible)
+                notificationsBubble.dismissBubble()
+        }
     }
 
     Connections
@@ -375,14 +375,10 @@ Dialog
         }
     }
 
-    background: Rectangle
-    {
-        color: Qt.alpha(notificationsBubble._panelColor, 0)
-    }
-
-    contentItem: Rectangle
+    Rectangle
     {
         id: _panel
+        anchors.fill: parent
         implicitWidth: notificationsBubble.width
         implicitHeight: _bubbleCard.implicitHeight + (notificationsBubble._panelInsetY * 2)
         radius: Maui.Style.radiusV

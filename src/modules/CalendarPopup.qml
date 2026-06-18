@@ -2,11 +2,12 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Effects
 import QtQuick.Layouts
+import QtQuick.Window
 
 import org.mauikit.controls as Maui
 import org.mauikit.calendar as Kalendar
 
-Dialog
+Window
 {
 
     id: calendarPopup
@@ -14,7 +15,7 @@ Dialog
     property Item anchorItem
     property QtObject rootWindow
     property QtObject bridge
-    property Item overlayItem: calendarPopup.parent
+    property Item overlayItem
     property date selectedDate: new Date()
     property int displayMonth: selectedDate.getMonth()
     property int displayYear: selectedDate.getFullYear()
@@ -52,16 +53,25 @@ Dialog
 
     readonly property real _availableHeightFromAnchor:
     {
-        const overlay = calendarPopup.overlayItem
-        if (!overlay)
+        const screenGeometry = calendarPopup._screenGeometry()
+        if (!screenGeometry || screenGeometry.height <= 0)
             return _preferredPanelHeight
 
         const minY = _margin
         const startY = Math.max(minY, _targetY)
-        return Math.max(0, overlay.height - startY - _margin)
+        return Math.max(0, screenGeometry.height - startY - _margin)
     }
 
     Maui.Theme.colorSet: Maui.Theme.View
+
+    Component.onCompleted:
+    {
+        if (layerShellHelper)
+            layerShellHelper.configurePopupWindow(calendarPopup, "org.maui.valenz.calendar", true)
+    }
+    color: "transparent"
+    flags: Qt.FramelessWindowHint | Qt.Tool
+
 
     function _touchGeometryRevision()
     {
@@ -207,6 +217,16 @@ Dialog
         return null
     }
 
+    function _screenGeometry()
+    {
+        const screen = calendarPopup.rootWindow ? calendarPopup.rootWindow.screen : null
+        if (screen && screen.availableGeometry && screen.availableGeometry.width > 0 && screen.availableGeometry.height > 0)
+            return screen.availableGeometry
+        if (screen && screen.geometry && screen.geometry.width > 0 && screen.geometry.height > 0)
+            return screen.geometry
+        return Qt.rect(0, 0, 0, 0)
+    }
+
     onDisplayMonthChanged: _syncModelFromDisplay()
     onDisplayYearChanged: _syncModelFromDisplay()
     onSelectedDateChanged: _syncSelectionFromDate(selectedDate)
@@ -229,68 +249,35 @@ Dialog
         }
     }
 
-    modal: false
-    focus: true
-    padding: 0
-    standardButtons: Dialog.NoButton
-    closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-    transformOrigin: Item.Top
+    signal aboutToShow()
+    signal opened()
+    signal closed()
 
-    enter: Transition
+    function open()
     {
-        ParallelAnimation
-        {
-            NumberAnimation
-            {
-                property: "opacity"
-                from: 0.0
-                to: 1.0
-                duration: 170
-                easing.type: Easing.OutCubic
-            }
+        if (visible)
+            return
 
-            NumberAnimation
-            {
-                property: "scale"
-                from: 0.96
-                to: 1.0
-                duration: 170
-                easing.type: Easing.OutCubic
-            }
-        }
+        aboutToShow()
+        visible = true
+        requestActivate()
     }
 
-    exit: Transition
+    function close()
     {
-        ParallelAnimation
-        {
-            NumberAnimation
-            {
-                property: "opacity"
-                from: 1.0
-                to: 0.0
-                duration: 130
-                easing.type: Easing.OutCubic
-            }
+        if (!visible)
+            return
 
-            NumberAnimation
-            {
-                property: "scale"
-                from: 1.0
-                to: 0.97
-                duration: 130
-                easing.type: Easing.OutCubic
-            }
-        }
+        visible = false
     }
 
     width:
     {
-        const overlay = calendarPopup.overlayItem
-        if (!overlay)
+        const screenGeometry = calendarPopup._screenGeometry()
+        if (!screenGeometry || screenGeometry.width <= 0)
             return _preferredPanelWidth
 
-        const available = Math.max(0, overlay.width - (_margin * 2))
+        const available = Math.max(0, screenGeometry.width - (_margin * 2))
         if (available <= 0)
             return _preferredPanelWidth
 
@@ -304,26 +291,32 @@ Dialog
         return Math.min(desiredHeight, _availableHeightFromAnchor)
     }
 
-    onAboutToShow:
+    onVisibleChanged:
     {
-        selectedDate = new Date()
-        displayMonth = selectedDate.getMonth()
-        displayYear = selectedDate.getFullYear()
-        _syncModelFromDisplay()
-        _syncSelectionFromDate(selectedDate)
-        _touchGeometryRevision()
+        if (visible)
+        {
+            opened()
+            selectedDate = new Date()
+            displayMonth = selectedDate.getMonth()
+            displayYear = selectedDate.getFullYear()
+            _syncModelFromDisplay()
+            _syncSelectionFromDate(selectedDate)
+            _touchGeometryRevision()
+            Qt.callLater(_touchGeometryRevision)
+        }
+        else
+        {
+            closed()
+            _lastClosedAtMs = Date.now()
+        }
     }
 
-    onOpened: Qt.callLater(_touchGeometryRevision)
-    onClosed: _lastClosedAtMs = Date.now()
-
-    anchors.centerIn: undefined
 
     x:
     {
         const dep = _geometryRevision
-        const overlay = calendarPopup.overlayItem
-        if (!overlay)
+        const screenGeometry = calendarPopup._screenGeometry()
+        if (!screenGeometry || screenGeometry.width <= 0)
             return 0
 
         let targetX = _margin
@@ -335,7 +328,7 @@ Dialog
         }
 
         const minX = _margin
-        const maxX = Math.max(minX, overlay.width - width - _margin)
+        const maxX = Math.max(minX, screenGeometry.width - width - _margin)
         return Math.max(minX, Math.min(maxX, targetX))
     }
 
@@ -381,16 +374,12 @@ Dialog
         function onWindowStateChanged() { calendarPopup._touchGeometryRevision() }
     }
 
-    background: Rectangle
-    {
-        color: Qt.alpha(calendarPopup._panelColor, 0)
-    }
-
-    contentItem: Rectangle
+    Rectangle
     {
         id: _panel
+        anchors.fill: parent
         implicitWidth: calendarPopup.width
-        implicitHeight: calendarPopup.height
+        implicitHeight: _contentColumn.implicitHeight + (calendarPopup._panelInsetY * 2)
         radius: Maui.Style.radiusV
         color: calendarPopup._panelColor
         layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software

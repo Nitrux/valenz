@@ -36,7 +36,7 @@ Window
         height: barHeight
         color: Maui.Theme.backgroundColor
         opacity: 0.76
-        radius: Maui.Style.radiusV
+        radius: Maui.Style.radiusV + 6
     }
 
     function traceMenu(action, detail)
@@ -230,9 +230,10 @@ Window
     ControlCenter
     {
         id: _controlCenterPopup
-        parent: root.contentItem
+        title: "Valenz Control Center"
         anchorButton: _controlCenterButton
         rootWindow: root
+        overlayItem: root.contentItem
         bridge: valenzBridge
         notificationsControllerRef: notificationsController
     }
@@ -240,19 +241,20 @@ Window
     NotificationsCenter
     {
         id: _notificationsCenterPopup
+        title: "Valenz Notifications Center"
         controller: notificationsController
-        parent: root.contentItem
         anchorButton: _notificationsCenterButton
         rootWindow: root
+        overlayItem: root.contentItem
         useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
     }
 
     NotificationsBubble
     {
         id: _notificationsBubble
-        parent: root.contentItem
         anchorButton: _notificationsCenterButton
         rootWindow: root
+        overlayItem: root.contentItem
         controller: notificationsController
         notificationsPopup: _notificationsCenterPopup
         useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
@@ -261,16 +263,16 @@ Window
     CalendarPopup
     {
         id: _calendarPopup
-        parent: root.contentItem
+        title: "Valenz Calendar"
         anchorItem: _weatherClock
         rootWindow: root
+        overlayItem: root.contentItem
         bridge: valenzBridge
     }
 
     SettingsDialog
     {
         id: _settingsDialog
-        parent: root.contentItem
         bridge: valenzBridge
     }
 

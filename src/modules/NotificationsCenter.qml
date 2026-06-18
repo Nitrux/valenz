@@ -2,21 +2,31 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.Effects
+import QtQuick.Window
 
 import org.mauikit.controls as Maui
 
-Dialog
+Window
 {
 
     id: notificationsCenter
 
     property Item anchorButton
     property var rootWindow
-    property Item overlayItem: notificationsCenter.parent
+    property Item overlayItem
     property QtObject controller
     property bool useSystemThemeIcons: true
 
     Maui.Theme.colorSet: Maui.Theme.View
+
+    Component.onCompleted:
+    {
+        if (layerShellHelper)
+            layerShellHelper.configurePopupWindow(notificationsCenter, "org.maui.valenz.notifications", true)
+    }
+    color: "transparent"
+    flags: Qt.FramelessWindowHint | Qt.Tool
+
 
     readonly property int _baseUnit: Math.max(20, Maui.Style.units.gridUnit)
     readonly property int _margin: Math.max(Maui.Style.contentMargins, Maui.Style.space.medium)
@@ -52,13 +62,13 @@ Dialog
 
     readonly property real _availableHeightFromAnchor:
     {
-        const overlayItem = notificationsCenter.overlayItem
-        if (!overlayItem)
+        const screenGeometry = notificationsCenter._screenGeometry()
+        if (!screenGeometry || screenGeometry.height <= 0)
             return _panel.implicitHeight
 
         const minY = _margin
         const startY = Math.max(minY, _targetY)
-        return Math.max(0, overlayItem.height - startY - _margin)
+        return Math.max(0, screenGeometry.height - startY - _margin)
     }
 
     function _touchGeometryRevision()
@@ -68,7 +78,7 @@ Dialog
 
     function _anchorPointInOverlay(offsetX, offsetY)
     {
-        const overlayItem = notificationsCenter.parent
+        const overlayItem = notificationsCenter.overlayItem
         if (!overlayItem || !anchorButton)
             return null
 
@@ -88,6 +98,16 @@ Dialog
             return mappedPoint
 
         return null
+    }
+
+    function _screenGeometry()
+    {
+        const screen = notificationsCenter.rootWindow ? notificationsCenter.rootWindow.screen : null
+        if (screen && screen.availableGeometry && screen.availableGeometry.width > 0 && screen.availableGeometry.height > 0)
+            return screen.availableGeometry
+        if (screen && screen.geometry && screen.geometry.width > 0 && screen.geometry.height > 0)
+            return screen.geometry
+        return Qt.rect(0, 0, 0, 0)
     }
 
     function _notificationGlyph(iconName)
@@ -184,87 +204,56 @@ Dialog
         id: _notificationsModel
     }
 
-    modal: false
-    focus: true
-    standardButtons: Dialog.NoButton
-    closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-    padding: 0
-    transformOrigin: Item.TopRight
+    signal aboutToShow()
+    signal opened()
+    signal closed()
 
-    enter: Transition
+    function open()
     {
-        ParallelAnimation
-        {
-            NumberAnimation
-            {
-                property: "opacity"
-                from: 0.0
-                to: 1.0
-                duration: 170
-                easing.type: Easing.OutCubic
-            }
+        if (visible)
+            return
 
-            NumberAnimation
-            {
-                property: "scale"
-                from: 0.96
-                to: 1.0
-                duration: 170
-                easing.type: Easing.OutCubic
-            }
-        }
+        aboutToShow()
+        visible = true
+        requestActivate()
     }
 
-    exit: Transition
+    function close()
     {
-        ParallelAnimation
-        {
-            NumberAnimation
-            {
-                property: "opacity"
-                from: 1.0
-                to: 0.0
-                duration: 130
-                easing.type: Easing.OutCubic
-            }
+        if (!visible)
+            return
 
-            NumberAnimation
-            {
-                property: "scale"
-                from: 1.0
-                to: 0.97
-                duration: 130
-                easing.type: Easing.OutCubic
-            }
-        }
+        visible = false
     }
 
     width: Math.max(_panel.implicitWidth, _minPanelWidth)
     height: Math.min(_panel.implicitHeight, _availableHeightFromAnchor)
 
-    onAboutToShow:
+    onVisibleChanged:
     {
-        _touchGeometryRevision()
-        if (controller)
-            controller.refreshTimestamps()
+        if (visible)
+        {
+            opened()
+            Qt.callLater(_touchGeometryRevision)
+            if (controller)
+                controller.refreshTimestamps()
+        }
+        else
+        {
+            closed()
+        }
     }
 
-    onOpened:
-    {
-        Qt.callLater(_touchGeometryRevision)
-    }
-
-    anchors.centerIn: undefined
 
     x:
     {
         const dep = _geometryRevision
-        const overlayItem = notificationsCenter.overlayItem
-        if (!overlayItem)
+        const screenGeometry = notificationsCenter._screenGeometry()
+        if (!screenGeometry || screenGeometry.width <= 0)
             return 0
 
         const minX = _margin
-        const maxX = Math.max(minX, overlayItem.width - width - _margin)
+        const maxX = Math.max(minX, screenGeometry.width - width - _margin)
         let targetX = maxX
 
         if (anchorButton)
@@ -318,15 +307,10 @@ Dialog
         function onVisibilityChanged() { notificationsCenter._touchGeometryRevision() }
         function onWindowStateChanged() { notificationsCenter._touchGeometryRevision() }
     }
-
-    background: Rectangle
-    {
-        color: Qt.alpha(notificationsCenter._panelColor, 0)
-    }
-
-    contentItem: Rectangle
+    Rectangle
     {
         id: _panel
+        anchors.fill: parent
         implicitWidth: Math.max(notificationsCenter._minPanelWidth, _panelContent.implicitWidth + (notificationsCenter._panelInsetX * 2))
         implicitHeight: _panelContent.implicitHeight + (notificationsCenter._panelInsetY * 2)
         radius: Maui.Style.radiusV
