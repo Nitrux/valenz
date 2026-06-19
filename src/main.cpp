@@ -11,7 +11,6 @@
 #include <QUrl>
 #include <QMargins>
 #include <QScreen>
-#include <QStandardPaths>
 
 #include <LayerShellQt/Shell>
 #include <LayerShellQt/Window>
@@ -85,10 +84,7 @@ static void configureLayerShellWindow(QWindow *window)
 
 static QString desktopFileNameForPortal()
 {
-    static const QString desktopFile = QStringLiteral("org.maui.valenz.desktop");
-    return QStandardPaths::locate(QStandardPaths::ApplicationsLocation, desktopFile).isEmpty()
-        ? QString()
-        : QStringLiteral("org.maui.valenz");
+    return QStringLiteral("org.maui.valenz");
 }
 
 int main(int argc, char *argv[])
@@ -117,13 +113,11 @@ int main(int argc, char *argv[])
     app.setOrganizationName(QStringLiteral("Maui"));
 
     const QString desktopFileName = desktopFileNameForPortal();
-    if (!desktopFileName.isEmpty())
-        app.setDesktopFileName(desktopFileName);
+    app.setDesktopFileName(desktopFileName);
 
     aboutData.setProductName(QByteArrayLiteral("nitrux/valenz"));
     aboutData.setOrganizationDomain(QByteArrayLiteral("org.maui.valenz"));
-    if (!desktopFileName.isEmpty())
-        aboutData.setDesktopFileName(desktopFileName.toUtf8());
+    aboutData.setDesktopFileName(desktopFileName.toUtf8());
     aboutData.setProgramLogo(app.windowIcon());
     KAboutData::setApplicationData(aboutData);
 

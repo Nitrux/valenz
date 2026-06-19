@@ -26,7 +26,7 @@ Window
             layerShellHelper.configurePopupWindow(controlCenter, "org.maui.valenz.controlcenter", true)
     }
     color: "transparent"
-    flags: Qt.FramelessWindowHint | Qt.Tool
+    flags: Qt.FramelessWindowHint | Qt.Window
 
 
     readonly property int _baseUnit: Math.max(20, Maui.Style.units.gridUnit)

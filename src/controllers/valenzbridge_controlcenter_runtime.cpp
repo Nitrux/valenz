@@ -136,13 +136,22 @@ void ValenzBridge::refreshControlCenterNightLightState()
     const bool available = MauiKitSystem::controlCenterNightLightAvailable();
     setControlCenterNightLightAvailable(available);
 
+    const bool running = MauiKitSystem::controlCenterNightLightRunning();
     if (!available)
     {
-        setControlCenterNightLightEnabled(false);
+        if (m_controlCenterNightLightEnabled)
+        {
+            m_controlCenterNightLightEnabled = false;
+            Q_EMIT controlCenterNightLightEnabledChanged(m_controlCenterNightLightEnabled);
+        }
         return;
     }
 
-    setControlCenterNightLightEnabled(MauiKitSystem::controlCenterNightLightRunning());
+    if (m_controlCenterNightLightEnabled != running)
+    {
+        m_controlCenterNightLightEnabled = running;
+        Q_EMIT controlCenterNightLightEnabledChanged(m_controlCenterNightLightEnabled);
+    }
 }
 
 void ValenzBridge::refreshControlCenterBrightnessState()

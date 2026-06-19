@@ -48,6 +48,11 @@ Window
             valenzBridge.trace("overflow_menu", action, detail)
     }
 
+    function openCalendarPopup()
+    {
+        _calendarPopup.toggleFromAnchor()
+    }
+
     function cleanText(value)
     {
         return String(value || "").trim()
@@ -526,7 +531,7 @@ Window
                         {
                             onTapped:
                             {
-                                _calendarPopup.toggleFromAnchor()
+                                openCalendarPopup()
                             }
                         }
                     }

@@ -36,7 +36,7 @@ Window
     readonly property int _calendarSpacing: Maui.Style.space.small
     readonly property int _eventsCount: _eventCountForSelectedDate()
     readonly property bool _agendaInstalled: !!calendarPopup.bridge && calendarPopup.bridge.agendaInstalled
-    readonly property int _effectiveMinPanelHeight: calendarPopup._agendaInstalled ? _minPanelHeight : 0
+    readonly property int _effectiveMinPanelHeight: _minPanelHeight
 
     readonly property real _targetY:
     {
@@ -70,7 +70,7 @@ Window
             layerShellHelper.configurePopupWindow(calendarPopup, "org.maui.valenz.calendar", true)
     }
     color: "transparent"
-    flags: Qt.FramelessWindowHint | Qt.Tool
+    flags: Qt.FramelessWindowHint | Qt.Window
 
 
     function _touchGeometryRevision()
@@ -286,8 +286,9 @@ Window
 
     height:
     {
-        const contentHeight = _contentColumn ? (_contentColumn.implicitHeight + (_panelInsetY * 2)) : _preferredPanelHeight
-        const desiredHeight = Math.max(_effectiveMinPanelHeight, contentHeight)
+        const calendarHeight = _calendarCard ? (_calendarCard.implicitHeight + (_panelInsetY * 2)) : _preferredPanelHeight
+        const contentHeight = _contentColumn ? (_contentColumn.implicitHeight + (_panelInsetY * 2)) : calendarHeight
+        const desiredHeight = _agendaInstalled ? Math.max(calendarHeight, contentHeight) : calendarHeight
         return Math.min(desiredHeight, _availableHeightFromAnchor)
     }
 
@@ -518,7 +519,6 @@ Window
                         }
                     }
                 }
-
                 Maui.SectionItem
                 {
                     id: _eventsCard
@@ -644,6 +644,7 @@ Window
 
                             Button
                             {
+                                visible: calendarPopup._agendaInstalled
                                 text: "Edit Events"
                                 onClicked:
                                 {

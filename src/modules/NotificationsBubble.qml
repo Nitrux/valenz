@@ -87,7 +87,7 @@ Window
             layerShellHelper.configurePopupWindow(notificationsBubble, "org.maui.valenz.bubble", false)
     }
     color: "transparent"
-    flags: Qt.FramelessWindowHint | Qt.Tool
+    flags: Qt.FramelessWindowHint | Qt.Window
 
 
     function _touchGeometryRevision()
