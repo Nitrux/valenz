@@ -53,6 +53,39 @@ Window
         _calendarPopup.toggleFromAnchor()
     }
 
+    function closeTransientPopups()
+    {
+        if (_notificationsBubble.visible)
+            _notificationsBubble.close()
+        if (_calendarPopup.visible)
+            _calendarPopup.close()
+        if (_notificationsCenterPopup.visible)
+            _notificationsCenterPopup.close()
+        if (_controlCenterPopup.visible)
+            _controlCenterPopup.close()
+    }
+
+    function _pointInsideItem(item, x, y)
+    {
+        if (!item || !item.visible || !item.width || !item.height)
+            return false
+
+        const point = item.mapFromItem(_pageLayout, x, y)
+        return point && point.x >= 0 && point.y >= 0 && point.x <= item.width && point.y <= item.height
+    }
+
+    function _isPopupToggleArea(x, y)
+    {
+        return _pointInsideItem(_weatherClock, x, y)
+                || _pointInsideItem(_notificationsCenterButton, x, y)
+                || _pointInsideItem(_controlCenterButton, x, y)
+    }
+
+    function toggleMaximized()
+    {
+        // Valenz uses a fixed-height bar window, so maximize is a no-op.
+    }
+
     function cleanText(value)
     {
         return String(value || "").trim()
@@ -540,6 +573,22 @@ Window
                     {
                         topPadding: 10
                         bottomPadding: 10
+                    }
+                }
+
+                MouseArea
+                {
+                    anchors.fill: parent
+                    enabled: _controlCenterPopup.visible || _notificationsCenterPopup.visible || _notificationsBubble.visible || _calendarPopup.visible
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                    hoverEnabled: false
+                    propagateComposedEvents: true
+
+                    onPressed: function(mouse)
+                    {
+                        if (!_isPopupToggleArea(mouse.x, mouse.y))
+                            closeTransientPopups()
+                        mouse.accepted = false
                     }
                 }
             }

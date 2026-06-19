@@ -81,13 +81,16 @@ Window
 
     Maui.Theme.colorSet: Maui.Theme.View
 
-    Component.onCompleted:
-    {
-        if (layerShellHelper)
-            layerShellHelper.configurePopupWindow(notificationsBubble, "org.maui.valenz.bubble", false)
-    }
+    Component.onCompleted: { }
     color: "transparent"
-    flags: Qt.FramelessWindowHint | Qt.Window
+    flags: Qt.FramelessWindowHint | Qt.Popup
+    transientParent: rootWindow
+
+    Keys.onEscapePressed:
+    {
+        close()
+    }
+
 
 
     function _touchGeometryRevision()

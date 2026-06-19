@@ -20,13 +20,16 @@ Window
 
     Maui.Theme.colorSet: Maui.Theme.View
 
-    Component.onCompleted:
-    {
-        if (layerShellHelper)
-            layerShellHelper.configurePopupWindow(controlCenter, "org.maui.valenz.controlcenter", true)
-    }
+    Component.onCompleted: { }
     color: "transparent"
-    flags: Qt.FramelessWindowHint | Qt.Window
+    flags: Qt.FramelessWindowHint | Qt.Popup
+    transientParent: rootWindow
+
+    Keys.onEscapePressed:
+    {
+        close()
+    }
+
 
 
     readonly property int _baseUnit: Math.max(20, Maui.Style.units.gridUnit)
