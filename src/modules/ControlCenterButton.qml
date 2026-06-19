@@ -23,6 +23,7 @@ ToolButton
     property var glyphColorForKind
     property int reopenGuardMs: 180
     property double _lastClosedAtMs: -1
+    property Item popupAnchorMarker: _popupAnchorMarker
     readonly property bool popupVisible: controlCenterButton.popup && controlCenterButton.popup.visible
     readonly property color activeContentColor: (controlCenterButton.down || controlCenterButton.popupVisible) ? Maui.Theme.highlightedTextColor : Maui.Theme.textColor
 
@@ -267,6 +268,23 @@ ToolButton
                     bridge: null
                 }
             }
+        }
+    }
+
+    Item
+    {
+        id: _popupAnchorMarker
+        anchors.right: parent.right
+        anchors.top: parent.bottom
+        width: 1
+        height: 1
+        visible: true
+
+        Rectangle
+        {
+            anchors.fill: parent
+            color: "#ff3b30"
+            opacity: 0.85
         }
     }
 }

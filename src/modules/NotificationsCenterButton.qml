@@ -15,6 +15,7 @@ ToolButton
     property string countText: ""
     property int reopenGuardMs: 180
     property double _lastClosedAtMs: -1
+    property Item popupAnchorMarker: _popupAnchorMarker
     readonly property bool popupVisible: notificationsCenterButton.popup && notificationsCenterButton.popup.visible
     readonly property color activeContentColor: (notificationsCenterButton.down || notificationsCenterButton.popupVisible) ? Maui.Theme.highlightedTextColor : Maui.Theme.textColor
 
@@ -110,6 +111,23 @@ ToolButton
                     bridge: null
                 }
             }
+        }
+    }
+
+    Item
+    {
+        id: _popupAnchorMarker
+        anchors.right: parent.right
+        anchors.top: parent.bottom
+        width: 1
+        height: 1
+        visible: true
+
+        Rectangle
+        {
+            anchors.fill: parent
+            color: "#ff3b30"
+            opacity: 0.85
         }
     }
 }

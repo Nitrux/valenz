@@ -269,7 +269,7 @@ Window
     {
         id: _controlCenterPopup
         title: "Valenz Control Center"
-        anchorButton: _controlCenterButton
+        anchorButton: _controlCenterButton.popupAnchorMarker
         rootWindow: root
         overlayItem: root.contentItem
         bridge: valenzBridge
@@ -281,7 +281,7 @@ Window
         id: _notificationsCenterPopup
         title: "Valenz Notifications Center"
         controller: notificationsController
-        anchorButton: _notificationsCenterButton
+        anchorButton: _notificationsCenterButton.popupAnchorMarker
         rootWindow: root
         overlayItem: root.contentItem
         useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
@@ -290,7 +290,7 @@ Window
     NotificationsBubble
     {
         id: _notificationsBubble
-        anchorButton: _notificationsCenterButton
+        anchorButton: _notificationsCenterButton.popupAnchorMarker
         rootWindow: root
         overlayItem: root.contentItem
         controller: notificationsController
@@ -302,7 +302,7 @@ Window
     {
         id: _calendarPopup
         title: "Valenz Calendar"
-        anchorItem: _weatherClock
+        anchorItem: _weatherClock.popupAnchorMarker
         rootWindow: root
         overlayItem: root.contentItem
         bridge: valenzBridge

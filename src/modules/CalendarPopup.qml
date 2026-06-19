@@ -43,10 +43,11 @@ Window
         let targetY = _margin
         if (anchorItem)
         {
-            const p = _anchorPointInOverlay(0, anchorItem.height)
+            const p = _anchorPointInScreen(0, 0)
             if (p)
                 targetY = p.y + Maui.Style.space.small + _dropOffset
         }
+        console.log("CalendarPopup._targetY", targetY, "anchor=", anchorItem)
 
         return targetY
     }
@@ -58,7 +59,15 @@ Window
             return _preferredPanelHeight
 
         const minY = _margin
-        const startY = Math.max(minY, _targetY)
+        let targetY = Math.max(Maui.Style.toolBarHeightAlt, Maui.Style.units.gridUnit * 2) + _margin
+        if (anchorItem)
+        {
+            const p = _anchorPointInScreen(0, 0)
+            if (p)
+                targetY = p.y + Maui.Style.space.small + _dropOffset
+        }
+
+        const startY = Math.max(minY, targetY)
         return Math.max(0, screenGeometry.height - startY - _margin)
     }
 
@@ -196,27 +205,22 @@ Window
         open()
     }
 
-    function _anchorPointInOverlay(offsetX, offsetY)
+    function _anchorPointInScreen(offsetX, offsetY)
     {
-        const overlay = calendarPopup.overlayItem
-        if (!overlay || !anchorItem)
-            return null
-
-        if (anchorItem.mapToGlobal && overlay.mapFromGlobal)
+        if (!anchorItem || !anchorItem.mapToGlobal)
         {
-            const globalPoint = anchorItem.mapToGlobal(offsetX, offsetY)
-            if (globalPoint && isFinite(globalPoint.x) && isFinite(globalPoint.y))
-            {
-                const localPoint = overlay.mapFromGlobal(globalPoint.x, globalPoint.y)
-                if (localPoint && isFinite(localPoint.x) && isFinite(localPoint.y))
-                    return localPoint
-            }
+            console.log("CalendarPopup._anchorPointInScreen", "missing anchor", offsetX, offsetY)
+            return null
         }
 
-        const mappedPoint = anchorItem.mapToItem(overlay, offsetX, offsetY)
-        if (mappedPoint && isFinite(mappedPoint.x) && isFinite(mappedPoint.y))
-            return mappedPoint
+        const globalPoint = anchorItem.mapToGlobal(offsetX, offsetY)
+        if (globalPoint && isFinite(globalPoint.x) && isFinite(globalPoint.y))
+        {
+            console.log("CalendarPopup._anchorPointInScreen", offsetX, offsetY, "->", globalPoint.x, globalPoint.y)
+            return globalPoint
+        }
 
+        console.log("CalendarPopup._anchorPointInScreen", "invalid point", offsetX, offsetY)
         return null
     }
 
@@ -227,6 +231,11 @@ Window
             return screen.availableGeometry
         if (screen && screen.geometry && screen.geometry.width > 0 && screen.geometry.height > 0)
             return screen.geometry
+        if (screen && screen.width > 0 && screen.height > 0)
+            return Qt.rect(0, 0, screen.width, screen.height)
+        if (screen && screen.virtualGeometry && screen.virtualGeometry.width > 0 && screen.virtualGeometry.height > 0)
+            return screen.virtualGeometry
+
         return Qt.rect(0, 0, 0, 0)
     }
 
@@ -261,9 +270,11 @@ Window
         if (visible)
             return
 
+        console.log("CalendarPopup.open", "anchor=", anchorItem, "popupVisible=", visible)
         aboutToShow()
         visible = true
         requestActivate()
+        _logPopupGeometry("opened")
     }
 
     function close()
@@ -272,6 +283,31 @@ Window
             return
 
         visible = false
+    }
+
+    function _logPopupGeometry(reason)
+    {
+        const screenGeometry = calendarPopup._screenGeometry()
+        console.log("CalendarPopup.geometry", reason,
+                    "window=", width, height,
+                    "implicit=", _panel.implicitHeight,
+                    "available=", _availableHeightFromAnchor,
+                    "screen=", screenGeometry ? screenGeometry.width : -1, screenGeometry ? screenGeometry.height : -1)
+    }
+
+    Timer
+    {
+        id: _deferredGeometryRefreshTimer
+        interval: 32
+        repeat: false
+        onTriggered:
+        {
+            if (visible)
+            {
+                _touchGeometryRevision()
+                _logPopupGeometry("deferred")
+            }
+        }
     }
 
     width:
@@ -307,6 +343,8 @@ Window
             _syncSelectionFromDate(selectedDate)
             _touchGeometryRevision()
             Qt.callLater(_touchGeometryRevision)
+            _deferredGeometryRefreshTimer.restart()
+            _logPopupGeometry("visible")
         }
         else
         {
@@ -326,14 +364,16 @@ Window
         let targetX = _margin
         if (anchorItem)
         {
-            const p = _anchorPointInOverlay(anchorItem.width / 2, anchorItem.height)
+            const p = _anchorPointInScreen(0, 0)
             if (p)
                 targetX = p.x - (width / 2)
         }
 
         const minX = _margin
         const maxX = Math.max(minX, screenGeometry.width - width - _margin)
-        return Math.max(minX, Math.min(maxX, targetX))
+        const finalX = Math.max(minX, Math.min(maxX, targetX))
+        console.log("CalendarPopup.x", "target=", targetX, "final=", finalX, "anchor=", anchorItem)
+        return finalX
     }
 
     y:
@@ -344,7 +384,17 @@ Window
             return _margin
 
         const minY = _margin
-        return Math.max(minY, _targetY)
+        let targetY = Math.max(Maui.Style.toolBarHeightAlt, Maui.Style.units.gridUnit * 2) + _margin
+        if (anchorItem)
+        {
+            const p = _anchorPointInScreen(0, 0)
+            if (p)
+                targetY = p.y + Maui.Style.space.small + _dropOffset
+        }
+
+        const finalY = Math.max(minY, targetY)
+        console.log("CalendarPopup.y", "target=", targetY, "final=", finalY, "anchor=", overlay)
+        return finalY
     }
 
     Connections

@@ -45,10 +45,11 @@ Window
         let targetY = Math.max(Maui.Style.toolBarHeightAlt, Maui.Style.units.gridUnit * 2) + _margin
         if (anchorButton)
         {
-            const p = _anchorPointInOverlay(0, anchorButton.height)
+            const p = _anchorPointInScreen(0, 0)
             if (p)
                 targetY = p.y + Maui.Style.space.small + _dropOffset
         }
+        console.log("NotificationsBubble._targetY", targetY, "anchor=", anchorButton)
 
         return targetY
     }
@@ -66,7 +67,15 @@ Window
             return _panel.implicitHeight
 
         const minY = _margin
-        const startY = Math.max(minY, _targetY)
+        let targetY = Math.max(Maui.Style.toolBarHeightAlt, Maui.Style.units.gridUnit * 2) + _margin
+        if (anchorButton)
+        {
+            const p = _anchorPointInScreen(0, 0)
+            if (p)
+                targetY = p.y + Maui.Style.space.small + _dropOffset
+        }
+
+        const startY = Math.max(minY, targetY)
         return Math.max(0, screenGeometry.height - startY - _margin)
     }
 
@@ -98,27 +107,22 @@ Window
         _geometryRevision += 1
     }
 
-    function _anchorPointInOverlay(offsetX, offsetY)
+    function _anchorPointInScreen(offsetX, offsetY)
     {
-        const overlay = notificationsBubble.overlayItem
-        if (!overlay || !anchorButton)
-            return null
-
-        if (anchorButton.mapToGlobal && overlay.mapFromGlobal)
+        if (!anchorButton || !anchorButton.mapToGlobal)
         {
-            const globalPoint = anchorButton.mapToGlobal(offsetX, offsetY)
-            if (globalPoint && isFinite(globalPoint.x) && isFinite(globalPoint.y))
-            {
-                const localPoint = overlay.mapFromGlobal(globalPoint.x, globalPoint.y)
-                if (localPoint && isFinite(localPoint.x) && isFinite(localPoint.y))
-                    return localPoint
-            }
+            console.log("NotificationsBubble._anchorPointInScreen", "missing anchor", offsetX, offsetY)
+            return null
         }
 
-        const mappedPoint = anchorButton.mapToItem(overlay, offsetX, offsetY)
-        if (mappedPoint && isFinite(mappedPoint.x) && isFinite(mappedPoint.y))
-            return mappedPoint
+        const globalPoint = anchorButton.mapToGlobal(offsetX, offsetY)
+        if (globalPoint && isFinite(globalPoint.x) && isFinite(globalPoint.y))
+        {
+            console.log("NotificationsBubble._anchorPointInScreen", offsetX, offsetY, "->", globalPoint.x, globalPoint.y)
+            return globalPoint
+        }
 
+        console.log("NotificationsBubble._anchorPointInScreen", "invalid point", offsetX, offsetY)
         return null
     }
 
@@ -129,6 +133,11 @@ Window
             return screen.availableGeometry
         if (screen && screen.geometry && screen.geometry.width > 0 && screen.geometry.height > 0)
             return screen.geometry
+        if (screen && screen.width > 0 && screen.height > 0)
+            return Qt.rect(0, 0, screen.width, screen.height)
+        if (screen && screen.virtualGeometry && screen.virtualGeometry.width > 0 && screen.virtualGeometry.height > 0)
+            return screen.virtualGeometry
+
         return Qt.rect(0, 0, 0, 0)
     }
 
@@ -261,9 +270,12 @@ Window
         if (visible)
             return
 
+        console.log("NotificationsBubble.open", "anchor=", anchorButton, "popupVisible=", visible)
         aboutToShow()
         visible = true
+        _deferredGeometryRefreshTimer.restart()
         requestActivate()
+        _logPopupGeometry("opened")
     }
 
     function close()
@@ -272,6 +284,31 @@ Window
             return
 
         visible = false
+    }
+
+    function _logPopupGeometry(reason)
+    {
+        const screenGeometry = notificationsBubble._screenGeometry()
+        console.log("NotificationsBubble.geometry", reason,
+                    "window=", width, height,
+                    "implicit=", _panel.implicitHeight,
+                    "available=", _availableHeightFromAnchor,
+                    "screen=", screenGeometry ? screenGeometry.width : -1, screenGeometry ? screenGeometry.height : -1)
+    }
+
+    Timer
+    {
+        id: _deferredGeometryRefreshTimer
+        interval: 32
+        repeat: false
+        onTriggered:
+        {
+            if (visible)
+            {
+                _touchGeometryRevision()
+                _logPopupGeometry("deferred")
+            }
+        }
     }
 
     width:
@@ -283,6 +320,19 @@ Window
     }
     height: Math.min(_panel.implicitHeight, _availableHeightFromAnchor)
 
+    onVisibleChanged:
+    {
+        if (visible)
+        {
+            opened()
+            _logPopupGeometry("visible")
+            _deferredGeometryRefreshTimer.restart()
+        }
+        else
+        {
+            closed()
+        }
+    }
 
     x:
     {
@@ -297,12 +347,14 @@ Window
 
         if (anchorButton)
         {
-            const p = _anchorPointInOverlay(anchorButton.width, 0)
+            const p = _anchorPointInScreen(0, 0)
             if (p)
                 targetX = p.x - width
         }
 
-        return Math.max(minX, Math.min(maxX, targetX))
+        const finalX = Math.max(minX, Math.min(maxX, targetX))
+        console.log("NotificationsBubble.x", "target=", targetX, "final=", finalX, "anchor=", anchorButton)
+        return finalX
     }
 
     y:
@@ -313,7 +365,17 @@ Window
             return _margin
 
         const minY = _margin
-        return Math.max(minY, _targetY)
+        let targetY = Math.max(Maui.Style.toolBarHeightAlt, Maui.Style.units.gridUnit * 2) + _margin
+        if (anchorButton)
+        {
+            const p = _anchorPointInScreen(0, 0)
+            if (p)
+                targetY = p.y + Maui.Style.space.small + _dropOffset
+        }
+
+        const finalY = Math.max(minY, targetY)
+        console.log("NotificationsBubble.y", "target=", targetY, "final=", finalY, "anchor=", overlay)
+        return finalY
     }
 
     Timer

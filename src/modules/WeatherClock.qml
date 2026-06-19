@@ -13,9 +13,27 @@ Item
     property string weatherIconName: "weather-clear"
     property string weatherTemperature: ""
     property string weatherLocationName: ""
+    property Item popupAnchorMarker: _popupAnchorMarker
 
     implicitWidth: _clockWeatherGrid.implicitWidth
     implicitHeight: _clockWeatherGrid.implicitHeight
+
+    Item
+    {
+        id: _popupAnchorMarker
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.bottom
+        width: 1
+        height: 1
+        visible: true
+
+        Rectangle
+        {
+            anchors.fill: parent
+            color: "#ff3b30"
+            opacity: 0.85
+        }
+    }
 
     GridLayout
     {
