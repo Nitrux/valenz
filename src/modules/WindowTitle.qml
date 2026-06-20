@@ -8,22 +8,24 @@ Item
     id: windowTitle
 
     property QtObject bridge
+    property string fallbackTitle: ""
     property int referenceHeight: -1
     readonly property int tabHeight: referenceHeight > 0 ? referenceHeight : _toolButtonHeightProbe.implicitHeight
     readonly property string displayTitle:
     {
-        return windowTitle.cleanText(windowTitle.bridge ? windowTitle.bridge.focusedWindowTitle : "")
+        const focused = windowTitle.cleanText(windowTitle.bridge ? windowTitle.bridge.focusedWindowTitle : "")
+        return focused.length > 0 ? focused : windowTitle.cleanText(windowTitle.fallbackTitle)
     }
-    readonly property bool hasFocusedWindow: displayTitle.length > 0
+    readonly property bool hasTitle: displayTitle.length > 0
 
-    visible: hasFocusedWindow
+    visible: hasTitle
 
-    implicitWidth: hasFocusedWindow
+    implicitWidth: hasTitle
                    ? Math.max(
                          Maui.Style.units.gridUnit * 4,
                          _focusedWindowMetrics.advanceWidth + Maui.Style.iconSizes.small + (Maui.Style.space.big * 3))
                    : 0
-    implicitHeight: hasFocusedWindow ? tabHeight : 0
+    implicitHeight: hasTitle ? tabHeight : 0
 
     function cleanText(value)
     {

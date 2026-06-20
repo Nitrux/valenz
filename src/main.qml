@@ -521,6 +521,7 @@ Window
                 {
                     id: _windowTitleMiddle
                     bridge: valenzBridge
+                    fallbackTitle: root.title
                     referenceHeight: _mprisControl.actionsButtonHeight
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
