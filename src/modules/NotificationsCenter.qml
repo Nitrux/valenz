@@ -73,7 +73,6 @@ Window
             if (p)
                 targetY = p.y + Maui.Style.space.small + _dropOffset
         }
-        console.log("NotificationsCenter._targetY", targetY, "anchor=", anchorButton)
 
         return targetY
     }
@@ -106,18 +105,14 @@ Window
     {
         if (!anchorButton || !anchorButton.mapToGlobal)
         {
-            console.log("NotificationsCenter._anchorPointInScreen", "missing anchor", offsetX, offsetY)
             return null
         }
 
         const globalPoint = anchorButton.mapToGlobal(offsetX, offsetY)
         if (globalPoint && isFinite(globalPoint.x) && isFinite(globalPoint.y))
         {
-            console.log("NotificationsCenter._anchorPointInScreen", offsetX, offsetY, "->", globalPoint.x, globalPoint.y)
             return globalPoint
         }
-
-        console.log("NotificationsCenter._anchorPointInScreen", "invalid point", offsetX, offsetY)
         return null
     }
 
@@ -238,8 +233,6 @@ Window
     {
         if (visible)
             return
-
-        console.log("NotificationsCenter.open", "anchor=", anchorButton, "popupVisible=", visible)
         aboutToShow()
         _fadeOutPending = false
         _panelOpen = false
@@ -265,12 +258,6 @@ Window
 
     function _logPopupGeometry(reason)
     {
-        const screenGeometry = notificationsCenter._screenGeometry()
-        console.log("NotificationsCenter.geometry", reason,
-                    "window=", width, height,
-                    "implicit=", _panel.implicitHeight,
-                    "available=", _availableHeightFromAnchor,
-                    "screen=", screenGeometry ? screenGeometry.width : -1, screenGeometry ? screenGeometry.height : -1)
     }
 
     Timer
@@ -345,7 +332,6 @@ Window
         }
 
         const finalX = Math.max(minX, Math.min(maxX, targetX))
-        console.log("NotificationsCenter.x", "target=", targetX, "final=", finalX, "anchor=", anchorButton)
         return finalX
     }
 
@@ -366,7 +352,6 @@ Window
         }
 
         const finalY = Math.max(minY, targetY)
-        console.log("NotificationsCenter.y", "target=", targetY, "final=", finalY, "anchor=", overlayItem)
         return finalY
     }
 

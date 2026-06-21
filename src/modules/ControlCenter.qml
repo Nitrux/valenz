@@ -101,7 +101,6 @@ Window
             if (p)
                 targetY = p.y + Maui.Style.space.small + _dropOffset
         }
-        console.log("ControlCenter._targetY", targetY, "anchor=", anchorButton)
 
         return targetY
     }
@@ -133,18 +132,14 @@ Window
     {
         if (!anchorButton || !anchorButton.mapToGlobal)
         {
-            console.log("ControlCenter._anchorPointInScreen", "missing anchor", offsetX, offsetY)
             return null
         }
 
         const globalPoint = anchorButton.mapToGlobal(offsetX, offsetY)
         if (globalPoint && isFinite(globalPoint.x) && isFinite(globalPoint.y))
         {
-            console.log("ControlCenter._anchorPointInScreen", offsetX, offsetY, "->", globalPoint.x, globalPoint.y)
             return globalPoint
         }
-
-        console.log("ControlCenter._anchorPointInScreen", "invalid point", offsetX, offsetY)
         return null
     }
 
@@ -278,8 +273,6 @@ Window
     {
         if (visible)
             return
-
-        console.log("ControlCenter.open", "anchor=", anchorButton, "popupVisible=", visible)
         aboutToShow()
         _fadeOutPending = false
         _panelOpen = false
@@ -305,12 +298,6 @@ Window
 
     function _logPopupGeometry(reason)
     {
-        const screenGeometry = controlCenter._screenGeometry()
-        console.log("ControlCenter.geometry", reason,
-                    "window=", width, height,
-                    "implicit=", _panel.implicitHeight,
-                    "available=", _availableHeightFromAnchor,
-                    "screen=", screenGeometry ? screenGeometry.width : -1, screenGeometry ? screenGeometry.height : -1)
     }
 
     Timer
@@ -385,7 +372,6 @@ Window
         }
 
         const finalX = Math.max(minX, Math.min(maxX, targetX))
-        console.log("ControlCenter.x", "target=", targetX, "final=", finalX, "anchor=", anchorButton)
         return finalX
     }
     y:
@@ -405,7 +391,6 @@ Window
         }
 
         const finalY = Math.max(minY, targetY)
-        console.log("ControlCenter.y", "target=", targetY, "final=", finalY, "anchor=", overlayItem)
         return finalY
     }
 
@@ -775,7 +760,6 @@ Window
                                 checked: controlCenter._dndEnabled
                                 onToggled:
                                 {
-                                    console.log("ControlCenter DND toggle", checked, "controller=", controlCenter.notificationsControllerRef ? controlCenter.notificationsControllerRef.dndEnabled : "null")
                                     if (controlCenter.notificationsControllerRef)
                                         controlCenter.notificationsControllerRef.dndEnabled = checked
                                 }

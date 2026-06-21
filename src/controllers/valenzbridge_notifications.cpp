@@ -2,7 +2,6 @@
 #include "valenzbridge_p.h"
 
 #include <QDBusConnection>
-#include <QDebug>
 #include <QDBusMessage>
 #include <QStringList>
 #include <QTimer>
@@ -224,18 +223,14 @@ void NotificationsController::setDndEnabled(bool enabled)
 {
     if (m_dndEnabled == enabled)
     {
-        qDebug().noquote() << "NotificationsController::setDndEnabled unchanged" << enabled;
         return;
     }
-
-    qDebug().noquote() << "NotificationsController::setDndEnabled" << m_dndEnabled << "->" << enabled;
     m_dndEnabled = enabled;
     Q_EMIT dndEnabledChanged(m_dndEnabled);
 }
 
 void NotificationsController::toggleDnd()
 {
-    qDebug().noquote() << "NotificationsController::toggleDnd" << m_dndEnabled << "->" << !m_dndEnabled;
     setDndEnabled(!m_dndEnabled);
 }
 
@@ -274,7 +269,6 @@ uint NotificationsController::Notify(const QString &appName,
     const int replaceRow = replacesId > 0 ? indexOfId(replacesId) : -1;
     const bool suppressTransient = m_dndEnabled;
     if (suppressTransient)
-        qDebug().noquote() << "NotificationsController::Notify stored but bubble suppressed by DND" << appName << summary;
 
     if (replaceRow >= 0)
     {

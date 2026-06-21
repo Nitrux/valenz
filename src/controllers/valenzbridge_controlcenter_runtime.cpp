@@ -2,7 +2,6 @@
 #include "valenzbridge_p.h"
 #include "mauikit_system_control.h"
 
-#include <QDebug>
 
 void ValenzBridge::initializeControlCenterRuntime()
 {
@@ -82,7 +81,6 @@ void ValenzBridge::setControlCenterVolumePercentageFromSlider(int percent)
 void ValenzBridge::setControlCenterBrightnessPercentageFromSlider(int percent)
 {
     const bool ok = MauiKitSystem::setControlCenterBrightnessPercent(percent);
-    qDebug().noquote() << "ValenzBridge::setControlCenterBrightnessPercentageFromSlider" << percent << ok;
     refreshControlCenterBrightnessState();
 }
 
@@ -92,13 +90,11 @@ void ValenzBridge::setControlCenterNightLightEnabled(bool enabled)
     {
         if (m_controlCenterNightLightEnabled && !enabled)
         {
-            qDebug().noquote() << "ValenzBridge::setControlCenterNightLightEnabled forcing off; hyprsunset unavailable";
             m_controlCenterNightLightEnabled = false;
             Q_EMIT controlCenterNightLightEnabledChanged(m_controlCenterNightLightEnabled);
         }
         else
         {
-            qDebug().noquote() << "ValenzBridge::setControlCenterNightLightEnabled ignored; hyprsunset unavailable";
         }
         return;
     }
@@ -106,19 +102,15 @@ void ValenzBridge::setControlCenterNightLightEnabled(bool enabled)
     if (m_controlCenterNightLightEnabled == enabled)
         return;
 
-    qDebug().noquote() << "ValenzBridge::setControlCenterNightLightEnabled" << m_controlCenterNightLightEnabled << "->" << enabled;
-
     if (enabled)
     {
         const bool started = MauiKitSystem::startControlCenterNightLight();
-        qDebug().noquote() << "ValenzBridge::setControlCenterNightLightEnabled start hyprsunset" << started;
         if (!started)
             return;
     }
     else
     {
         const bool stopped = MauiKitSystem::stopControlCenterNightLight();
-        qDebug().noquote() << "ValenzBridge::setControlCenterNightLightEnabled stop hyprsunset" << stopped;
     }
 
     m_controlCenterNightLightEnabled = enabled;

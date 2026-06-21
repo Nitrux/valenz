@@ -52,7 +52,6 @@ Window
             if (p)
                 targetY = p.y + Maui.Style.space.small + _dropOffset
         }
-        console.log("CalendarPopup._targetY", targetY, "anchor=", anchorItem)
 
         return targetY
     }
@@ -223,18 +222,14 @@ Window
     {
         if (!anchorItem || !anchorItem.mapToGlobal)
         {
-            console.log("CalendarPopup._anchorPointInScreen", "missing anchor", offsetX, offsetY)
             return null
         }
 
         const globalPoint = anchorItem.mapToGlobal(offsetX, offsetY)
         if (globalPoint && isFinite(globalPoint.x) && isFinite(globalPoint.y))
         {
-            console.log("CalendarPopup._anchorPointInScreen", offsetX, offsetY, "->", globalPoint.x, globalPoint.y)
             return globalPoint
         }
-
-        console.log("CalendarPopup._anchorPointInScreen", "invalid point", offsetX, offsetY)
         return null
     }
 
@@ -283,8 +278,6 @@ Window
     {
         if (visible)
             return
-
-        console.log("CalendarPopup.open", "anchor=", anchorItem, "popupVisible=", visible)
         aboutToShow()
         _fadeOutPending = false
         _panelOpen = false
@@ -310,12 +303,6 @@ Window
 
     function _logPopupGeometry(reason)
     {
-        const screenGeometry = calendarPopup._screenGeometry()
-        console.log("CalendarPopup.geometry", reason,
-                    "window=", width, height,
-                    "implicit=", _panel.implicitHeight,
-                    "available=", _availableHeightFromAnchor,
-                    "screen=", screenGeometry ? screenGeometry.width : -1, screenGeometry ? screenGeometry.height : -1)
     }
 
     Timer
@@ -412,7 +399,6 @@ Window
         const minX = _margin
         const maxX = Math.max(minX, screenGeometry.width - width - _margin)
         const finalX = Math.max(minX, Math.min(maxX, targetX))
-        console.log("CalendarPopup.x", "target=", targetX, "final=", finalX, "anchor=", anchorItem)
         return finalX
     }
 
@@ -433,7 +419,6 @@ Window
         }
 
         const finalY = Math.max(minY, targetY)
-        console.log("CalendarPopup.y", "target=", targetY, "final=", finalY, "anchor=", overlay)
         return finalY
     }
 

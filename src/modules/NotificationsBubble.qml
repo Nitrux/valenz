@@ -29,6 +29,7 @@ Window
 
     property int _geometryRevision: 0
     property bool _fadeOutPending: false
+    property bool _panelOpen: false
 
     readonly property int _baseUnit: Math.max(20, Maui.Style.units.gridUnit)
     readonly property int _fadeInDurationMs: 50
@@ -52,7 +53,6 @@ Window
             if (p)
                 targetY = p.y + Maui.Style.space.small + _dropOffset
         }
-        console.log("NotificationsBubble._targetY", targetY, "anchor=", anchorButton)
 
         return targetY
     }
@@ -123,18 +123,14 @@ Window
     {
         if (!anchorButton || !anchorButton.mapToGlobal)
         {
-            console.log("NotificationsBubble._anchorPointInScreen", "missing anchor", offsetX, offsetY)
             return null
         }
 
         const globalPoint = anchorButton.mapToGlobal(offsetX, offsetY)
         if (globalPoint && isFinite(globalPoint.x) && isFinite(globalPoint.y))
         {
-            console.log("NotificationsBubble._anchorPointInScreen", offsetX, offsetY, "->", globalPoint.x, globalPoint.y)
             return globalPoint
         }
-
-        console.log("NotificationsBubble._anchorPointInScreen", "invalid point", offsetX, offsetY)
         return null
     }
 
@@ -204,7 +200,6 @@ Window
 
     function showNotification(idValue, sourceNameValue, messageTextValue, timestampTextValue, iconNameValue, urgencyLevelValue, actionTextValue, actionKeyValue)
     {
-        console.log("NotificationsBubble.showNotification", idValue, sourceNameValue, "dnd=", controller ? controller.dndEnabled : false, "popupVisible=", notificationsPopup ? notificationsPopup.visible : false)
         if (notificationsPopup && notificationsPopup.visible)
             return
 
@@ -249,7 +244,6 @@ Window
 
     function dismissBubble()
     {
-        console.log("NotificationsBubble.dismissBubble", "visible=", visible, "popupVisible=", notificationsPopup ? notificationsPopup.visible : false, "controllerDnd=", controller ? controller.dndEnabled : false)
         _autoCloseTimer.stop()
         if (visible)
             close()
@@ -281,8 +275,6 @@ Window
     {
         if (visible)
             return
-
-        console.log("NotificationsBubble.open", "anchor=", anchorButton, "popupVisible=", visible)
         aboutToShow()
         _fadeOutPending = false
         _panelOpen = false
@@ -309,12 +301,6 @@ Window
 
     function _logPopupGeometry(reason)
     {
-        const screenGeometry = notificationsBubble._screenGeometry()
-        console.log("NotificationsBubble.geometry", reason,
-                    "window=", width, height,
-                    "implicit=", _panel.implicitHeight,
-                    "available=", _availableHeightFromAnchor,
-                    "screen=", screenGeometry ? screenGeometry.width : -1, screenGeometry ? screenGeometry.height : -1)
     }
 
     Timer
@@ -391,7 +377,6 @@ Window
         }
 
         const finalX = Math.max(minX, Math.min(maxX, targetX))
-        console.log("NotificationsBubble.x", "target=", targetX, "final=", finalX, "anchor=", anchorButton)
         return finalX
     }
 
@@ -412,7 +397,6 @@ Window
         }
 
         const finalY = Math.max(minY, targetY)
-        console.log("NotificationsBubble.y", "target=", targetY, "final=", finalY, "anchor=", overlay)
         return finalY
     }
 
@@ -472,7 +456,6 @@ Window
 
         function onDndEnabledChanged()
         {
-            console.log("NotificationsBubble.onDndEnabledChanged", notificationsBubble.controller ? notificationsBubble.controller.dndEnabled : false)
             if (notificationsBubble.controller && notificationsBubble.controller.dndEnabled)
                 notificationsBubble.dismissBubble()
         }

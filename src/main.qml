@@ -314,7 +314,6 @@ Window
 
         function onTransientNotification(id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey)
         {
-            console.log("main.onTransientNotification", id, sourceName, "dnd=", notificationsController ? notificationsController.dndEnabled : false, "centerVisible=", _notificationsCenterPopup.visible, "bubbleVisible=", _notificationsBubble.visible)
             if (_notificationsCenterPopup.visible)
                 return
 

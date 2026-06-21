@@ -21,7 +21,6 @@
 #include <QDBusMessage>
 #include <QDBusReply>
 #include <QDBusVariant>
-#include <QDebug>
 #include <QLocalSocket>
 #include <QTimer>
 #include <QProcess>
