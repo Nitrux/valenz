@@ -23,6 +23,11 @@ Window
     property double _lastClosedAtMs: -1
     property int _geometryRevision: 0
     property bool _calendarStateSyncing: false
+    property bool _fadeOutPending: false
+    property bool _panelOpen: false
+
+    readonly property int _fadeInDurationMs: 25
+    readonly property int _fadeOutDurationMs: 100
 
     readonly property int _baseUnit: Math.max(20, Maui.Style.units.gridUnit)
     readonly property int _margin: Math.max(Maui.Style.contentMargins, Maui.Style.space.medium)
@@ -80,6 +85,15 @@ Window
 
     Keys.onEscapePressed:
     {
+        close()
+    }
+
+    onClosing: function(closeEvent)
+    {
+        if (_fadeOutPending)
+            return
+
+        closeEvent.accepted = false
         close()
     }
 
@@ -272,8 +286,15 @@ Window
 
         console.log("CalendarPopup.open", "anchor=", anchorItem, "popupVisible=", visible)
         aboutToShow()
+        _fadeOutPending = false
+        _panelOpen = false
         visible = true
         requestActivate()
+        Qt.callLater(function()
+        {
+            if (visible)
+                _panelOpen = true
+        })
         _logPopupGeometry("opened")
     }
 
@@ -282,7 +303,9 @@ Window
         if (!visible)
             return
 
-        visible = false
+        _fadeOutPending = true
+        _panelOpen = false
+        _fadeOutTimer.restart()
     }
 
     function _logPopupGeometry(reason)
@@ -306,6 +329,21 @@ Window
             {
                 _touchGeometryRevision()
                 _logPopupGeometry("deferred")
+            }
+        }
+    }
+
+    Timer
+    {
+        id: _fadeOutTimer
+        interval: calendarPopup._fadeOutDurationMs
+        repeat: false
+        onTriggered:
+        {
+            if (calendarPopup._fadeOutPending)
+            {
+                calendarPopup._fadeOutPending = false
+                visible = false
             }
         }
     }
@@ -348,6 +386,8 @@ Window
         }
         else
         {
+            _fadeOutTimer.stop()
+            _panelOpen = false
             closed()
             _lastClosedAtMs = Date.now()
         }
@@ -432,10 +472,47 @@ Window
     {
         id: _panel
         anchors.fill: parent
+        opacity: 0.0
+        scale: 0.97
+        transformOrigin: Item.Center
         implicitWidth: calendarPopup.width
         implicitHeight: _contentColumn.implicitHeight + (calendarPopup._panelInsetY * 2)
         radius: Maui.Style.radiusV
         color: calendarPopup._panelColor
+        states: [
+            State
+            {
+                name: "open"
+                when: calendarPopup._panelOpen
+                PropertyChanges
+                {
+                    target: _panel
+                    opacity: 1.0
+                    scale: 1.0
+                }
+            },
+            State
+            {
+                name: "closed"
+                when: !calendarPopup._panelOpen
+                PropertyChanges
+                {
+                    target: _panel
+                    opacity: 0.0
+                    scale: 0.97
+                }
+            }
+        ]
+        transitions: Transition
+        {
+            reversible: true
+            NumberAnimation
+            {
+                properties: "opacity,scale"
+                duration: calendarPopup._panelOpen ? calendarPopup._fadeInDurationMs : calendarPopup._fadeOutDurationMs
+                easing.type: Easing.InOutCubic
+            }
+        }
         layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software
         layer.effect: MultiEffect
         {

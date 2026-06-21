@@ -308,12 +308,6 @@ Window
         bridge: valenzBridge
     }
 
-    SettingsDialog
-    {
-        id: _settingsDialog
-        bridge: valenzBridge
-    }
-
     Connections
     {
         target: notificationsController
@@ -439,52 +433,6 @@ Window
                 glyphForIcon: root.controlCenterButtonGlyph
                 glyphColorForKind: root.controlCenterButtonGlyphColor
             },
-
-            ToolSeparator
-            {
-                topPadding: 10
-                bottomPadding: 10
-            },
-
-            Loader
-            {
-                id: _mainMenuLoader
-                asynchronous: true
-                active: true
-                visible: true
-                sourceComponent: Maui.ToolButtonMenu
-                {
-                    id: _mainMenu
-                    icon.name: "overflow-menu"
-
-                    MenuItem
-                    {
-                        text: "Shortcuts"
-                        onTriggered: root.traceMenu("dialog/shortcuts")
-                    }
-
-                    MenuItem
-                    {
-                        text: "Settings"
-                        onTriggered:
-                        {
-                            root.traceMenu("dialog/settings")
-                            _settingsDialog.open()
-                        }
-                    }
-
-                    MenuItem
-                    {
-                        text: "About"
-                        icon.name: "documentinfo"
-                        onTriggered:
-                        {
-                            root.traceMenu("dialog/about")
-                            Maui.App.aboutDialog()
-                        }
-                    }
-                }
-            }
         ]
 
         headBar.middleContent: RowLayout

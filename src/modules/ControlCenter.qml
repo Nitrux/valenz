@@ -30,6 +30,15 @@ Window
         close()
     }
 
+    onClosing: function(closeEvent)
+    {
+        if (_fadeOutPending)
+            return
+
+        closeEvent.accepted = false
+        close()
+    }
+
 
 
     readonly property int _baseUnit: Math.max(20, Maui.Style.units.gridUnit)
@@ -74,6 +83,11 @@ Window
     }
     property int _geometryRevision: 0
     property bool _systemResourcesRefreshActive: false
+    property bool _fadeOutPending: false
+    property bool _panelOpen: false
+
+    readonly property int _fadeInDurationMs: 25
+    readonly property int _fadeOutDurationMs: 100
     readonly property real _targetY:
     {
         const overlayItem = controlCenter.overlayItem
@@ -267,8 +281,15 @@ Window
 
         console.log("ControlCenter.open", "anchor=", anchorButton, "popupVisible=", visible)
         aboutToShow()
+        _fadeOutPending = false
+        _panelOpen = false
         visible = true
         requestActivate()
+        Qt.callLater(function()
+        {
+            if (visible)
+                _panelOpen = true
+        })
         _logPopupGeometry("opened")
     }
 
@@ -277,7 +298,9 @@ Window
         if (!visible)
             return
 
-        visible = false
+        _fadeOutPending = true
+        _panelOpen = false
+        _fadeOutTimer.restart()
     }
 
     function _logPopupGeometry(reason)
@@ -305,8 +328,24 @@ Window
         }
     }
 
+    Timer
+    {
+        id: _fadeOutTimer
+        interval: controlCenter._fadeOutDurationMs
+        repeat: false
+        onTriggered:
+        {
+            if (controlCenter._fadeOutPending)
+            {
+                controlCenter._fadeOutPending = false
+                visible = false
+            }
+        }
+    }
+
     width: Math.max(_panel.implicitWidth, _minPanelWidth)
     height: Math.min(_panel.implicitHeight, _availableHeightFromAnchor)
+
     onVisibleChanged:
     {
         if (visible)
@@ -321,6 +360,8 @@ Window
         }
         else
         {
+            _fadeOutTimer.stop()
+            _panelOpen = false
             closed()
             _systemResourcesRefreshActive = false
         }
@@ -403,10 +444,47 @@ Window
     {
         id: _panel
         anchors.fill: parent
+        opacity: 0.0
+        scale: 0.97
+        transformOrigin: Item.Center
         implicitWidth: Math.max(controlCenter._minPanelWidth, _panelContent.implicitWidth + (controlCenter._panelInsetX * 2))
         implicitHeight: _panelContent.implicitHeight + (controlCenter._panelInsetY * 2)
         radius: Maui.Style.radiusV
         color: controlCenter._panelColor
+        states: [
+            State
+            {
+                name: "open"
+                when: controlCenter._panelOpen
+                PropertyChanges
+                {
+                    target: _panel
+                    opacity: 1.0
+                    scale: 1.0
+                }
+            },
+            State
+            {
+                name: "closed"
+                when: !controlCenter._panelOpen
+                PropertyChanges
+                {
+                    target: _panel
+                    opacity: 0.0
+                    scale: 0.97
+                }
+            }
+        ]
+        transitions: Transition
+        {
+            reversible: true
+            NumberAnimation
+            {
+                properties: "opacity,scale"
+                duration: controlCenter._panelOpen ? controlCenter._fadeInDurationMs : controlCenter._fadeOutDurationMs
+                easing.type: Easing.InOutCubic
+            }
+        }
         layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software
         layer.effect: MultiEffect
         {

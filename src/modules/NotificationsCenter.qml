@@ -29,6 +29,15 @@ Window
         close()
     }
 
+    onClosing: function(closeEvent)
+    {
+        if (_fadeOutPending)
+            return
+
+        closeEvent.accepted = false
+        close()
+    }
+
 
 
     readonly property int _baseUnit: Math.max(20, Maui.Style.units.gridUnit)
@@ -42,6 +51,11 @@ Window
     readonly property int notificationCount: controller ? controller.count : _notificationsModel.count
     property int _geometryRevision: 0
     property bool _clearingAll: false
+    property bool _fadeOutPending: false
+    property bool _panelOpen: false
+
+    readonly property int _fadeInDurationMs: 25
+    readonly property int _fadeOutDurationMs: 100
     property int clearAllTrigger: 0
     property int _clearRemainingAnimations: 0
     readonly property int _clearAllStaggerMs: 45
@@ -227,8 +241,15 @@ Window
 
         console.log("NotificationsCenter.open", "anchor=", anchorButton, "popupVisible=", visible)
         aboutToShow()
+        _fadeOutPending = false
+        _panelOpen = false
         visible = true
         requestActivate()
+        Qt.callLater(function()
+        {
+            if (visible)
+                _panelOpen = true
+        })
         _logPopupGeometry("opened")
     }
 
@@ -237,7 +258,9 @@ Window
         if (!visible)
             return
 
-        visible = false
+        _fadeOutPending = true
+        _panelOpen = false
+        _fadeOutTimer.restart()
     }
 
     function _logPopupGeometry(reason)
@@ -265,6 +288,21 @@ Window
         }
     }
 
+    Timer
+    {
+        id: _fadeOutTimer
+        interval: notificationsCenter._fadeOutDurationMs
+        repeat: false
+        onTriggered:
+        {
+            if (notificationsCenter._fadeOutPending)
+            {
+                notificationsCenter._fadeOutPending = false
+                visible = false
+            }
+        }
+    }
+
     width: Math.max(_panel.implicitWidth, _minPanelWidth)
     height: Math.min(_panel.implicitHeight, _availableHeightFromAnchor)
 
@@ -281,6 +319,8 @@ Window
         }
         else
         {
+            _fadeOutTimer.stop()
+            _panelOpen = false
             closed()
         }
     }
@@ -364,10 +404,47 @@ Window
     {
         id: _panel
         anchors.fill: parent
+        opacity: 0.0
+        scale: 0.97
+        transformOrigin: Item.Center
         implicitWidth: Math.max(notificationsCenter._minPanelWidth, _panelContent.implicitWidth + (notificationsCenter._panelInsetX * 2))
         implicitHeight: _panelContent.implicitHeight + (notificationsCenter._panelInsetY * 2)
         radius: Maui.Style.radiusV
         color: notificationsCenter._panelColor
+        states: [
+            State
+            {
+                name: "open"
+                when: notificationsCenter._panelOpen
+                PropertyChanges
+                {
+                    target: _panel
+                    opacity: 1.0
+                    scale: 1.0
+                }
+            },
+            State
+            {
+                name: "closed"
+                when: !notificationsCenter._panelOpen
+                PropertyChanges
+                {
+                    target: _panel
+                    opacity: 0.0
+                    scale: 0.97
+                }
+            }
+        ]
+        transitions: Transition
+        {
+            reversible: true
+            NumberAnimation
+            {
+                properties: "opacity,scale"
+                duration: notificationsCenter._panelOpen ? notificationsCenter._fadeInDurationMs : notificationsCenter._fadeOutDurationMs
+                easing.type: Easing.InOutCubic
+            }
+        }
         layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software
         layer.effect: MultiEffect
         {
