@@ -14,6 +14,8 @@ ToolButton
     display: ToolButton.TextOnly
     font.bold: true
     font.pointSize: Maui.Style.fontSizes.small
+    ToolTip.visible: false
+    ToolTip.text: ""
 
     // Display-only badge: unlike Index tabs, this does not open any overview.
     onClicked: {}

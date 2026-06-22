@@ -59,6 +59,8 @@ bool ValenzBridge::refreshFocusedWindowState()
     {
         setFocusedWindowTitle(QString());
         setFocusedWindowIconName(QStringLiteral("application-x-executable"));
+        setFocusedWindowFullscreenInternal(kFullscreenModeNone);
+        setFocusedWindowFullscreenClient(kFullscreenModeNone);
         return false;
     }
 
@@ -66,10 +68,23 @@ bool ValenzBridge::refreshFocusedWindowState()
     {
         setFocusedWindowTitle(QString());
         setFocusedWindowIconName(QStringLiteral("application-x-executable"));
+        setFocusedWindowFullscreenInternal(kFullscreenModeNone);
+        setFocusedWindowFullscreenClient(kFullscreenModeNone);
         return false;
     }
 
     const QJsonObject windowObject = activeWindow.toObject();
+
+    const auto parseFullscreenMode = [](const QJsonValue &value) -> int
+    {
+        if (value.isBool())
+            return value.toBool() ? kFullscreenModeFullscreen : kFullscreenModeNone;
+
+        return qBound(kFullscreenModeNone, value.toInt(), kFullscreenModeMax);
+    };
+
+    const int fullscreenInternal = parseFullscreenMode(windowObject.value(QStringLiteral("fullscreen")));
+    const int fullscreenClient = parseFullscreenMode(windowObject.value(QStringLiteral("fullscreenClient")));
 
     QString title = windowObject.value(QStringLiteral("title")).toString().trimmed();
     if (title.isEmpty())
@@ -114,6 +129,8 @@ bool ValenzBridge::refreshFocusedWindowState()
 
     setFocusedWindowTitle(title);
     setFocusedWindowIconName(resolvedIconName);
+    setFocusedWindowFullscreenInternal(fullscreenInternal);
+    setFocusedWindowFullscreenClient(fullscreenClient);
     return true;
 }
 

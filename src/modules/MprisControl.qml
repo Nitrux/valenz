@@ -9,6 +9,8 @@ Item
     id: mprisControl
 
     property QtObject bridge
+    property var popup
+    property Item popupAnchorMarker: _popupAnchorMarker
     readonly property int actionsButtonHeight: _mediaControls.implicitHeight
 
     Layout.fillWidth: false
@@ -18,6 +20,17 @@ Item
     function cleanText(value)
     {
         return String(value || "").trim()
+    }
+
+    function toggleSourcesPopup()
+    {
+        if (!mprisControl.popup)
+            return
+
+        if (mprisControl.popup.visible)
+            mprisControl.popup.close()
+        else
+            mprisControl.popup.open()
     }
 
     GridLayout
@@ -55,6 +68,7 @@ Item
             Label
             {
                 anchors.centerIn: parent
+                font.pointSize: Maui.Style.fontSizes.big
                 text: "\u266B"
                 visible: _mediaArtImage.status !== Image.Ready
             }
@@ -97,6 +111,7 @@ Item
                 Label
                 {
                     id: _mediaPrimaryText
+                    font.pointSize: Maui.Style.fontSizes.big
                     y: (_mediaPrimaryTextWrap.height - height) / 2
                     text:
                     {
@@ -181,6 +196,7 @@ Item
                 Label
                 {
                     id: _mediaSecondaryText
+                    font.pointSize: Maui.Style.fontSizes.tiny
                     y: (_mediaSecondaryTextWrap.height - height) / 2
                     color: Maui.Theme.textColor
                     text:
@@ -209,24 +225,48 @@ Item
 
             Action
             {
-                text: "Previous track"
+                text: i18n("Media sources")
+                icon.name: "open-menu-symbolic"
+                onTriggered: mprisControl.toggleSourcesPopup()
+            }
+
+            Action
+            {
+                text: i18n("Previous track")
                 icon.name: "media-skip-backward"
                 onTriggered: mprisControl.bridge.mediaPreviousTrack()
             }
 
             Action
             {
-                text: "Play and pause"
+                text: i18n("Play and pause")
                 icon.name: mprisControl.bridge && mprisControl.bridge.mediaPlaying ? "media-playback-pause" : "media-playback-start"
                 onTriggered: mprisControl.bridge.mediaTogglePlayPause()
             }
 
             Action
             {
-                text: "Next track"
+                text: i18n("Next track")
                 icon.name: "media-skip-forward"
                 onTriggered: mprisControl.bridge.mediaNextTrack()
             }
+        }
+    }
+
+    Item
+    {
+        id: _popupAnchorMarker
+        x: _mediaControls.x + (_mediaControls.width / 2)
+        y: parent.height
+        width: 1
+        height: 1
+        visible: true
+
+        Rectangle
+        {
+            anchors.fill: parent
+            visible: false
+            color: "#ff3b30"
         }
     }
 }

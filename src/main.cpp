@@ -4,6 +4,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QSurfaceFormat>
+#include <QProcess>
 #include <QDate>
 #include <QIcon>
 #include <QWindow>
@@ -57,6 +58,34 @@ public:
     }
 };
 
+class LegacyTrayProxyHelper : public QObject
+{
+    Q_OBJECT
+
+public:
+    explicit LegacyTrayProxyHelper(QObject *parent = nullptr) : QObject(parent) {}
+
+    void start()
+    {
+        if (!QGuiApplication::platformName().contains(QStringLiteral("wayland"), Qt::CaseInsensitive))
+            return;
+
+        const QString proxyExecutable = QStandardPaths::findExecutable(QStringLiteral("xembedsniproxy"));
+        if (proxyExecutable.isEmpty())
+            return;
+
+        if (m_proxy.state() != QProcess::NotRunning)
+            return;
+
+        m_proxy.start(proxyExecutable);
+        if (!m_proxy.waitForStarted(3000))
+            m_proxy.close();
+    }
+
+private:
+    QProcess m_proxy;
+};
+
 static void configureLayerShellWindow(QWindow *window)
 {
     if (!window)
@@ -69,26 +98,23 @@ static void configureLayerShellWindow(QWindow *window)
     layerShellWindow->setScope(QStringLiteral("org.maui.valenz"));
     layerShellWindow->setLayer(LayerShellQt::Window::LayerOverlay);
     layerShellWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityNone);
-    const int exclusiveZone = window->property("barHeight").toInt();
+    const int barHeight = window->property("barHeight").toInt();
+    const int barLayerSpacing = qMax(0, window->property("barLayerSpacing").toInt());
+    const int exclusiveZone = barHeight + barLayerSpacing;
     layerShellWindow->setExclusiveZone(exclusiveZone > 0 ? exclusiveZone : window->height());
     layerShellWindow->setWantsToBeOnActiveScreen(true);
     layerShellWindow->setScreen(window->screen());
 
     LayerShellQt::Window::Anchors anchors;
     anchors |= LayerShellQt::Window::AnchorTop;
-    anchors |= LayerShellQt::Window::AnchorLeft;
-    anchors |= LayerShellQt::Window::AnchorRight;
     layerShellWindow->setAnchors(anchors);
     layerShellWindow->setDesiredSize(QSize(window->width(), window->height()));
-    layerShellWindow->setMargins(QMargins(0, 0, 0, 0));
+    layerShellWindow->setMargins(QMargins(0, barLayerSpacing, 0, 0));
 }
 
 static QString desktopFileNameForPortal()
 {
-    static const QString desktopFile = QStringLiteral("org.maui.valenz.desktop");
-    return QStandardPaths::locate(QStandardPaths::ApplicationsLocation, desktopFile).isEmpty()
-        ? QString()
-        : QStringLiteral("org.maui.valenz");
+    return QStringLiteral("org.maui.valenz");
 }
 
 int main(int argc, char *argv[])
@@ -136,6 +162,8 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextObject(new KLocalizedContext(&engine));
     LayerShellPopupHelper layerShellPopupHelper;
     engine.rootContext()->setContextProperty(QStringLiteral("layerShellHelper"), &layerShellPopupHelper);
+    LegacyTrayProxyHelper legacyTrayProxyHelper;
+    legacyTrayProxyHelper.start();
     ValenzBridge valenzBridge;
     SystemTrayController systemTrayController;
     NotificationsController notificationsController;

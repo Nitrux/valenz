@@ -32,9 +32,9 @@ Window
     readonly property int _baseUnit: Math.max(20, Maui.Style.units.gridUnit)
     readonly property int _margin: Math.max(Maui.Style.contentMargins, Maui.Style.space.medium)
     readonly property int _dropOffset: 6
-    readonly property int _panelInsetX: 8
-    readonly property int _panelInsetY: 8
-    readonly property color _panelColor: Maui.Theme.backgroundColor
+    readonly property int _panelInsetX: 6
+    readonly property int _panelInsetY: 6
+    readonly property color _panelColor: calendarPopup.rootWindow ? calendarPopup.rootWindow.popupSurfaceColor : Maui.Theme.backgroundColor
     readonly property int _preferredPanelWidth: Maui.Handy.isMobile ? _baseUnit * 16 : _baseUnit * 18
     readonly property int _minPanelHeight: Maui.Handy.isMobile ? _baseUnit * 19 : _baseUnit * 20
     readonly property int _preferredPanelHeight: Maui.Handy.isMobile ? _baseUnit * 23 : _baseUnit * 24
@@ -79,12 +79,15 @@ Window
 
     Component.onCompleted: { }
     color: "transparent"
+
+    visible: false
     flags: Qt.FramelessWindowHint | Qt.Popup
     transientParent: rootWindow
 
-    Keys.onEscapePressed:
+    Shortcut
     {
-        close()
+        sequences: [ StandardKey.Cancel ]
+        onActivated: calendarPopup.close()
     }
 
     onClosing: function(closeEvent)
@@ -278,6 +281,9 @@ Window
     {
         if (visible)
             return
+
+        if (rootWindow && rootWindow.closeTransientPopups)
+            rootWindow.closeTransientPopups()
         aboutToShow()
         _fadeOutPending = false
         _panelOpen = false
@@ -299,6 +305,14 @@ Window
         _fadeOutPending = true
         _panelOpen = false
         _fadeOutTimer.restart()
+    }
+
+    function forceClose()
+    {
+        _fadeOutTimer.stop()
+        _fadeOutPending = false
+        _panelOpen = false
+        visible = false
     }
 
     function _logPopupGeometry(reason)
@@ -460,10 +474,13 @@ Window
         opacity: 0.0
         scale: 0.97
         transformOrigin: Item.Center
+        clip: true
         implicitWidth: calendarPopup.width
         implicitHeight: _contentColumn.implicitHeight + (calendarPopup._panelInsetY * 2)
-        radius: Maui.Style.radiusV
+        radius: Maui.Style.radiusV + 3
         color: calendarPopup._panelColor
+        border.width: 1
+        border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
         states: [
             State
             {
@@ -502,7 +519,7 @@ Window
         layer.effect: MultiEffect
         {
             autoPaddingEnabled: true
-            shadowEnabled: true
+            shadowEnabled: false
             shadowColor: "#80000000"
         }
 
@@ -531,6 +548,7 @@ Window
                     id: _calendarCard
                     width: parent.width
                     flat: false
+                    clip: true
                     padding: Maui.Style.space.medium
                     text: ""
                     label2.text: ""
@@ -640,6 +658,7 @@ Window
                     visible: calendarPopup._agendaInstalled
                     width: parent.width
                     flat: false
+                    clip: true
                     padding: Maui.Style.space.medium
                     text: ""
                     label2.text: ""
@@ -658,7 +677,7 @@ Window
 
                                 Label
                                 {
-                                    text: "Events"
+                                    text: i18n("Events")
                                     font.weight: Font.DemiBold
                                 }
 
@@ -691,7 +710,7 @@ Window
                         {
                             Layout.fillWidth: true
                             visible: calendarPopup._eventsCount === 0
-                            text: "No events scheduled for this day."
+                            text: i18n("No events scheduled for this day.")
                             color: Qt.alpha(Maui.Theme.textColor, 0.72)
                         }
 
@@ -760,7 +779,7 @@ Window
                             Button
                             {
                                 visible: calendarPopup._agendaInstalled
-                                text: "Edit Events"
+                                text: i18n("Edit Events")
                                 onClicked:
                                 {
                                     if (calendarPopup.rootWindow && calendarPopup.rootWindow.traceMenu)

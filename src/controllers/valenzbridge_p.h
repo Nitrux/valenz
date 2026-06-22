@@ -2,6 +2,15 @@
 
 constexpr auto kControlCenterPowerCommandKey = "ControlCenter/powerCommand";
 constexpr auto kControlCenterDiskUsagePathKey = "ControlCenter/diskUsagePath";
+constexpr auto kWindowBarHeightKey = "Window/barHeight";
+constexpr auto kWindowBarWidthKey = "Window/barWidth";
+constexpr auto kWindowBarLayerSpacingKey = "Window/barLayerSpacing";
+constexpr auto kLegacyWindowPopupMaxWidthKey = "Window/popupMaxWidth";
+constexpr auto kWindowBarHeightMax = 100;
+constexpr auto kFullscreenModeNone = 0;
+constexpr auto kFullscreenModeMaximized = 1;
+constexpr auto kFullscreenModeFullscreen = 2;
+constexpr auto kFullscreenModeMax = kFullscreenModeMaximized | kFullscreenModeFullscreen;
 constexpr auto kDistroConfigPath = "/etc/valenz/valenz.conf";
 constexpr auto kFocusedWindowIconNameKey = "Window/focusedWindowIconName";
 constexpr auto kControlCenterIconModeKey = "ControlCenter/iconMode";

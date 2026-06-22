@@ -22,12 +22,15 @@ Window
 
     Component.onCompleted: { }
     color: "transparent"
+
+    visible: false
     flags: Qt.FramelessWindowHint | Qt.Popup
     transientParent: rootWindow
 
-    Keys.onEscapePressed:
+    Shortcut
     {
-        close()
+        sequences: [ StandardKey.Cancel ]
+        onActivated: controlCenter.close()
     }
 
     onClosing: function(closeEvent)
@@ -44,10 +47,9 @@ Window
     readonly property int _baseUnit: Math.max(20, Maui.Style.units.gridUnit)
     readonly property int _margin: Math.max(Maui.Style.contentMargins, Maui.Style.space.medium)
     readonly property int _dropOffset: 6
-    readonly property int _panelInsetX: 8
-    readonly property int _panelInsetY: 8
-    // readonly property color _panelColor: Qt.alpha(Maui.Theme.backgroundColor, 0.76)
-    readonly property color _panelColor: Maui.Theme.backgroundColor
+    readonly property int _panelInsetX: 6
+    readonly property int _panelInsetY: 6
+    readonly property color _panelColor: controlCenter.rootWindow ? controlCenter.rootWindow.popupSurfaceColor : Maui.Theme.backgroundColor
     readonly property string _nerdFontFamily: "Symbols Nerd Font Mono"
     readonly property int _glyphSize: Math.max(15, Math.round(Maui.Style.iconSizes.medium * 0.9))
     readonly property int _cardPadding: Maui.Style.space.small
@@ -162,9 +164,9 @@ Window
     {
         switch (profileName)
         {
-            case "power-saver": return "Power Saver"
-            case "balanced": return "Balanced"
-            case "performance": return "Performance"
+            case "power-saver": return i18n("Power Saver")
+            case "balanced": return i18n("Balanced")
+            case "performance": return i18n("Performance")
             default: return profileName
         }
     }
@@ -172,23 +174,23 @@ Window
     function _networkModeTitle()
     {
         const state = controlCenter.bridge ? String(controlCenter.bridge.controlCenterNetworkMode).toLowerCase() : "wireless"
-        return state === "wired" ? "Wired" : "WiFi"
+        return state === "wired" ? i18n("Wired") : i18n("WiFi")
     }
 
     function _networkModeSubtitle()
     {
         const state = controlCenter.bridge ? String(controlCenter.bridge.controlCenterNetworkMode).toLowerCase() : "wireless"
         if (state === "offline")
-            return "Off"
+            return i18n("Off")
         if (state === "wired")
-            return "Connected"
+            return i18n("Connected")
         if (state === "hotspot")
-            return "Hotspot"
+            return i18n("Hotspot")
         if (state === "vpn")
-            return "VPN"
+            return i18n("VPN")
         if (state === "cellular")
-            return "Cellular"
-        return "Connected"
+            return i18n("Cellular")
+        return i18n("Connected")
     }
 
     function _commitVolumeFromSlider()
@@ -273,6 +275,9 @@ Window
     {
         if (visible)
             return
+
+        if (rootWindow && rootWindow.closeTransientPopups)
+            rootWindow.closeTransientPopups()
         aboutToShow()
         _fadeOutPending = false
         _panelOpen = false
@@ -294,6 +299,14 @@ Window
         _fadeOutPending = true
         _panelOpen = false
         _fadeOutTimer.restart()
+    }
+
+    function forceClose()
+    {
+        _fadeOutTimer.stop()
+        _fadeOutPending = false
+        _panelOpen = false
+        visible = false
     }
 
     function _logPopupGeometry(reason)
@@ -434,8 +447,10 @@ Window
         transformOrigin: Item.Center
         implicitWidth: Math.max(controlCenter._minPanelWidth, _panelContent.implicitWidth + (controlCenter._panelInsetX * 2))
         implicitHeight: _panelContent.implicitHeight + (controlCenter._panelInsetY * 2)
-        radius: Maui.Style.radiusV
+        radius: Maui.Style.radiusV + 3
         color: controlCenter._panelColor
+        border.width: 1
+        border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
         states: [
             State
             {
@@ -474,7 +489,7 @@ Window
         layer.effect: MultiEffect
         {
             autoPaddingEnabled: true
-            shadowEnabled: true
+            shadowEnabled: false
             shadowColor: "#80000000"
         }
 
@@ -510,6 +525,7 @@ Window
                         Layout.fillWidth: true
                         Layout.columnSpan: 2
                         flat: false
+                        clip: true
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
@@ -530,8 +546,7 @@ Window
                                 {
                                     anchors.centerIn: parent
                                     text: "\uf007"
-                                    font.family: controlCenter._nerdFontFamily
-                                    font.pixelSize: controlCenter._glyphSize
+                                    font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
                                     color: Maui.Theme.textColor
                                 }
                             }
@@ -550,8 +565,8 @@ Window
                             {
                                 Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                                 Layout.minimumHeight: 28
-                                text: "Power"
-                                icon.name: "system-shutdown"
+                                text: i18n("Shutdown")
+                                // icon.name: "system-shutdown"
                                 display: ToolButton.TextBesideIcon
 
                                 background: Rectangle
@@ -573,6 +588,7 @@ Window
                     {
                         Layout.fillWidth: true
                         flat: false
+                        clip: true
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
@@ -588,8 +604,7 @@ Window
                             Label
                             {
                                 text: "\uf1eb"
-                                font.family: controlCenter._nerdFontFamily
-                                font.pixelSize: controlCenter._glyphSize
+                                font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
                                 color: Maui.Theme.textColor
                             }
 
@@ -628,6 +643,7 @@ Window
                     {
                         Layout.fillWidth: true
                         flat: false
+                        clip: true
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
@@ -643,8 +659,7 @@ Window
                             Label
                             {
                                 text: "\uf294"
-                                font.family: controlCenter._nerdFontFamily
-                                font.pixelSize: controlCenter._glyphSize
+                                font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
                                 color: Maui.Theme.textColor
                             }
 
@@ -654,7 +669,7 @@ Window
 
                                 Label
                                 {
-                                    text: "Bluetooth"
+                                    text: i18n("Bluetooth")
                                     color: Maui.Theme.textColor
                                     font.weight: Font.DemiBold
                                 }
@@ -683,6 +698,7 @@ Window
                     {
                         Layout.fillWidth: true
                         flat: false
+                        clip: true
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
@@ -698,15 +714,14 @@ Window
                             Label
                             {
                                 text: "\uf186"
-                                font.family: controlCenter._nerdFontFamily
-                                font.pixelSize: controlCenter._glyphSize
+                                font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
                                 color: Maui.Theme.textColor
                             }
 
                             ColumnLayout
                             {
                                 spacing: 0
-                                Label { text: "Night Light"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
+                                Label { text: i18n("Night Light"); color: Maui.Theme.textColor; font.weight: Font.DemiBold }
                                 Label { text: controlCenter._nightLightAvailable ? (controlCenter._nightLightEnabled ? "On" : "Off") : "Unavailable"; color: Maui.Theme.disabledTextColor }
                             }
 
@@ -729,6 +744,7 @@ Window
                     {
                         Layout.fillWidth: true
                         flat: false
+                        clip: true
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
@@ -741,15 +757,14 @@ Window
                             Label
                             {
                                 text: "\uf05e"
-                                font.family: controlCenter._nerdFontFamily
-                                font.pixelSize: controlCenter._glyphSize
+                                font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
                                 color: Maui.Theme.textColor
                             }
 
                             ColumnLayout
                             {
                                 spacing: 0
-                                Label { text: "Do Not Disturb"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
+                                Label { text: i18n("Do Not Disturb"); color: Maui.Theme.textColor; font.weight: Font.DemiBold }
                                 Label { text: controlCenter._dndEnabled ? "On" : "Off"; color: Maui.Theme.disabledTextColor }
                             }
 
@@ -772,6 +787,7 @@ Window
                         Layout.fillWidth: true
                         Layout.columnSpan: 2
                         flat: false
+                        clip: true
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
@@ -784,8 +800,7 @@ Window
                             Label
                             {
                                 text: controlCenter._powerProfileIconName === "power-profile-performance" ? "\uf0e7" : (controlCenter._powerProfileIconName === "power-profile-power-saver" ? "\uf06c" : "\ueeb2")
-                                font.family: controlCenter._nerdFontFamily
-                                font.pixelSize: controlCenter._glyphSize
+                                font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
                                 color: Maui.Theme.textColor
                             }
 
@@ -796,7 +811,7 @@ Window
 
                                 Label
                                 {
-                                    text: "Power Profile"
+                                    text: i18n("Power Profile")
                                     color: Maui.Theme.textColor
                                     font.weight: Font.DemiBold
                                 }
@@ -813,7 +828,7 @@ Window
                             QQC.ComboBox
                             {
                                 id: _powerProfileSelector
-                                readonly property string _fallbackLabel: "Select Profile"
+                                readonly property string _fallbackLabel: i18n("Select Profile")
                                 readonly property string _longestLabel:
                                 {
                                     const entries = controlCenter.bridge ? controlCenter.bridge.controlCenterPowerProfiles : []
@@ -903,6 +918,7 @@ Window
                         Layout.fillWidth: true
                         Layout.columnSpan: 2
                         flat: false
+                        clip: true
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
@@ -914,8 +930,7 @@ Window
                             Label
                             {
                                 text: "\uf026"
-                                font.family: controlCenter._nerdFontFamily
-                                font.pixelSize: controlCenter._glyphSize
+                                font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
                                 color: Maui.Theme.textColor
                             }
                             Slider
@@ -958,8 +973,7 @@ Window
                             Label
                             {
                                 text: "\uf028"
-                                font.family: controlCenter._nerdFontFamily
-                                font.pixelSize: controlCenter._glyphSize
+                                font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
                                 color: Maui.Theme.textColor
                             }
                         }
@@ -970,6 +984,7 @@ Window
                         Layout.fillWidth: true
                         Layout.columnSpan: 2
                         flat: false
+                        clip: true
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
@@ -983,8 +998,7 @@ Window
                             Label
                             {
                                 text: "\uf042"
-                                font.family: controlCenter._nerdFontFamily
-                                font.pixelSize: controlCenter._glyphSize
+                                font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
                                 color: Maui.Theme.textColor
                             }
                             Slider
@@ -1029,8 +1043,7 @@ Window
                             Label
                             {
                                 text: "\uf185"
-                                font.family: controlCenter._nerdFontFamily
-                                font.pixelSize: controlCenter._glyphSize
+                                font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
                                 color: Maui.Theme.textColor
                             }
                         }
@@ -1041,6 +1054,7 @@ Window
                         Layout.fillWidth: true
                         Layout.columnSpan: 2
                         flat: false
+                        clip: true
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
@@ -1054,8 +1068,8 @@ Window
                             {
                                 Layout.fillWidth: true
                                 spacing: Maui.Style.space.small
-                                Label { text: "\uf2db"; font.family: controlCenter._nerdFontFamily; font.pixelSize: controlCenter._glyphSize; color: Maui.Theme.textColor }
-                                Label { text: "CPU"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
+                                Label { text: "\uf2db"; font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize }); color: Maui.Theme.textColor }
+                                Label { text: i18n("CPU"); color: Maui.Theme.textColor; font.weight: Font.DemiBold }
                                 Label { text: controlCenter._controlCenterCpuPercentage() + "%"; color: Maui.Theme.disabledTextColor }
                             }
                             ProgressBar
@@ -1070,8 +1084,8 @@ Window
                             {
                                 Layout.fillWidth: true
                                 spacing: Maui.Style.space.small
-                                Label { text: "\uefc5"; font.family: controlCenter._nerdFontFamily; font.pixelSize: controlCenter._glyphSize; color: Maui.Theme.textColor }
-                                Label { text: "RAM"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
+                                Label { text: "\uefc5"; font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize }); color: Maui.Theme.textColor }
+                                Label { text: i18n("RAM"); color: Maui.Theme.textColor; font.weight: Font.DemiBold }
                                 Label { text: controlCenter._controlCenterRamPercentage() + "%"; color: Maui.Theme.disabledTextColor }
                             }
                             ProgressBar
@@ -1086,8 +1100,8 @@ Window
                             {
                                 Layout.fillWidth: true
                                 spacing: Maui.Style.space.small
-                                Label { text: "\uf0a0"; font.family: controlCenter._nerdFontFamily; font.pixelSize: controlCenter._glyphSize; color: Maui.Theme.textColor }
-                                Label { text: "Disk"; color: Maui.Theme.textColor; font.weight: Font.DemiBold }
+                                Label { text: "\uf0a0"; font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize }); color: Maui.Theme.textColor }
+                                Label { text: i18n("Disk"); color: Maui.Theme.textColor; font.weight: Font.DemiBold }
                                 Label { text: controlCenter._controlCenterDiskUsageText(); color: Maui.Theme.disabledTextColor }
                             }
                             ProgressBar

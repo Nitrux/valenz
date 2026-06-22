@@ -21,7 +21,7 @@ Window
     property int notificationId: -1
     property string sourceName: ""
     property string messageText: ""
-    property string timestampText: "Now"
+    property string timestampText: i18n("Now")
     property string iconName: "notifications"
     property int urgencyLevel: 0
     property string actionText: ""
@@ -36,9 +36,9 @@ Window
     readonly property int _fadeOutDurationMs: 100
     readonly property int _margin: Math.max(Maui.Style.contentMargins, Maui.Style.space.medium)
     readonly property int _dropOffset: 6
-    readonly property int _panelInsetX: 8
-    readonly property int _panelInsetY: 8
-    readonly property color _panelColor: Maui.Theme.backgroundColor
+    readonly property int _panelInsetX: 6
+    readonly property int _panelInsetY: 6
+    readonly property color _panelColor: notificationsBubble.rootWindow ? notificationsBubble.rootWindow.popupSurfaceColor : Maui.Theme.backgroundColor
     readonly property int _preferredPanelWidth: Maui.Handy.isMobile ? _baseUnit * 16 : _baseUnit * 20
     readonly property real _targetY:
     {
@@ -95,12 +95,15 @@ Window
 
     Component.onCompleted: { }
     color: "transparent"
+
+    visible: false
     flags: Qt.FramelessWindowHint | Qt.Popup
     transientParent: rootWindow
 
-    Keys.onEscapePressed:
+    Shortcut
     {
-        close()
+        sequences: [ StandardKey.Cancel ]
+        onActivated: notificationsBubble.close()
     }
 
     onClosing: function(closeEvent)
@@ -215,11 +218,11 @@ Window
         if (!isFinite(notificationId))
             notificationId = -1
         if (sourceName.length === 0)
-            sourceName = "Notification"
+            sourceName = i18n("Notification")
         if (messageText.length === 0)
-            messageText = "(No details)"
+            messageText = i18n("(No details)")
         if (timestampText.length === 0)
-            timestampText = "Now"
+            timestampText = i18n("Now")
         if (iconName.length === 0)
             iconName = "notifications"
         if (!isFinite(urgencyLevel))
@@ -275,6 +278,9 @@ Window
     {
         if (visible)
             return
+
+        if (rootWindow && rootWindow.closeTransientPopups)
+            rootWindow.closeTransientPopups()
         aboutToShow()
         _fadeOutPending = false
         _panelOpen = false
@@ -297,6 +303,14 @@ Window
         _fadeOutPending = true
         _panelOpen = false
         _fadeOutTimer.restart()
+    }
+
+    function forceClose()
+    {
+        _fadeOutTimer.stop()
+        _fadeOutPending = false
+        _panelOpen = false
+        visible = false
     }
 
     function _logPopupGeometry(reason)
@@ -468,10 +482,13 @@ Window
         opacity: 0.0
         scale: 0.97
         transformOrigin: Item.Center
+        clip: true
         implicitWidth: notificationsBubble.width
         implicitHeight: _bubbleCard.implicitHeight + (notificationsBubble._panelInsetY * 2)
-        radius: Maui.Style.radiusV
+        radius: Maui.Style.radiusV + 3
         color: notificationsBubble._panelColor
+        border.width: 1
+        border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
         states: [
             State
             {
@@ -510,7 +527,7 @@ Window
         layer.effect: MultiEffect
         {
             autoPaddingEnabled: true
-            shadowEnabled: true
+            shadowEnabled: false
             shadowColor: "#80000000"
         }
 
@@ -524,6 +541,7 @@ Window
             anchors.rightMargin: notificationsBubble._panelInsetX
             anchors.topMargin: notificationsBubble._panelInsetY
             property int padding: Math.max(Maui.Style.space.medium, Maui.Style.space.small + 2)
+            clip: true
             implicitHeight: (_bubbleContentColumn ? _bubbleContentColumn.implicitHeight : 0) + (padding * 2)
 
             color: Maui.Theme.alternateBackgroundColor
@@ -556,33 +574,23 @@ Window
                         readonly property bool isImageSource: notificationsBubble._isImageIconSource(notificationsBubble.iconName)
                         readonly property string resolvedIconSource: notificationsBubble._resolvedIconSource(notificationsBubble.iconName)
 
-                        Image
-                        {
-                            anchors.centerIn: parent
-                            width: 22
-                            height: 22
-                            source: parent.isImageSource ? parent.resolvedIconSource : ""
-                            fillMode: Image.PreserveAspectFit
-                            smooth: true
-                            mipmap: true
-                            visible: parent.isImageSource
-                        }
-
-                        Maui.Icon
+                        Maui.IconItem
                         {
                             id: _notificationIcon
                             anchors.centerIn: parent
                             width: 22
                             height: 22
-                            source: parent.resolvedIconSource
+                            imageSource: parent.isImageSource ? parent.resolvedIconSource : ""
+                            iconSource: parent.isImageSource ? "" : (notificationsBubble.useSystemThemeIcons ? notificationsBubble.iconName : "")
+                            imageSizeHint: 22
+                            iconSizeHint: 22
                             color: Maui.Theme.textColor
-                            visible: !parent.isImageSource && notificationsBubble.useSystemThemeIcons && valid
                         }
 
                         Label
                         {
                             anchors.centerIn: parent
-                            visible: !parent.isImageSource && (!notificationsBubble.useSystemThemeIcons || !_notificationIcon.valid)
+                            visible: !parent.isImageSource && (!notificationsBubble.useSystemThemeIcons || !_notificationIcon.icon.valid)
                             text: notificationsBubble._notificationGlyph(notificationsBubble.iconName)
                             color: Maui.Theme.textColor
                             font.family: "Symbols Nerd Font"

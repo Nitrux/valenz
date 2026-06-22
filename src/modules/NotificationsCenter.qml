@@ -21,12 +21,15 @@ Window
 
     Component.onCompleted: { }
     color: "transparent"
+
+    visible: false
     flags: Qt.FramelessWindowHint | Qt.Popup
     transientParent: rootWindow
 
-    Keys.onEscapePressed:
+    Shortcut
     {
-        close()
+        sequences: [ StandardKey.Cancel ]
+        onActivated: notificationsCenter.close()
     }
 
     onClosing: function(closeEvent)
@@ -43,9 +46,9 @@ Window
     readonly property int _baseUnit: Math.max(20, Maui.Style.units.gridUnit)
     readonly property int _margin: Math.max(Maui.Style.contentMargins, Maui.Style.space.medium)
     readonly property int _dropOffset: 6
-    readonly property int _panelInsetX: 8
-    readonly property int _panelInsetY: 8
-    readonly property color _panelColor: Maui.Theme.backgroundColor
+    readonly property int _panelInsetX: 6
+    readonly property int _panelInsetY: 6
+    readonly property color _panelColor: notificationsCenter.rootWindow ? notificationsCenter.rootWindow.popupSurfaceColor : Maui.Theme.backgroundColor
     readonly property int _cardPadding: Math.max(Maui.Style.space.medium, Maui.Style.space.small + 2)
     readonly property int _minPanelWidth: Maui.Handy.isMobile ? _baseUnit * 16 : _baseUnit * 20
     readonly property int notificationCount: controller ? controller.count : _notificationsModel.count
@@ -233,6 +236,9 @@ Window
     {
         if (visible)
             return
+
+        if (rootWindow && rootWindow.closeTransientPopups)
+            rootWindow.closeTransientPopups()
         aboutToShow()
         _fadeOutPending = false
         _panelOpen = false
@@ -254,6 +260,14 @@ Window
         _fadeOutPending = true
         _panelOpen = false
         _fadeOutTimer.restart()
+    }
+
+    function forceClose()
+    {
+        _fadeOutTimer.stop()
+        _fadeOutPending = false
+        _panelOpen = false
+        visible = false
     }
 
     function _logPopupGeometry(reason)
@@ -394,8 +408,10 @@ Window
         transformOrigin: Item.Center
         implicitWidth: Math.max(notificationsCenter._minPanelWidth, _panelContent.implicitWidth + (notificationsCenter._panelInsetX * 2))
         implicitHeight: _panelContent.implicitHeight + (notificationsCenter._panelInsetY * 2)
-        radius: Maui.Style.radiusV
+        radius: Maui.Style.radiusV + 3
         color: notificationsCenter._panelColor
+        border.width: 1
+        border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
         states: [
             State
             {
@@ -434,7 +450,7 @@ Window
         layer.effect: MultiEffect
         {
             autoPaddingEnabled: true
-            shadowEnabled: true
+            shadowEnabled: false
             shadowColor: "#80000000"
         }
 
@@ -452,6 +468,7 @@ Window
             {
                 Layout.fillWidth: true
                 flat: false
+                clip: true
                 padding: notificationsCenter._cardPadding
                 text: ""
                 label2.text: ""
@@ -468,14 +485,14 @@ Window
 
                         Label
                         {
-                            text: "Notifications"
+                            text: i18n("Notifications")
                             color: Maui.Theme.textColor
                             font.weight: Font.DemiBold
                         }
 
                         Label
                         {
-                            text: "Recent activity"
+                            text: i18n("Recent activity")
                             color: Qt.alpha(Maui.Theme.textColor, 0.85)
                         }
                     }
@@ -518,9 +535,7 @@ Window
                                     visible: !notificationsCenter.useSystemThemeIcons
                                     text: "\uee23"
                                     color: _clearAllButton.enabled ? Maui.Theme.textColor : Maui.Theme.disabledTextColor
-                                    font.family: "Symbols Nerd Font"
-                                    font.weight: Font.Normal
-                                    font.pixelSize: 12
+                                    font: Qt.font({ family: "Symbols Nerd Font", weight: Font.Normal, pixelSize: 12 })
                                     textFormat: Text.PlainText
                                     renderType: Text.QtRendering
                                 }
@@ -529,7 +544,7 @@ Window
                             Label
                             {
                                 Layout.alignment: Qt.AlignVCenter
-                                text: "Clear All"
+                                text: i18n("Clear All")
                                 color: _clearAllButton.enabled ? Maui.Theme.textColor : Maui.Theme.disabledTextColor
                             }
                         }
@@ -560,9 +575,10 @@ Window
                         width: parent.width
                         visible: notificationsCenter.notificationCount === 0
                         flat: false
+                clip: true
                         padding: notificationsCenter._cardPadding
-                        text: "No notifications"
-                        label2.text: "You are all caught up."
+                        text: i18n("No notifications")
+                        label2.text: i18n("You are all caught up.")
                     }
 
                     Repeater
@@ -607,6 +623,7 @@ Window
 
                             width: _notificationsColumn.width
                             flat: false
+                clip: true
                             padding: notificationsCenter._cardPadding
                             text: ""
                             label2.text: ""
@@ -675,38 +692,26 @@ Window
                                         readonly property bool isImageSource: notificationsCenter._isImageIconSource(iconName)
                                         readonly property string resolvedIconSource: notificationsCenter._resolvedIconSource(iconName)
 
-                                        Image
-                                        {
-                                            anchors.centerIn: parent
-                                            width: 22
-                                            height: 22
-                                            source: parent.isImageSource ? parent.resolvedIconSource : ""
-                                            fillMode: Image.PreserveAspectFit
-                                            smooth: true
-                                            mipmap: true
-                                            visible: parent.isImageSource
-                                        }
-
-                                        Maui.Icon
+                                        Maui.IconItem
                                         {
                                             id: _notificationIcon
                                             anchors.centerIn: parent
                                             width: 22
                                             height: 22
-                                            source: parent.resolvedIconSource
+                                            imageSource: parent.isImageSource ? parent.resolvedIconSource : ""
+                                            iconSource: parent.isImageSource ? "" : (notificationsCenter.useSystemThemeIcons ? iconName : "")
+                                            imageSizeHint: 22
+                                            iconSizeHint: 22
                                             color: Maui.Theme.textColor
-                                            visible: !parent.isImageSource && notificationsCenter.useSystemThemeIcons && valid
                                         }
 
                                         Label
                                         {
                                             anchors.centerIn: parent
-                                            visible: !parent.isImageSource && (!notificationsCenter.useSystemThemeIcons || !_notificationIcon.valid)
+                                            visible: !parent.isImageSource && (!notificationsCenter.useSystemThemeIcons || !_notificationIcon.icon.valid)
                                             text: notificationsCenter._notificationGlyph(iconName)
                                             color: Maui.Theme.textColor
-                                            font.family: "Symbols Nerd Font"
-                                            font.weight: Font.Normal
-                                            font.pixelSize: Math.max(12, Math.round(parent.height * 0.75))
+                                            font: Qt.font({ family: "Symbols Nerd Font", weight: Font.Normal, pixelSize: Math.max(12, Math.round(parent.height * 0.75)) })
                                             textFormat: Text.PlainText
                                             renderType: Text.QtRendering
                                         }

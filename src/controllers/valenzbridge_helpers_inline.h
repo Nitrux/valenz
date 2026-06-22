@@ -376,6 +376,7 @@ inline bool isFocusedWindowRelatedHyprlandEvent(const QString &eventName)
         || eventName == QLatin1String("activewindowv2")
         || eventName == QLatin1String("windowtitle")
         || eventName == QLatin1String("windowtitlev2")
+        || eventName == QLatin1String("fullscreen")
         || eventName == QLatin1String("openwindow")
         || eventName == QLatin1String("closewindow");
 }

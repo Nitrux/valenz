@@ -152,6 +152,11 @@ void ValenzBridge::setMprisAlwaysVisible(bool alwaysVisible)
     Q_EMIT mprisAlwaysVisibleChanged(m_mprisAlwaysVisible);
 }
 
+QVariantList ValenzBridge::mprisSources() const
+{
+    return m_mprisSources;
+}
+
 bool ValenzBridge::agendaInstalled() const
 {
     return m_agendaInstalled;
@@ -321,6 +326,46 @@ void ValenzBridge::setFocusedWindowIconName(const QString &iconName)
 
     m_focusedWindowIconName = iconName;
     Q_EMIT focusedWindowIconNameChanged(m_focusedWindowIconName);
+}
+
+int ValenzBridge::focusedWindowFullscreenInternal() const
+{
+    return m_focusedWindowFullscreenInternal;
+}
+
+void ValenzBridge::setFocusedWindowFullscreenInternal(int fullscreen)
+{
+    const int normalized = qBound(kFullscreenModeNone, fullscreen, kFullscreenModeMax);
+    if (m_focusedWindowFullscreenInternal == normalized)
+        return;
+
+    const bool wasFullscreen = focusedWindowFullscreen();
+    m_focusedWindowFullscreenInternal = normalized;
+    Q_EMIT focusedWindowFullscreenInternalChanged(m_focusedWindowFullscreenInternal);
+
+    const bool isFullscreen = focusedWindowFullscreen();
+    if (wasFullscreen != isFullscreen)
+        Q_EMIT focusedWindowFullscreenChanged(isFullscreen);
+}
+
+int ValenzBridge::focusedWindowFullscreenClient() const
+{
+    return m_focusedWindowFullscreenClient;
+}
+
+void ValenzBridge::setFocusedWindowFullscreenClient(int fullscreen)
+{
+    const int normalized = qBound(kFullscreenModeNone, fullscreen, kFullscreenModeMax);
+    if (m_focusedWindowFullscreenClient == normalized)
+        return;
+
+    m_focusedWindowFullscreenClient = normalized;
+    Q_EMIT focusedWindowFullscreenClientChanged(m_focusedWindowFullscreenClient);
+}
+
+bool ValenzBridge::focusedWindowFullscreen() const
+{
+    return (m_focusedWindowFullscreenInternal & kFullscreenModeFullscreen) != 0;
 }
 
 QString ValenzBridge::userRealName() const

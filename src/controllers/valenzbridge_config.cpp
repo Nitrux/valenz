@@ -7,6 +7,21 @@ QString ValenzBridge::configFilePath() const
     return m_userConfigPath;
 }
 
+int ValenzBridge::barHeight() const
+{
+    return m_barHeight;
+}
+
+int ValenzBridge::barWidth() const
+{
+    return m_barWidth;
+}
+
+int ValenzBridge::barLayerSpacing() const
+{
+    return m_barLayerSpacing;
+}
+
 int ValenzBridge::clampWorkspace(int workspace) const
 {
     return qBound(1, workspace, m_workspaceCount);
@@ -57,6 +72,10 @@ void ValenzBridge::initializeConfig()
     ensureKey(QString::fromLatin1(kWeatherRefreshMinutesKey), QString(), 20);
     ensureKey(QString::fromLatin1(kMprisAlwaysVisibleKey), QString(), false);
     ensureKey(QString::fromLatin1(kControlCenterDiskUsagePathKey), QString::fromLatin1(kLegacyControlCenterDiskUsagePathKey), "/");
+    ensureKey(QString::fromLatin1(kWindowBarHeightKey), QString(), 56);
+    ensureKey(QString::fromLatin1(kWindowBarWidthKey), QString::fromLatin1(kLegacyWindowPopupMaxWidthKey), 0);
+    ensureKey(QString::fromLatin1(kWindowBarLayerSpacingKey), QString(), 0);
+    userSettings.remove(QString::fromLatin1(kLegacyWindowPopupMaxWidthKey));
 
     userSettings.remove("ControlCenter/batteryIconName");
     userSettings.remove("controlCenter/batteryIconName");
@@ -94,7 +113,9 @@ void ValenzBridge::initializeConfig()
     if (!m_controlCenterDiskUsagePath.startsWith(QLatin1Char('/')))
         m_controlCenterDiskUsagePath.prepend(QLatin1Char('/'));
     m_mprisAlwaysVisible = userSettings.value(kMprisAlwaysVisibleKey, false).toBool();
-
+    m_barHeight = qBound(1, userSettings.value(kWindowBarHeightKey, 56).toInt(), kWindowBarHeightMax);
+    m_barWidth = qMax(0, userSettings.value(kWindowBarWidthKey, 0).toInt());
+    m_barLayerSpacing = qBound(0, userSettings.value(kWindowBarLayerSpacingKey, 0).toInt(), 64);
 
     m_weatherLatitude = normalizeWeatherCoordinate(userSettings.value(kWeatherLatitudeKey, 40.7128), -90.0, 90.0, 40.7128);
     m_weatherLongitude = normalizeWeatherCoordinate(userSettings.value(kWeatherLongitudeKey, -74.0060), -180.0, 180.0, -74.0060);

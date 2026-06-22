@@ -30,8 +30,8 @@ Item
         Rectangle
         {
             anchors.fill: parent
+            visible: false
             color: "#ff3b30"
-            opacity: 0.85
         }
     }
 

@@ -39,6 +39,7 @@ qt_add_qml_module(${PROJECT_NAME}
     modules/WorkspaceBadge.qml
     modules/WorkspaceNavigation.qml
     modules/MprisControl.qml
+    modules/MprisSourcesPopup.qml
     modules/WindowTitle.qml
     modules/WeatherClock.qml
     modules/CalendarPopup.qml

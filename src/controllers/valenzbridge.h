@@ -26,8 +26,12 @@ class ValenzBridge : public QObject
     Q_PROPERTY(bool mediaPlaying READ mediaPlaying WRITE setMediaPlaying NOTIFY mediaPlayingChanged FINAL)
     Q_PROPERTY(bool mprisVisible READ mprisVisible WRITE setMprisVisible NOTIFY mprisVisibleChanged FINAL)
     Q_PROPERTY(bool mprisAlwaysVisible READ mprisAlwaysVisible WRITE setMprisAlwaysVisible NOTIFY mprisAlwaysVisibleChanged FINAL)
+    Q_PROPERTY(QVariantList mprisSources READ mprisSources NOTIFY mprisSourcesChanged FINAL)
     Q_PROPERTY(QString focusedWindowTitle READ focusedWindowTitle WRITE setFocusedWindowTitle NOTIFY focusedWindowTitleChanged FINAL)
     Q_PROPERTY(QString focusedWindowIconName READ focusedWindowIconName WRITE setFocusedWindowIconName NOTIFY focusedWindowIconNameChanged FINAL)
+    Q_PROPERTY(int focusedWindowFullscreenInternal READ focusedWindowFullscreenInternal NOTIFY focusedWindowFullscreenInternalChanged FINAL)
+    Q_PROPERTY(int focusedWindowFullscreenClient READ focusedWindowFullscreenClient NOTIFY focusedWindowFullscreenClientChanged FINAL)
+    Q_PROPERTY(bool focusedWindowFullscreen READ focusedWindowFullscreen NOTIFY focusedWindowFullscreenChanged FINAL)
     Q_PROPERTY(QString userRealName READ userRealName CONSTANT)
     Q_PROPERTY(QString controlCenterIconMode READ controlCenterIconMode WRITE setControlCenterIconMode NOTIFY controlCenterIconModeChanged FINAL)
     Q_PROPERTY(QString controlCenterNetworkMode READ controlCenterNetworkMode WRITE setControlCenterNetworkMode NOTIFY controlCenterNetworkModeChanged FINAL)
@@ -54,6 +58,9 @@ class ValenzBridge : public QObject
     Q_PROPERTY(bool controlCenterNightLightAvailable READ controlCenterNightLightAvailable WRITE setControlCenterNightLightAvailable NOTIFY controlCenterNightLightAvailableChanged FINAL)
     Q_PROPERTY(QString controlCenterPowerCommand READ controlCenterPowerCommand WRITE setControlCenterPowerCommand NOTIFY controlCenterPowerCommandChanged FINAL)
     Q_PROPERTY(QString controlCenterDiskUsagePath READ controlCenterDiskUsagePath WRITE setControlCenterDiskUsagePath NOTIFY controlCenterDiskUsagePathChanged FINAL)
+    Q_PROPERTY(int barHeight READ barHeight CONSTANT FINAL)
+    Q_PROPERTY(int barWidth READ barWidth CONSTANT FINAL)
+    Q_PROPERTY(int barLayerSpacing READ barLayerSpacing CONSTANT FINAL)
     Q_PROPERTY(bool agendaInstalled READ agendaInstalled NOTIFY agendaInstalledChanged FINAL)
     Q_PROPERTY(QString weatherIconName READ weatherIconName WRITE setWeatherIconName NOTIFY weatherIconNameChanged FINAL)
     Q_PROPERTY(QString weatherTemperature READ weatherTemperature WRITE setWeatherTemperature NOTIFY weatherTemperatureChanged FINAL)
@@ -87,10 +94,16 @@ public:
     void setMprisVisible(bool visible);
     bool mprisAlwaysVisible() const;
     void setMprisAlwaysVisible(bool alwaysVisible);
+    QVariantList mprisSources() const;
     QString focusedWindowTitle() const;
     void setFocusedWindowTitle(const QString &title);
     QString focusedWindowIconName() const;
     void setFocusedWindowIconName(const QString &iconName);
+    int focusedWindowFullscreenInternal() const;
+    void setFocusedWindowFullscreenInternal(int fullscreen);
+    int focusedWindowFullscreenClient() const;
+    void setFocusedWindowFullscreenClient(int fullscreen);
+    bool focusedWindowFullscreen() const;
     QString userRealName() const;
     QString controlCenterIconMode() const;
     void setControlCenterIconMode(const QString &mode);
@@ -142,6 +155,9 @@ public:
     void setControlCenterPowerCommand(const QString &command);
     QString controlCenterDiskUsagePath() const;
     void setControlCenterDiskUsagePath(const QString &path);
+    int barHeight() const;
+    int barWidth() const;
+    int barLayerSpacing() const;
     bool agendaInstalled() const;
     QString weatherIconName() const;
     void setWeatherIconName(const QString &iconName);
@@ -169,6 +185,7 @@ public:
     Q_INVOKABLE void mediaPreviousTrack();
     Q_INVOKABLE void mediaTogglePlayPause();
     Q_INVOKABLE void mediaNextTrack();
+    Q_INVOKABLE void selectMprisSource(const QString &serviceName);
     Q_INVOKABLE QString configFilePath() const;
     Q_INVOKABLE QVariantList controlCenterDiskUsageOptions() const;
     Q_INVOKABLE void refreshControlCenterSystemResources();
@@ -186,8 +203,12 @@ Q_SIGNALS:
     void mediaPlayingChanged(bool playing);
     void mprisVisibleChanged(bool visible);
     void mprisAlwaysVisibleChanged(bool alwaysVisible);
+    void mprisSourcesChanged();
     void focusedWindowTitleChanged(const QString &title);
     void focusedWindowIconNameChanged(const QString &iconName);
+    void focusedWindowFullscreenInternalChanged(int fullscreen);
+    void focusedWindowFullscreenClientChanged(int fullscreen);
+    void focusedWindowFullscreenChanged(bool fullscreen);
     void controlCenterPowerCommandChanged(const QString &command);
     void controlCenterDiskUsagePathChanged(const QString &path);
     void controlCenterIconModeChanged(const QString &mode);
@@ -245,6 +266,7 @@ private:
     QString formatMprisTimestamp(qint64 positionUs, qint64 lengthUs) const;
     void refreshMprisState();
     void clearMprisState();
+    void setMprisSources(const QVariantList &sources);
     void updateMprisPlaybackTicker();
     void updateMprisTimestampFromTicker();
     void connectMprisSignalObservers();
@@ -278,8 +300,11 @@ private:
     bool m_mediaPlaying = false;
     bool m_mprisVisible = false;
     bool m_mprisAlwaysVisible = false;
+    QVariantList m_mprisSources;
     QString m_focusedWindowTitle;
     QString m_focusedWindowIconName;
+    int m_focusedWindowFullscreenInternal = 0;
+    int m_focusedWindowFullscreenClient = 0;
     QString m_userRealName;
     QString m_controlCenterIconMode;
     QString m_controlCenterNetworkMode;
@@ -306,6 +331,9 @@ private:
     bool m_controlCenterNightLightAvailable = false;
     QString m_controlCenterPowerCommand = QStringLiteral("wlogout");
     QString m_controlCenterDiskUsagePath = QStringLiteral("/");
+    int m_barHeight = 56;
+    int m_barWidth = 0;
+    int m_barLayerSpacing = 0;
     bool m_agendaInstalled = false;
     QString m_weatherIconName = QStringLiteral("weather-severe-alert");
     QString m_weatherTemperature = QStringLiteral("--°C");

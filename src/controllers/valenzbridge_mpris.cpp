@@ -62,7 +62,17 @@ void ValenzBridge::clearMprisState()
     setMediaTimestamp(QString());
     setMediaPlaying(false);
     setMprisVisible(false);
+    setMprisSources({});
     updateMprisPlaybackTicker();
+}
+
+void ValenzBridge::setMprisSources(const QVariantList &sources)
+{
+    if (m_mprisSources == sources)
+        return;
+
+    m_mprisSources = sources;
+    Q_EMIT mprisSourcesChanged();
 }
 
 void ValenzBridge::updateMprisPlaybackTicker()
@@ -203,10 +213,6 @@ QString ValenzBridge::preferredMprisService() const
     {
         const QVariantMap properties = mprisPlayerProperties(service);
         const QString playbackStatus = unwrapMprisVariant(properties.value(QStringLiteral("PlaybackStatus"))).toString().trimmed();
-        QVariantMap metadata = mprisPlayerMetadata(service);
-        if (metadata.isEmpty())
-            metadata = variantToVariantMap(properties.value(QStringLiteral("Metadata")));
-        const QString title = unwrapMprisVariant(metadata.value(QStringLiteral("xesam:title"))).toString().trimmed();
         if (playbackStatus.compare(QStringLiteral("Playing"), Qt::CaseInsensitive) == 0)
         {
             return service;
@@ -214,7 +220,8 @@ QString ValenzBridge::preferredMprisService() const
 
         if (fallbackService.isEmpty() && !properties.isEmpty())
             fallbackService = service;
-    }    return fallbackService;
+    }
+    return fallbackService;
 }
 
 qint64 ValenzBridge::mprisPlayerPositionUs(const QString &serviceName) const
@@ -276,9 +283,21 @@ bool ValenzBridge::invokeMprisPlayerMethod(const QString &method)
 
 void ValenzBridge::refreshMprisState()
 {
-    const QString serviceName = preferredMprisService();
+    const QStringList services = mprisServiceNames();
+    if (services.isEmpty())
+    {
+        clearMprisPropertiesSubscription();
+        clearMprisState();
+        return;
+    }
+
+    QString serviceName = m_mprisServiceName;
+    if (serviceName.isEmpty() || !services.contains(serviceName))
+        serviceName = preferredMprisService();
+
     if (serviceName.isEmpty())
-    {        clearMprisPropertiesSubscription();
+    {
+        clearMprisPropertiesSubscription();
         clearMprisState();
         return;
     }
@@ -302,10 +321,8 @@ void ValenzBridge::refreshMprisState()
         metadata = variantToVariantMap(playerProperties.value(QStringLiteral("Metadata")));
 
     const QString title = unwrapMprisVariant(metadata.value(QStringLiteral("xesam:title"))).toString().trimmed();
-
     const QStringList artistList = variantToStringList(metadata.value(QStringLiteral("xesam:artist")));
     const QString artist = artistList.join(QStringLiteral(", "));
-
     const QString artSource = unwrapMprisVariant(metadata.value(QStringLiteral("mpris:artUrl"))).toString().trimmed();
 
     m_mprisTrackLengthUs = qMax<qint64>(0, unwrapMprisVariant(metadata.value(QStringLiteral("mpris:length"))).toLongLong());
@@ -316,6 +333,38 @@ void ValenzBridge::refreshMprisState()
 
     m_mprisLastPositionUs = m_mprisPositionUs;
     m_mprisLastPositionEpochMs = QDateTime::currentMSecsSinceEpoch();
+
+    QVariantList sources;
+    sources.reserve(services.size());
+    for (const QString &service : services)
+    {
+        const QVariantMap properties = mprisPlayerProperties(service);
+        if (properties.isEmpty())
+            continue;
+
+        QVariantMap entry;
+        entry.insert(QStringLiteral("serviceName"), service);
+        entry.insert(QStringLiteral("selected"), service == m_mprisServiceName);
+        entry.insert(QStringLiteral("playing"), unwrapMprisVariant(properties.value(QStringLiteral("PlaybackStatus"))).toString().trimmed().compare(QStringLiteral("Playing"), Qt::CaseInsensitive) == 0);
+
+        QVariantMap sourceMetadata = mprisPlayerMetadata(service);
+        if (sourceMetadata.isEmpty())
+            sourceMetadata = variantToVariantMap(properties.value(QStringLiteral("Metadata")));
+
+        const QString sourceTitle = unwrapMprisVariant(sourceMetadata.value(QStringLiteral("xesam:title"))).toString().trimmed();
+        const QStringList sourceArtistList = variantToStringList(sourceMetadata.value(QStringLiteral("xesam:artist")));
+        const QString sourceArtist = sourceArtistList.join(QStringLiteral(", "));
+        const QString sourceLabel = service.mid(QString::fromLatin1(kMprisServicePrefix).length());
+        const QString displayTitle = sourceTitle.isEmpty() ? sourceLabel : sourceTitle;
+
+        entry.insert(QStringLiteral("title"), displayTitle);
+        entry.insert(QStringLiteral("artist"), sourceArtist);
+        entry.insert(QStringLiteral("subtitle"), sourceArtist.isEmpty() ? sourceLabel : sourceArtist);
+        entry.insert(QStringLiteral("status"), unwrapMprisVariant(properties.value(QStringLiteral("PlaybackStatus"))).toString().trimmed());
+        entry.insert(QStringLiteral("artSource"), unwrapMprisVariant(sourceMetadata.value(QStringLiteral("mpris:artUrl"))).toString().trimmed());
+        sources.append(entry);
+    }
+    setMprisSources(sources);
 
     const QString timestamp = formatMprisTimestamp(m_mprisPositionUs, m_mprisTrackLengthUs);
     setMediaTitle(title);
@@ -351,6 +400,19 @@ void ValenzBridge::mediaNextTrack()
         return;
 
     trace(QStringLiteral("mpris"), QStringLiteral("next_track"));
+    refreshMprisState();
+}
+
+void ValenzBridge::selectMprisSource(const QString &serviceName)
+{
+    const QString trimmed = serviceName.trimmed();
+    if (trimmed.isEmpty())
+        return;
+
+    if (m_mprisServiceName == trimmed)
+        return;
+
+    m_mprisServiceName = trimmed;
     refreshMprisState();
 }
 

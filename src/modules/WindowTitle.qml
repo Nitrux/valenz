@@ -10,7 +10,7 @@ Item
     property QtObject bridge
     property string fallbackTitle: ""
     property int referenceHeight: -1
-    readonly property int tabHeight: referenceHeight > 0 ? referenceHeight : _toolButtonHeightProbe.implicitHeight
+    readonly property int tabHeight: Math.min(28, referenceHeight > 0 ? referenceHeight : _toolButtonHeightProbe.implicitHeight)
     readonly property string displayTitle:
     {
         const focused = windowTitle.cleanText(windowTitle.bridge ? windowTitle.bridge.focusedWindowTitle : "")
@@ -50,8 +50,12 @@ Item
     Maui.TabButton
     {
         id: _focusedWindowTab
+        font.pointSize: Maui.Style.fontSizes.small
         implicitHeight: windowTitle.tabHeight
-        anchors.fill: parent
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        height: windowTitle.tabHeight
         padding: 0
         leftPadding: Maui.Style.space.small
         rightPadding: Maui.Style.space.small
@@ -126,9 +130,6 @@ Item
                         _focusedWindowFade.restart()
                     }
 
-                    ToolTip.delay: 500
-                    ToolTip.visible: _focusedWindowTab.hovered && text.length > 0
-                    ToolTip.text: text
                 }
             }
         }

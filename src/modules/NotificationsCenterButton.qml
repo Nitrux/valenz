@@ -19,7 +19,7 @@ ToolButton
     readonly property bool popupVisible: notificationsCenterButton.popup && notificationsCenterButton.popup.visible
     readonly property color activeContentColor: (notificationsCenterButton.down || notificationsCenterButton.popupVisible) ? Maui.Theme.highlightedTextColor : Maui.Theme.textColor
 
-    text: "Notifications center"
+    text: i18n("Notifications center")
     display: ToolButton.IconOnly
     checked: popupVisible
     padding: Maui.Style.space.small
@@ -83,9 +83,7 @@ ToolButton
                 visible: !notificationsCenterButton.useSystemThemeIcons || !_notificationIcon.valid
                 text: notificationsCenterButton.glyphForIcon ? notificationsCenterButton.glyphForIcon(notificationsCenterButton.iconName) : ""
                 color: notificationsCenterButton.activeContentColor
-                font.family: "Symbols Nerd Font"
-                font.weight: Font.Normal
-                font.pixelSize: Math.max(10, Math.round(parent.height * 0.65))
+                font: Qt.font({ family: "Symbols Nerd Font", weight: Font.Normal, pixelSize: Math.max(10, Math.round(parent.height * 0.65)) })
                 textFormat: Text.PlainText
                 renderType: Text.QtRendering
             }
@@ -126,8 +124,8 @@ ToolButton
         Rectangle
         {
             anchors.fill: parent
+            visible: false
             color: "#ff3b30"
-            opacity: 0.85
         }
     }
 }

@@ -10,33 +10,32 @@ import org.mauikit.controls as Maui
 Window
 {
     id: root
-    readonly property int barHeight: 56
-    visible: false
-    width: Screen.width
-    height: barHeight
-    minimumHeight: barHeight
-    maximumHeight: barHeight
+    readonly property int barHeight: valenzBridge ? valenzBridge.barHeight : 56
+    readonly property int barWidth: valenzBridge ? valenzBridge.barWidth : 0
+    readonly property int barHeightClamped: Math.max(1, Math.min(barHeight, Screen.height > 0 ? Screen.height : barHeight))
+    readonly property int barFrameInset: 6
+    readonly property int barContentHeight: Math.max(0, barHeightClamped - (barFrameInset * 2))
+    readonly property int barSeparatorPadding: 12
+    readonly property int barLayerSpacing: valenzBridge ? valenzBridge.barLayerSpacing : 0
+    readonly property real popupSurfaceOpacity: 0.76
+    readonly property color popupSurfaceColor: Qt.lighter(Maui.Theme.backgroundColor, 1.25)
+    readonly property int popupSurfaceRadius: Maui.Style.radiusV + 3
+    visible: !valenzBridge || !valenzBridge.focusedWindowFullscreen
+    width: barWidth > 0 ? Math.min(Screen.width, barWidth) : Screen.width
+    x: Math.max(0, Math.round((Screen.width - width) / 2))
+    height: barHeightClamped
+    minimumHeight: barHeightClamped
+    maximumHeight: barHeightClamped
     flags: Qt.FramelessWindowHint | Qt.Tool
-    title: "Valenz"
+    title: i18n("Valenz")
     color: "transparent"
 
     Maui.WindowBlur
     {
         view: root
-        geometry: Qt.rect(0, 0, root.width, barHeight)
-        windowRadius: Maui.Style.radiusV
+        geometry: Qt.rect(0, 0, root.width, barHeightClamped)
+        windowRadius: root.popupSurfaceRadius
         enabled: true
-    }
-
-    Rectangle
-    {
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.top: parent.top
-        height: barHeight
-        color: Maui.Theme.backgroundColor
-        opacity: 0.76
-        radius: Maui.Style.radiusV + 6
     }
 
     function traceMenu(action, detail)
@@ -55,13 +54,32 @@ Window
 
     function closeTransientPopups()
     {
-        if (_notificationsBubble.visible)
+        if (_systemTray && _systemTray.closeTrayMenu)
+            _systemTray.closeTrayMenu()
+
+        if (_notificationsBubble.visible && _notificationsBubble.forceClose)
+            _notificationsBubble.forceClose()
+        else if (_notificationsBubble.visible)
             _notificationsBubble.close()
-        if (_calendarPopup.visible)
+
+        if (_calendarPopup.visible && _calendarPopup.forceClose)
+            _calendarPopup.forceClose()
+        else if (_calendarPopup.visible)
             _calendarPopup.close()
-        if (_notificationsCenterPopup.visible)
+
+        if (_notificationsCenterPopup.visible && _notificationsCenterPopup.forceClose)
+            _notificationsCenterPopup.forceClose()
+        else if (_notificationsCenterPopup.visible)
             _notificationsCenterPopup.close()
-        if (_controlCenterPopup.visible)
+
+        if (_mprisSourcesPopup.visible && _mprisSourcesPopup.forceClose)
+            _mprisSourcesPopup.forceClose()
+        else if (_mprisSourcesPopup.visible)
+            _mprisSourcesPopup.close()
+
+        if (_controlCenterPopup.visible && _controlCenterPopup.forceClose)
+            _controlCenterPopup.forceClose()
+        else if (_controlCenterPopup.visible)
             _controlCenterPopup.close()
     }
 
@@ -70,7 +88,7 @@ Window
         if (!item || !item.visible || !item.width || !item.height)
             return false
 
-        const point = item.mapFromItem(_pageLayout, x, y)
+        const point = item.mapFromItem(_barInner, x, y)
         return point && point.x >= 0 && point.y >= 0 && point.x <= item.width && point.y <= item.height
     }
 
@@ -114,8 +132,8 @@ Window
             case "network-vpn": return "\uF023"
             case "network-cellular-3g": return "\uF10B"
             case "network-disconnect": return "\uF127"
-            case "bluetooth-active": return "\uF294"
-            case "bluetooth-disabled": return "\uF293"
+            case "bluetooth-active": return "\uF293"
+            case "bluetooth-disabled": return "\uF294"
             case "audio-volume-muted": return "\uF026"
             case "audio-volume-high": return "\uF028"
             case "audio-volume-medium": return "\uF027"
@@ -268,7 +286,7 @@ Window
     ControlCenter
     {
         id: _controlCenterPopup
-        title: "Valenz Control Center"
+        title: i18n("Valenz Control Center")
         anchorButton: _controlCenterButton.popupAnchorMarker
         rootWindow: root
         overlayItem: root.contentItem
@@ -279,7 +297,7 @@ Window
     NotificationsCenter
     {
         id: _notificationsCenterPopup
-        title: "Valenz Notifications Center"
+        title: i18n("Valenz Notifications Center")
         controller: notificationsController
         anchorButton: _notificationsCenterButton.popupAnchorMarker
         rootWindow: root
@@ -298,10 +316,20 @@ Window
         useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
     }
 
+    MprisSourcesPopup
+    {
+        id: _mprisSourcesPopup
+        title: i18n("Valenz MPRIS Controls")
+        rootWindow: root
+        bridge: valenzBridge
+        overlayItem: root.contentItem
+        anchorItem: _mprisControl.popupAnchorMarker
+    }
+
     CalendarPopup
     {
         id: _calendarPopup
-        title: "Valenz Calendar"
+        title: i18n("Valenz Calendar")
         anchorItem: _weatherClock.popupAnchorMarker
         rootWindow: root
         overlayItem: root.contentItem
@@ -321,222 +349,307 @@ Window
         }
     }
 
-    Maui.PageLayout
+    Item
     {
-        id: _pageLayout
+        id: _barShell
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        height: barHeight
-        clip: true
-
-        split: false
-
-        altHeader: Maui.Handy.isMobile
-        Maui.Controls.showCSD: true
-
-        headBar.visible: true
-        headBar.forceCenterMiddleContent: false
-        headerMargins: Maui.Handy.isMobile ? 0 : Maui.Style.contentMargins
-        footerMargins: headerMargins
-
+        height: barHeightClamped
         Maui.Theme.colorSet: Maui.Theme.View
-        background: null
 
-        leftContent:  [
-            WorkspaceBadge
-            {
-                bridge: valenzBridge
-            },
-
-            ToolSeparator
-            {
-                topPadding: 10
-                bottomPadding: 10
-            },
-
-            WorkspaceNavigation
-            {
-                bridge: valenzBridge
-            },
-
-            ToolSeparator
-            {
-                topPadding: 10
-                bottomPadding: 10
-                visible: root.mprisModuleVisible
-            },
-
-            MprisControl
-            {
-                id: _mprisControl
-                bridge: valenzBridge
-                visible: root.mprisModuleVisible
-            },
-
-            ToolSeparator
-            {
-                topPadding: 10
-                bottomPadding: 10
-            }
-        ]
-
-        rightContent: [
-            ToolSeparator
-            {
-                topPadding: 10
-                bottomPadding: 10
-            },
-
-            SystemTray
-            {
-                controller: systemTrayController
-            },
-
-            ToolSeparator
-            {
-                topPadding: 10
-                bottomPadding: 10
-            },
-
-            NotificationsCenterButton
-            {
-                id: _notificationsCenterButton
-                popup: _notificationsCenterPopup
-                useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
-                iconName: notificationsController && notificationsController.dndEnabled ? "notifications-disabled" : "notifications"
-                glyphForIcon: root.controlCenterButtonGlyph
-                countText: String(Math.max(0, notificationsController ? notificationsController.count : 0))
-            },
-
-            ToolSeparator
-            {
-                topPadding: 10
-                bottomPadding: 10
-            },
-
-            ControlCenterButton
-            {
-                id: _controlCenterButton
-                popup: _controlCenterPopup
-                useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
-                networkIconName: root.controlCenterNetworkIconName
-                bluetoothIconName: root.controlCenterBluetoothIconName
-                bluetoothAvailable: root.controlCenterBluetoothAvailable
-                volumeIconName: root.controlCenterVolumeIconName
-                volumePercentageText: root.controlCenterVolumePercentageText
-                batteryIconName: root.controlCenterBatteryIconName
-                batteryPercentageText: root.controlCenterBatteryPercentageText
-                batteryAvailable: root.controlCenterBatteryAvailable
-                powerProfileIconName: root.controlCenterPowerProfileIconName
-                glyphForIcon: root.controlCenterButtonGlyph
-                glyphColorForKind: root.controlCenterButtonGlyphColor
-            },
-        ]
-
-        headBar.middleContent: RowLayout
+        Rectangle
         {
-            Layout.fillWidth: true
-            spacing: 0
+            anchors.fill: parent
+            color: Maui.Theme.backgroundColor
+            opacity: root.popupSurfaceOpacity
+            radius: root.popupSurfaceRadius
+        }
 
-            Item
+        Rectangle
+        {
+            id: _barInner
+            anchors.fill: parent
+            anchors.margins: barFrameInset
+            color: Maui.Theme.backgroundColor
+            radius: Maui.Style.radiusV
+            clip: true
+
+            RowLayout
             {
-                id: _middleContentArea
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-                Layout.minimumWidth: Maui.Style.units.gridUnit * 12
+                id: _barLayout
+                anchors.fill: parent
+                spacing: 0
 
-                readonly property real leftSectionWidth:
+                Item
                 {
-                    const bar = _pageLayout.headBar
-                    if (!bar || !bar.leftLayout || !bar.farLeftLayout)
-                        return 0
-                    return bar.leftLayout.implicitWidth + bar.farLeftLayout.implicitWidth
-                }
+                    id: _leftSection
+                    Layout.alignment: Qt.AlignVCenter
+                    Layout.fillHeight: true
+                    implicitWidth: _leftSectionRow.implicitWidth
+                    implicitHeight: _leftSectionRow.implicitHeight
 
-                readonly property real rightSectionWidth:
-                {
-                    const bar = _pageLayout.headBar
-                    if (!bar || !bar.rightLayout || !bar.farRightLayout)
-                        return 0
-                    return bar.rightLayout.implicitWidth + bar.farRightLayout.implicitWidth
-                }
-
-                readonly property real globalCenterOffset: (rightSectionWidth - leftSectionWidth) / 2
-
-                WindowTitle
-                {
-                    id: _windowTitleMiddle
-                    bridge: valenzBridge
-                    fallbackTitle: root.title
-                    referenceHeight: _mprisControl.actionsButtonHeight
-                    anchors.left: parent.left
-                    anchors.verticalCenter: parent.verticalCenter
-                    width:
+                    RowLayout
                     {
-                        const available = _weatherBlock.x - Maui.Style.space.medium - x
-                        return Math.max(0, Math.min(implicitWidth, available))
-                    }
-                }
+                        id: _leftSectionRow
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 0
 
-                RowLayout
-                {
-                    id: _weatherBlock
-                    spacing: Maui.Style.space.small
-                    anchors.verticalCenter: parent.verticalCenter
-                    x:
-                    {
-                        const centeredX = (parent.width - width) / 2
-                        const shiftedX = centeredX + _middleContentArea.globalCenterOffset
-                        const minX = 0
-                        const maxX = Math.max(0, parent.width - width)
-                        return Math.min(maxX, Math.max(minX, shiftedX))
-                    }
-
-                    ToolSeparator
-                    {
-                        topPadding: 10
-                        bottomPadding: 10
-                    }
-
-                    WeatherClock
-                    {
-                        id: _weatherClock
-                        clockText: root.clockText
-                        dateText: root.dateText
-                        weatherIconName: root.weatherIconName
-                        weatherTemperature: root.weatherTemperature
-                        weatherLocationName: root.weatherLocationName
-
-                        TapHandler
+                        Item
                         {
-                            onTapped:
+                            Layout.preferredWidth: Maui.Style.space.small
+                            Layout.fillHeight: true
+                        }
+
+                        WorkspaceBadge
+                        {
+                            bridge: valenzBridge
+                                                    }
+
+                        Item
+                        {
+                            Layout.preferredWidth: Maui.Style.space.small
+                            Layout.fillHeight: true
+                        }
+
+                        ToolSeparator
+                        {
+                            topPadding: barSeparatorPadding
+                            bottomPadding: barSeparatorPadding
+                        }
+
+                        Item
+                        {
+                            Layout.preferredWidth: Maui.Style.space.small
+                            Layout.fillHeight: true
+                        }
+
+                        Maui.ToolActions
+                        {
+                            display: ToolButton.IconOnly
+                            checkable: false
+                            autoExclusive: false
+                            spacing: 2
+
+                            Action
                             {
-                                openCalendarPopup()
+                                text: i18n("Previous workspace")
+                                icon.name: "go-previous"
+                                enabled: !!valenzBridge
+                                onTriggered: valenzBridge.goToPreviousWorkspace()
                             }
+
+                            Action
+                            {
+                                text: i18n("Next workspace")
+                                icon.name: "go-next"
+                                enabled: !!valenzBridge
+                                onTriggered: valenzBridge.goToNextWorkspace()
+                            }
+                        }
+
+                        Item
+                        {
+                            Layout.preferredWidth: Maui.Style.space.small
+                            Layout.fillHeight: true
+                        }
+
+                        ToolSeparator
+                        {
+                            topPadding: barSeparatorPadding
+                            bottomPadding: barSeparatorPadding
+                            visible: root.mprisModuleVisible
+                        }
+
+                        Item
+                        {
+                            Layout.preferredWidth: Maui.Style.space.small
+                            Layout.fillHeight: true
+                        }
+
+                        MprisControl
+                        {
+                            id: _mprisControl
+                            bridge: valenzBridge
+                            popup: _mprisSourcesPopup
+                            visible: root.mprisModuleVisible
+                        }
+
+                        Item
+                        {
+                            Layout.preferredWidth: Maui.Style.space.small
+                            Layout.fillHeight: true
+                        }
+
+                        ToolSeparator
+                        {
+                            topPadding: barSeparatorPadding
+                            bottomPadding: barSeparatorPadding
+                        }
+
+                        Item
+                        {
+                            Layout.preferredWidth: Maui.Style.space.small
+                            Layout.fillHeight: true
+                        }
+                    }
+                }
+
+                Item
+                {
+                    id: _middleContentArea
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.minimumWidth: Maui.Style.units.gridUnit * 12
+                    Layout.alignment: Qt.AlignVCenter
+
+                    readonly property real leftSectionWidth: _leftSection.implicitWidth
+                    readonly property real rightSectionWidth: _rightSection.implicitWidth
+                    readonly property real globalCenterOffset: (rightSectionWidth - leftSectionWidth) / 2
+
+                    WindowTitle
+                    {
+                        id: _windowTitleMiddle
+                        bridge: valenzBridge
+                        fallbackTitle: root.title
+                                                referenceHeight: barContentHeight
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        width:
+                        {
+                            const available = _weatherBlock.x - Maui.Style.space.small - x
+                            return Math.max(0, Math.min(implicitWidth, available))
                         }
                     }
 
-                    ToolSeparator
+                    RowLayout
                     {
-                        topPadding: 10
-                        bottomPadding: 10
+                        id: _weatherBlock
+                        spacing: Maui.Style.space.medium
+                        anchors.verticalCenter: parent.verticalCenter
+                        x:
+                        {
+                            const centeredX = (parent.width - width) / 2
+                            const shiftedX = centeredX + _middleContentArea.globalCenterOffset
+                            const minX = 0
+                            const maxX = Math.max(0, parent.width - width)
+                            return Math.min(maxX, Math.max(minX, shiftedX))
+                        }
+
+                        ToolSeparator
+                        {
+                            topPadding: barSeparatorPadding
+                            bottomPadding: barSeparatorPadding
+                        }
+
+                        WeatherClock
+                        {
+                            id: _weatherClock
+                            clockText: root.clockText
+                            dateText: root.dateText
+                            weatherIconName: root.weatherIconName
+                            weatherTemperature: root.weatherTemperature
+                            weatherLocationName: root.weatherLocationName
+                            
+                            TapHandler
+                            {
+                                onTapped:
+                                {
+                                    openCalendarPopup()
+                                }
+                            }
+                        }
+
+                        ToolSeparator
+                        {
+                            topPadding: barSeparatorPadding
+                            bottomPadding: barSeparatorPadding
+                        }
+                    }
+
+                    MouseArea
+                    {
+                        anchors.fill: parent
+                        enabled: _controlCenterPopup.visible || _notificationsCenterPopup.visible || _notificationsBubble.visible || _calendarPopup.visible || _mprisSourcesPopup.visible
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                        hoverEnabled: false
+                        propagateComposedEvents: true
+
+                        onPressed: function(mouse)
+                        {
+                            if (!_isPopupToggleArea(mouse.x, mouse.y))
+                                closeTransientPopups()
+                            mouse.accepted = false
+                        }
                     }
                 }
 
-                MouseArea
+                Item
                 {
-                    anchors.fill: parent
-                    enabled: _controlCenterPopup.visible || _notificationsCenterPopup.visible || _notificationsBubble.visible || _calendarPopup.visible
-                    acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-                    hoverEnabled: false
-                    propagateComposedEvents: true
+                    id: _rightSection
+                    Layout.alignment: Qt.AlignVCenter
+                    Layout.fillHeight: true
+                    implicitWidth: _rightSectionRow.implicitWidth
+                    implicitHeight: _rightSectionRow.implicitHeight
 
-                    onPressed: function(mouse)
+                    RowLayout
                     {
-                        if (!_isPopupToggleArea(mouse.x, mouse.y))
-                            closeTransientPopups()
-                        mouse.accepted = false
+                        id: _rightSectionRow
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: Maui.Style.space.medium
+
+                        ToolSeparator
+                        {
+                            topPadding: barSeparatorPadding
+                            bottomPadding: barSeparatorPadding
+                        }
+
+                        SystemTray
+                        {
+                            id: _systemTray
+                            controller: systemTrayController
+                            rootWindow: root
+                        }
+
+                        ToolSeparator
+                        {
+                            topPadding: barSeparatorPadding
+                            bottomPadding: barSeparatorPadding
+                        }
+
+                        NotificationsCenterButton
+                        {
+                            id: _notificationsCenterButton
+                            popup: _notificationsCenterPopup
+                                                        useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
+                            iconName: notificationsController && notificationsController.dndEnabled ? "notifications-disabled" : "notifications"
+                            glyphForIcon: root.controlCenterButtonGlyph
+                            countText: String(Math.max(0, notificationsController ? notificationsController.count : 0))
+                        }
+
+                        ToolSeparator
+                        {
+                            topPadding: barSeparatorPadding
+                            bottomPadding: barSeparatorPadding
+                        }
+
+                        ControlCenterButton
+                        {
+                            id: _controlCenterButton
+                            popup: _controlCenterPopup
+                                                        useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
+                            networkIconName: root.controlCenterNetworkIconName
+                            bluetoothIconName: root.controlCenterBluetoothIconName
+                            bluetoothAvailable: root.controlCenterBluetoothAvailable
+                            volumeIconName: root.controlCenterVolumeIconName
+                            volumePercentageText: root.controlCenterVolumePercentageText
+                            batteryIconName: root.controlCenterBatteryIconName
+                            batteryPercentageText: root.controlCenterBatteryPercentageText
+                            batteryAvailable: root.controlCenterBatteryAvailable
+                            powerProfileIconName: root.controlCenterPowerProfileIconName
+                            glyphForIcon: root.controlCenterButtonGlyph
+                            glyphColorForKind: root.controlCenterButtonGlyphColor
+                        }
                     }
                 }
             }
