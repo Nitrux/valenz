@@ -35,6 +35,7 @@ $APT_COMMAND install -y --no-install-recommends \
     extra-cmake-modules \
     gettext \
     gnupg2 \
+    layer-shell-qt \
     libkf6coreaddons-dev \
     libkf6i18n-dev \
     libkf6notifications-dev \
