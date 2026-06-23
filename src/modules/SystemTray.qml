@@ -12,6 +12,7 @@ RowLayout
 
     property QtObject controller
     property QtObject rootWindow
+    property bool debugDetails: false
     property int trayMenuIndex: -1
     property bool trayMenuItemIsMenu: false
     property var trayMenuItems: []
@@ -130,10 +131,14 @@ RowLayout
         delegate: ToolButton
         {
             required property int index
+            required property string itemId
             required property string title
             required property string iconName
             required property string iconSource
             required property string status
+            required property string service
+            required property string objectPath
+            required property string menu
             required property bool itemIsMenu
 
             function displayTitle()
@@ -145,6 +150,30 @@ RowLayout
                     return status
 
                 return ""
+            }
+
+            function debugDetailsText()
+            {
+                const parts = []
+                const display = displayTitle()
+                if (display.length > 0)
+                    parts.push("title: " + display)
+                if (itemId.length > 0)
+                    parts.push("itemId: " + itemId)
+                if (service.length > 0)
+                    parts.push("service: " + service)
+                if (objectPath.length > 0)
+                    parts.push("objectPath: " + objectPath)
+                if (status.length > 0)
+                    parts.push("status: " + status)
+                if (iconName.length > 0)
+                    parts.push("iconName: " + iconName)
+                if (iconSource.length > 0)
+                    parts.push("iconSource: " + iconSource)
+                if (menu.length > 0)
+                    parts.push("menu: " + menu)
+                parts.push("itemIsMenu: " + itemIsMenu)
+                return parts.join("\n")
             }
 
             icon.name: iconSource.length > 0 ? "" : (iconName.length > 0 ? iconName : "application-x-executable")
@@ -161,11 +190,26 @@ RowLayout
                 if (!systemTray.controller)
                     return
 
+                if (systemTray.debugDetails)
+                {
+                    systemTray.controller.debugTrayItem(index)
+                    return
+                }
+
                 if (itemIsMenu)
                     systemTray.openTrayMenu(index, itemIsMenu, popupAnchorMarker)
                 else
                     systemTray.controller.activate(index)
             }
+
+            HoverHandler
+            {
+                id: _trayHover
+            }
+
+            ToolTip.delay: 0
+            ToolTip.visible: systemTray.debugDetails && _trayHover.hovered
+            ToolTip.text: debugDetailsText()
 
             MouseArea
             {

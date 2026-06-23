@@ -5,6 +5,7 @@ constexpr auto kControlCenterDiskUsagePathKey = "ControlCenter/diskUsagePath";
 constexpr auto kWindowBarHeightKey = "Window/barHeight";
 constexpr auto kWindowBarWidthKey = "Window/barWidth";
 constexpr auto kWindowBarLayerSpacingKey = "Window/barLayerSpacing";
+constexpr auto kSystemTrayDebugDetailsKey = "SystemTray/debugDetails";
 constexpr auto kLegacyWindowPopupMaxWidthKey = "Window/popupMaxWidth";
 constexpr auto kWindowBarHeightMax = 100;
 constexpr auto kFullscreenModeNone = 0;

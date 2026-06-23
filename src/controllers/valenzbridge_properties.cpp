@@ -2,6 +2,86 @@
 #include "valenzbridge_p.h"
 #include "mauikit_system_control.h"
 
+#include <QDBusConnection>
+#include <QDBusInterface>
+#include <QDBusObjectPath>
+#include <QDBusReply>
+#include <QDBusVariant>
+#include <QDBusMetaType>
+#include <QMap>
+#include <QVariant>
+
+namespace
+{
+using BluezPropertyMap = QMap<QString, QVariant>;
+using BluezInterfaceMap = QMap<QString, BluezPropertyMap>;
+using BluezManagedObjects = QMap<QDBusObjectPath, BluezInterfaceMap>;
+}
+
+Q_DECLARE_METATYPE(BluezPropertyMap)
+Q_DECLARE_METATYPE(BluezInterfaceMap)
+Q_DECLARE_METATYPE(BluezManagedObjects)
+
+namespace
+{
+
+bool setBluezAdapterPowered(bool enabled)
+{
+    qDBusRegisterMetaType<BluezPropertyMap>();
+    qDBusRegisterMetaType<BluezInterfaceMap>();
+    qDBusRegisterMetaType<BluezManagedObjects>();
+
+    QDBusInterface objectsIface(QStringLiteral("org.bluez"),
+                                QStringLiteral("/"),
+                                QStringLiteral("org.freedesktop.DBus.ObjectManager"),
+                                QDBusConnection::systemBus());
+    if (!objectsIface.isValid())
+        return false;
+
+    const QDBusReply<BluezManagedObjects> reply = objectsIface.call(QStringLiteral("GetManagedObjects"));
+    if (!reply.isValid())
+        return false;
+
+    const BluezManagedObjects objects = reply.value();
+    bool anyAdapter = false;
+    bool allSucceeded = true;
+
+    for (const QDBusObjectPath &path : objects.keys())
+    {
+        const BluezInterfaceMap interfaces = objects.value(path);
+        if (!interfaces.contains(QStringLiteral("org.bluez.Adapter1")))
+            continue;
+
+        anyAdapter = true;
+
+        QDBusInterface propertiesIface(QStringLiteral("org.bluez"),
+                                       path.path(),
+                                       QStringLiteral("org.freedesktop.DBus.Properties"),
+                                       QDBusConnection::systemBus());
+        if (!propertiesIface.isValid())
+        {
+            allSucceeded = false;
+            continue;
+        }
+
+        QDBusMessage setCall = QDBusMessage::createMethodCall(QStringLiteral("org.bluez"),
+                                                              path.path(),
+                                                              QStringLiteral("org.freedesktop.DBus.Properties"),
+                                                              QStringLiteral("Set"));
+        setCall.setArguments({QStringLiteral("org.bluez.Adapter1"),
+                              QStringLiteral("Powered"),
+                              QVariant::fromValue(QDBusVariant(QVariant(enabled)))});
+
+        const QDBusMessage result = QDBusConnection::systemBus().call(setCall);
+        if (result.type() == QDBusMessage::ErrorMessage)
+            allSucceeded = false;
+    }
+
+    return anyAdapter && allSucceeded;
+}
+
+}
+
 bool ValenzBridge::enabled() const
 {
     return m_enabled;
@@ -373,6 +453,11 @@ QString ValenzBridge::userRealName() const
     return m_userRealName;
 }
 
+QString ValenzBridge::userAvatarUrl() const
+{
+    return m_userAvatarPath;
+}
+
 QString ValenzBridge::controlCenterIconMode() const
 {
     return m_controlCenterIconMode;
@@ -635,11 +720,29 @@ bool ValenzBridge::controlCenterBluetoothEnabled() const
 
 void ValenzBridge::setControlCenterBluetoothEnabled(bool enabled)
 {
+    if (!MauiKitSystem::controlCenterBluetoothAvailable())
+    {
+        if (m_controlCenterBluetoothEnabled)
+        {
+            m_controlCenterBluetoothEnabled = false;
+            Q_EMIT controlCenterBluetoothEnabledChanged(m_controlCenterBluetoothEnabled);
+        }
+        setControlCenterBluetoothState(QStringLiteral("off"));
+        return;
+    }
+
     if (m_controlCenterBluetoothEnabled == enabled)
+    {
+        setControlCenterBluetoothState(enabled ? QStringLiteral("on") : QStringLiteral("off"));
+        return;
+    }
+
+    if (!setBluezAdapterPowered(enabled))
         return;
 
     m_controlCenterBluetoothEnabled = enabled;
     Q_EMIT controlCenterBluetoothEnabledChanged(m_controlCenterBluetoothEnabled);
+    setControlCenterBluetoothState(enabled ? QStringLiteral("on") : QStringLiteral("off"));
 }
 
 bool ValenzBridge::controlCenterBluetoothAvailable() const

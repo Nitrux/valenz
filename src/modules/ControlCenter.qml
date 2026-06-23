@@ -535,16 +535,38 @@ Window
                             Layout.fillWidth: true
                             spacing: Maui.Style.space.small
 
-                            Rectangle
+                            Item
                             {
-                                implicitWidth: Maui.Style.iconSizes.big + Maui.Style.space.small
-                                implicitHeight: implicitWidth
-                                radius: implicitWidth / 2
-                                color: Maui.Theme.alternateBackgroundColor
+                                Layout.preferredWidth: 36
+                                Layout.preferredHeight: 36
+                                implicitWidth: 36
+                                implicitHeight: 36
+
+                                Rectangle
+                                {
+                                    anchors.fill: parent
+                                    radius: width / 2
+                                    color: Maui.Theme.alternateBackgroundColor
+                                    border.width: 1
+                                    border.color: Qt.alpha(Maui.Theme.textColor, 0.12)
+                                }
+
+                                Maui.IconItem
+                                {
+                                    anchors.fill: parent
+                                    visible: controlCenter.bridge && controlCenter.bridge.userAvatarUrl.length > 0
+                                    imageSource: controlCenter.bridge ? controlCenter.bridge.userAvatarUrl : ""
+                                    imageSizeHint: 36
+                                    imageWidth: 72
+                                    imageHeight: 72
+                                    maskRadius: 18
+                                    fillMode: Image.PreserveAspectCrop
+                                }
 
                                 Label
                                 {
                                     anchors.centerIn: parent
+                                    visible: !(controlCenter.bridge && controlCenter.bridge.userAvatarUrl.length > 0)
                                     text: "\uf007"
                                     font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
                                     color: Maui.Theme.textColor
@@ -566,7 +588,7 @@ Window
                                 Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                                 Layout.minimumHeight: 28
                                 text: i18n("Shutdown")
-                                // icon.name: "system-shutdown"
+                                icon.name: "system-shutdown"
                                 display: ToolButton.TextBesideIcon
 
                                 background: Rectangle
@@ -684,11 +706,11 @@ Window
 
                             Switch
                             {
-                                checked: controlCenter.bridge ? (controlCenter.bridge.controlCenterBluetoothAvailable && controlCenter.bridge.controlCenterBluetoothState !== "off") : false
+                                checked: controlCenter.bridge ? (controlCenter.bridge.controlCenterBluetoothAvailable && controlCenter.bridge.controlCenterBluetoothEnabled) : false
                                 onToggled:
                                 {
                                     if (controlCenter.bridge)
-                                        controlCenter.bridge.controlCenterBluetoothState = checked ? "on" : "off"
+                                        controlCenter.bridge.controlCenterBluetoothEnabled = checked
                                 }
                             }
                         }

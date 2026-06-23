@@ -17,6 +17,7 @@ Window
     readonly property int barContentHeight: Math.max(0, barHeightClamped - (barFrameInset * 2))
     readonly property int barSeparatorPadding: 12
     readonly property int barLayerSpacing: valenzBridge ? valenzBridge.barLayerSpacing : 0
+    readonly property bool systemTrayDebugDetails: valenzBridge ? valenzBridge.systemTrayDebugDetails : false
     readonly property real popupSurfaceOpacity: 0.76
     readonly property color popupSurfaceColor: Qt.lighter(Maui.Theme.backgroundColor, 1.25)
     readonly property int popupSurfaceRadius: Maui.Style.radiusV + 3
@@ -511,7 +512,7 @@ Window
                     {
                         id: _windowTitleMiddle
                         bridge: valenzBridge
-                        fallbackTitle: root.title
+                        fallbackTitle: ""
                                                 referenceHeight: barContentHeight
                         anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
@@ -609,6 +610,7 @@ Window
                             id: _systemTray
                             controller: systemTrayController
                             rootWindow: root
+                            debugDetails: root.systemTrayDebugDetails
                         }
 
                         ToolSeparator

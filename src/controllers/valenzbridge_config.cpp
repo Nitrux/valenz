@@ -2,6 +2,10 @@
 #include "valenzbridge_p.h"
 #include "mauikit_system_control.h"
 
+#include <QDir>
+#include <QFileInfo>
+#include <QUrl>
+
 QString ValenzBridge::configFilePath() const
 {
     return m_userConfigPath;
@@ -20,6 +24,11 @@ int ValenzBridge::barWidth() const
 int ValenzBridge::barLayerSpacing() const
 {
     return m_barLayerSpacing;
+}
+
+bool ValenzBridge::systemTrayDebugDetails() const
+{
+    return m_systemTrayDebugDetails;
 }
 
 int ValenzBridge::clampWorkspace(int workspace) const
@@ -75,6 +84,7 @@ void ValenzBridge::initializeConfig()
     ensureKey(QString::fromLatin1(kWindowBarHeightKey), QString(), 56);
     ensureKey(QString::fromLatin1(kWindowBarWidthKey), QString::fromLatin1(kLegacyWindowPopupMaxWidthKey), 0);
     ensureKey(QString::fromLatin1(kWindowBarLayerSpacingKey), QString(), 0);
+    ensureKey(QString::fromLatin1(kSystemTrayDebugDetailsKey), QString(), false);
     userSettings.remove(QString::fromLatin1(kLegacyWindowPopupMaxWidthKey));
 
     userSettings.remove("ControlCenter/batteryIconName");
@@ -95,6 +105,8 @@ void ValenzBridge::initializeConfig()
     m_focusedWindowTitle.clear();
     m_focusedWindowIconName = focusedWindowIconName.isEmpty() ? QStringLiteral("application-x-executable") : focusedWindowIconName;
     m_userRealName = MauiKitSystem::systemUserRealName();
+    const QString facePath = QDir::home().filePath(QStringLiteral(".face"));
+    m_userAvatarPath = QFileInfo::exists(facePath) ? QUrl::fromLocalFile(facePath).toString() : QString();
     m_controlCenterIconMode = normalizeControlCenterIconMode(userSettings.value(kControlCenterIconModeKey, QStringLiteral("system16")).toString());
     m_controlCenterNetworkMode = QStringLiteral("auto");
     m_controlCenterBluetoothState = QStringLiteral("auto");
@@ -116,6 +128,7 @@ void ValenzBridge::initializeConfig()
     m_barHeight = qBound(1, userSettings.value(kWindowBarHeightKey, 56).toInt(), kWindowBarHeightMax);
     m_barWidth = qMax(0, userSettings.value(kWindowBarWidthKey, 0).toInt());
     m_barLayerSpacing = qBound(0, userSettings.value(kWindowBarLayerSpacingKey, 0).toInt(), 64);
+    m_systemTrayDebugDetails = userSettings.value(kSystemTrayDebugDetailsKey, false).toBool();
 
     m_weatherLatitude = normalizeWeatherCoordinate(userSettings.value(kWeatherLatitudeKey, 40.7128), -90.0, 90.0, 40.7128);
     m_weatherLongitude = normalizeWeatherCoordinate(userSettings.value(kWeatherLongitudeKey, -74.0060), -180.0, 180.0, -74.0060);

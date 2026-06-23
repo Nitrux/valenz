@@ -1,6 +1,8 @@
 #include "valenzbridge_systray.h"
 #include "valenzbridge_p.h"
 
+#include <QDebug>
+
 #include <QDBusArgument>
 #include <QDBusConnection>
 #include <QDBusMessage>
@@ -119,10 +121,18 @@ const QStringList kItemInterfaces {
 QString shortServiceName(const QString &service)
 {
     const QString trimmed = service.trimmed();
-    if (trimmed.isEmpty() || trimmed.startsWith(QLatin1Char(':')))
+    if (trimmed.isEmpty() || trimmed.startsWith(QStringLiteral(":")))
         return {};
 
-    return trimmed.section(QLatin1Char('.'), -1);
+    return trimmed.section(QStringLiteral("."), -1);
+}
+
+bool shouldHideAnonymousTrayItem(const QString &service, const QString &title, const QString &iconName, const QString &menu)
+{
+    return service.trimmed().startsWith(QStringLiteral(":"))
+        && title.trimmed().isEmpty()
+        && iconName.trimmed() == QStringLiteral("application-x-executable")
+        && menu.trimmed().isEmpty();
 }
 
 QString variantToString(const QVariant &value)
@@ -282,7 +292,7 @@ QVariant SystemTrayController::data(const QModelIndex &index, int role) const
 QHash<int, QByteArray> SystemTrayController::roleNames() const
 {
     return {
-        {IdRole, "id"},
+        {IdRole, "itemId"},
         {TitleRole, "title"},
         {IconNameRole, "iconName"},
         {IconSourceRole, "iconSource"},
@@ -327,6 +337,29 @@ void SystemTrayController::activate(int index)
 void SystemTrayController::secondaryActivate(int index)
 {
     requestItemMethod(index, QStringLiteral("SecondaryActivate"));
+}
+
+void SystemTrayController::debugTrayItem(int index)
+{
+    if (index < 0 || index >= m_items.size())
+        return;
+
+    const TrayItemEntry &entry = m_items.at(index);
+    const auto safe = [](const QString &value) -> QString {
+        return value.isEmpty() ? QStringLiteral("<empty>") : value;
+    };
+
+    qInfo().noquote() << QStringLiteral("System tray item %1\n  itemId: %2\n  title: %3\n  service: %4\n  objectPath: %5\n  status: %6\n  iconName: %7\n  iconSource: %8\n  menu: %9\n  itemIsMenu: %10")
+                             .arg(QString::number(index),
+                                  safe(entry.id),
+                                  safe(entry.title),
+                                  safe(entry.service),
+                                  safe(entry.objectPath),
+                                  safe(entry.status),
+                                  safe(entry.iconName),
+                                  safe(entry.iconSource),
+                                  safe(entry.menu),
+                                  QString::number(entry.itemIsMenu));
 }
 
 void SystemTrayController::contextMenu(int index, qreal x, qreal y)
@@ -391,6 +424,9 @@ void SystemTrayController::refresh()
             continue;
         }
 
+        if (shouldHideAnonymousTrayItem(entry.service, entry.title, entry.iconName, entry.menu))
+            continue;
+
         rebuilt.push_back(entry);
         validIds.push_back(itemId);
     }
@@ -442,6 +478,9 @@ void SystemTrayController::onStatusNotifierItemRegistered(const QString &itemId)
 
     const TrayItemEntry entry = buildItem(itemId);
     if (entry.service.isEmpty() || entry.objectPath.isEmpty())
+        return;
+
+    if (shouldHideAnonymousTrayItem(entry.service, entry.title, entry.iconName, entry.menu))
         return;
 
     const int insertRow = m_items.size();

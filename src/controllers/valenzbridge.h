@@ -33,6 +33,7 @@ class ValenzBridge : public QObject
     Q_PROPERTY(int focusedWindowFullscreenClient READ focusedWindowFullscreenClient NOTIFY focusedWindowFullscreenClientChanged FINAL)
     Q_PROPERTY(bool focusedWindowFullscreen READ focusedWindowFullscreen NOTIFY focusedWindowFullscreenChanged FINAL)
     Q_PROPERTY(QString userRealName READ userRealName CONSTANT)
+    Q_PROPERTY(QString userAvatarUrl READ userAvatarUrl CONSTANT)
     Q_PROPERTY(QString controlCenterIconMode READ controlCenterIconMode WRITE setControlCenterIconMode NOTIFY controlCenterIconModeChanged FINAL)
     Q_PROPERTY(QString controlCenterNetworkMode READ controlCenterNetworkMode WRITE setControlCenterNetworkMode NOTIFY controlCenterNetworkModeChanged FINAL)
     Q_PROPERTY(QString controlCenterBluetoothState READ controlCenterBluetoothState WRITE setControlCenterBluetoothState NOTIFY controlCenterBluetoothStateChanged FINAL)
@@ -61,6 +62,7 @@ class ValenzBridge : public QObject
     Q_PROPERTY(int barHeight READ barHeight CONSTANT FINAL)
     Q_PROPERTY(int barWidth READ barWidth CONSTANT FINAL)
     Q_PROPERTY(int barLayerSpacing READ barLayerSpacing CONSTANT FINAL)
+    Q_PROPERTY(bool systemTrayDebugDetails READ systemTrayDebugDetails CONSTANT FINAL)
     Q_PROPERTY(bool agendaInstalled READ agendaInstalled NOTIFY agendaInstalledChanged FINAL)
     Q_PROPERTY(QString weatherIconName READ weatherIconName WRITE setWeatherIconName NOTIFY weatherIconNameChanged FINAL)
     Q_PROPERTY(QString weatherTemperature READ weatherTemperature WRITE setWeatherTemperature NOTIFY weatherTemperatureChanged FINAL)
@@ -105,6 +107,7 @@ public:
     void setFocusedWindowFullscreenClient(int fullscreen);
     bool focusedWindowFullscreen() const;
     QString userRealName() const;
+    QString userAvatarUrl() const;
     QString controlCenterIconMode() const;
     void setControlCenterIconMode(const QString &mode);
     QString controlCenterNetworkMode() const;
@@ -158,6 +161,7 @@ public:
     int barHeight() const;
     int barWidth() const;
     int barLayerSpacing() const;
+    bool systemTrayDebugDetails() const;
     bool agendaInstalled() const;
     QString weatherIconName() const;
     void setWeatherIconName(const QString &iconName);
@@ -300,12 +304,14 @@ private:
     bool m_mediaPlaying = false;
     bool m_mprisVisible = false;
     bool m_mprisAlwaysVisible = false;
+    bool m_systemTrayDebugDetails = false;
     QVariantList m_mprisSources;
     QString m_focusedWindowTitle;
     QString m_focusedWindowIconName;
     int m_focusedWindowFullscreenInternal = 0;
     int m_focusedWindowFullscreenClient = 0;
     QString m_userRealName;
+    QString m_userAvatarPath;
     QString m_controlCenterIconMode;
     QString m_controlCenterNetworkMode;
     QString m_controlCenterBluetoothState;

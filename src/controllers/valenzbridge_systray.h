@@ -49,6 +49,7 @@ public:
     Q_INVOKABLE void secondaryActivate(int index);
     Q_INVOKABLE void contextMenu(int index, qreal x = 0, qreal y = 0);
     Q_INVOKABLE QVariantList trayMenuItems(int index) const;
+    Q_INVOKABLE void debugTrayItem(int index);
     Q_INVOKABLE void triggerTrayMenuItem(int index, int itemId);
     Q_INVOKABLE void refresh();
 
