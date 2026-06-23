@@ -3,6 +3,7 @@
 #include <QAbstractListModel>
 #include <QDateTime>
 #include <QString>
+#include <QVariantList>
 #include <QVariantMap>
 #include <QVector>
 
@@ -14,6 +15,7 @@ class NotificationsController : public QAbstractListModel
     Q_PROPERTY(int count READ count NOTIFY countChanged FINAL)
     Q_PROPERTY(bool dndEnabled READ dndEnabled WRITE setDndEnabled NOTIFY dndEnabledChanged FINAL)
     Q_PROPERTY(bool available READ available NOTIFY availableChanged FINAL)
+    Q_PROPERTY(QVariantList groupedNotifications READ groupedNotifications NOTIFY notificationsChanged FINAL)
 
 public:
     enum Role
@@ -37,10 +39,12 @@ public:
     int count() const;
     bool dndEnabled() const;
     bool available() const;
+    QVariantList groupedNotifications() const;
 
     Q_INVOKABLE void clearAllNotifications();
     Q_INVOKABLE void dismiss(int index);
     Q_INVOKABLE void dismissById(uint id);
+    Q_INVOKABLE void dismissGroup(const QString &sourceName);
     Q_INVOKABLE void invokeAction(int index);
     Q_INVOKABLE void invokeActionById(uint id);
     Q_INVOKABLE void refreshTimestamps();
@@ -65,6 +69,7 @@ Q_SIGNALS:
     void countChanged(int count);
     void dndEnabledChanged(bool enabled);
     void availableChanged(bool available);
+    void notificationsChanged();
     void transientNotification(uint id, const QString &sourceName, const QString &messageText, const QString &timestampText, const QString &iconName, int urgencyLevel, const QString &actionText, const QString &actionKey);
 
     void NotificationClosed(uint id, uint reason);
@@ -85,10 +90,12 @@ private:
 
     int indexOfId(uint id) const;
     QString relativeTimestamp(const QDateTime &createdAt) const;
+    static QString normalizedGroupKey(const QString &sourceName);
     static int parseUrgency(const QVariantMap &hints);
     static QString chooseActionText(const QStringList &actions);
     static QString chooseActionKey(const QStringList &actions);
     static QString normalizeIconName(const QString &iconName, const QString &appName, const QVariantMap &hints);
+    QVariantMap notificationEntryToMap(const NotificationEntry &entry) const;
 
     void removeByIndex(int row, uint closeReason);
     void setAvailable(bool available);

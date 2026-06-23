@@ -52,6 +52,9 @@ Window
     readonly property int _cardPadding: Math.max(Maui.Style.space.medium, Maui.Style.space.small + 2)
     readonly property int _minPanelWidth: Maui.Handy.isMobile ? _baseUnit * 16 : _baseUnit * 20
     readonly property int notificationCount: controller ? controller.count : _notificationsModel.count
+    readonly property var _notificationGroups: notificationsCenter.controller ? notificationsCenter.controller.groupedNotifications : []
+    readonly property int _topLevelNotificationCount: notificationsCenter.controller ? notificationsCenter._notificationGroups.length : _notificationsModel.count
+    property var _expandedGroups: ({})
     property int _geometryRevision: 0
     property bool _clearingAll: false
     property bool _fadeOutPending: false
@@ -183,6 +186,35 @@ Window
         }
     }
 
+    function _groupKey(group)
+    {
+        if (!group)
+            return "notification"
+
+        const raw = String(group.key !== undefined ? group.key : group.sourceName || "").trim().toLowerCase()
+        return raw.length > 0 ? raw : "notification"
+    }
+
+    function _isGroupExpanded(groupKey)
+    {
+        return _expandedGroups[groupKey] === true
+    }
+
+    function _setGroupExpanded(groupKey, expanded)
+    {
+        const next = Object.assign({}, _expandedGroups)
+        if (expanded)
+            next[groupKey] = true
+        else
+            delete next[groupKey]
+        _expandedGroups = next
+    }
+
+    function toggleGroupExpanded(groupKey)
+    {
+        _setGroupExpanded(groupKey, !_isGroupExpanded(groupKey))
+    }
+
     function dismissNotification(index)
     {
         if (controller)
@@ -193,6 +225,26 @@ Window
 
         if (index >= 0 && index < _notificationsModel.count)
             _notificationsModel.remove(index, 1)
+    }
+
+    function dismissNotificationById(id)
+    {
+        if (controller && controller.dismissById)
+        {
+            controller.dismissById(id)
+            return
+        }
+    }
+
+    function dismissGroup(group)
+    {
+        if (!group)
+            return
+
+        _setGroupExpanded(_groupKey(group), false)
+
+        if (controller && controller.dismissGroup)
+            controller.dismissGroup(group.key)
     }
 
     function _onClearAllCardDismissed()
@@ -218,7 +270,7 @@ Window
         if (_clearingAll || notificationCount === 0)
             return
 
-        _clearRemainingAnimations = notificationCount
+        _clearRemainingAnimations = _topLevelNotificationCount
         _clearingAll = true
         clearAllTrigger += 1
     }
@@ -575,17 +627,389 @@ Window
                         width: parent.width
                         visible: notificationsCenter.notificationCount === 0
                         flat: false
-                clip: true
+                        clip: true
                         padding: notificationsCenter._cardPadding
                         text: i18n("No notifications")
                         label2.text: i18n("You are all caught up.")
                     }
 
-                    Repeater
+                    Column
                     {
-                        model: notificationsCenter.controller ? notificationsCenter.controller : _notificationsModel
+                        width: parent.width
+                        visible: notificationsCenter.controller && notificationsCenter.notificationCount > 0
+                        spacing: Maui.Style.space.small
 
-                        delegate: Maui.SectionItem
+                            Repeater
+                            {
+                                model: notificationsCenter._notificationGroups
+
+                                delegate: Maui.SectionItem
+                                {
+                                    id: _groupCard
+                                    required property int index
+                                    required property string key
+                                    required property string sourceName
+                                    required property int count
+                                    required property int latestId
+                                    required property string latestMessageText
+                                    required property string latestTimestampText
+                                    required property string latestIconName
+                                    required property int latestUrgencyLevel
+                                    required property string latestActionText
+                                    required property string latestActionKey
+                                    required property var notifications
+
+                                    property bool _dismissing: false
+                                    property int _dismissDelayMs: 0
+                                    readonly property bool _expanded: notificationsCenter._isGroupExpanded(key)
+                                    readonly property var _olderNotifications: notifications.length > 1 ? notifications.slice(1) : []
+
+                                    function startDismiss(delayMs)
+                                    {
+                                        if (_dismissing)
+                                            return
+
+                                        _dismissing = true
+                                        _dismissDelayMs = Math.max(0, delayMs || 0)
+                                        _dismissAnimation.start()
+                                    }
+
+                                    Connections
+                                    {
+                                        target: notificationsCenter
+
+                                        function onClearAllTriggerChanged()
+                                        {
+                                            if (notificationsCenter._clearingAll)
+                                                _groupCard.startDismiss(index * notificationsCenter._clearAllStaggerMs)
+                                        }
+                                    }
+
+                                    width: _notificationsColumn.width
+                                    flat: false
+                                    clip: true
+                                    padding: notificationsCenter._cardPadding
+                                    text: ""
+                                    label2.text: ""
+                                    background: Rectangle
+                                    {
+                                        color: Maui.Theme.alternateBackgroundColor
+                                        radius: Maui.Style.radiusV
+                                        border.width: latestUrgencyLevel >= 0 ? 1 : 0
+                                        border.color: notificationsCenter._urgencyAccentColor(latestUrgencyLevel)
+                                    }
+                                    SequentialAnimation
+                                    {
+                                        id: _dismissAnimation
+
+                                        PauseAnimation
+                                        {
+                                            duration: _groupCard._dismissDelayMs
+                                        }
+
+                                        ParallelAnimation
+                                        {
+                                            NumberAnimation
+                                            {
+                                                target: _groupCard
+                                                property: "x"
+                                                to: _groupCard.width + Maui.Style.space.large
+                                                duration: 200
+                                                easing.type: Easing.InOutCubic
+                                            }
+
+                                            NumberAnimation
+                                            {
+                                                target: _groupCard
+                                                property: "opacity"
+                                                to: 0
+                                                duration: 160
+                                                easing.type: Easing.InOutQuad
+                                            }
+                                        }
+
+                                        onFinished:
+                                        {
+                                            if (notificationsCenter._clearingAll)
+                                                notificationsCenter._onClearAllCardDismissed()
+                                            else
+                                                notificationsCenter.dismissGroup(_groupCard)
+                                        }
+                                    }
+
+                                    ColumnLayout
+                                    {
+                                        Layout.fillWidth: true
+                                        spacing: Maui.Style.space.small
+
+                                        RowLayout
+                                        {
+                                            Layout.fillWidth: true
+                                            spacing: Maui.Style.space.small
+
+                                            Item
+                                            {
+                                                Layout.alignment: Qt.AlignVCenter
+                                                width: 28
+                                                height: 28
+
+                                                readonly property bool isImageSource: notificationsCenter._isImageIconSource(latestIconName)
+                                                readonly property string resolvedIconSource: notificationsCenter._resolvedIconSource(latestIconName)
+
+                                                Maui.IconItem
+                                                {
+                                                    id: _groupIcon
+                                                    anchors.centerIn: parent
+                                                    width: 22
+                                                    height: 22
+                                                    imageSource: parent.isImageSource ? parent.resolvedIconSource : ""
+                                                    iconSource: parent.isImageSource ? "" : (notificationsCenter.useSystemThemeIcons ? latestIconName : "")
+                                                    imageSizeHint: 22
+                                                    iconSizeHint: 22
+                                                    color: Maui.Theme.textColor
+                                                }
+
+                                                Label
+                                                {
+                                                    anchors.centerIn: parent
+                                                    visible: !parent.isImageSource && (!notificationsCenter.useSystemThemeIcons || !_groupIcon.icon.valid)
+                                                    text: notificationsCenter._notificationGlyph(latestIconName)
+                                                    color: Maui.Theme.textColor
+                                                    font: Qt.font({ family: "Symbols Nerd Font", weight: Font.Normal, pixelSize: Math.max(12, Math.round(parent.height * 0.75)) })
+                                                    textFormat: Text.PlainText
+                                                    renderType: Text.QtRendering
+                                                }
+                                            }
+
+                                            ColumnLayout
+                                            {
+                                                Layout.alignment: Qt.AlignVCenter
+                                                Layout.fillWidth: true
+                                                spacing: 2
+
+                                                Label
+                                                {
+                                                    Layout.fillWidth: true
+                                                    text: sourceName
+                                                    color: Maui.Theme.textColor
+                                                    font.weight: Font.DemiBold
+                                                    elide: Text.ElideRight
+                                                }
+
+                                                Label
+                                                {
+                                                    Layout.fillWidth: true
+                                                    text: count > 1 ? String(count) + " notifications" : i18n("1 notification")
+                                                    color: Qt.alpha(Maui.Theme.textColor, 0.72)
+                                                    elide: Text.ElideRight
+                                                }
+                                            }
+
+                                            Label
+                                            {
+                                                Layout.alignment: Qt.AlignTop | Qt.AlignRight
+                                                text: latestTimestampText
+                                                color: Qt.alpha(Maui.Theme.textColor, 0.7)
+                                            }
+
+                                            ToolButton
+                                            {
+                                                id: _groupDismissButton
+                                                Layout.alignment: Qt.AlignTop | Qt.AlignRight
+                                                display: ToolButton.IconOnly
+                                                padding: 0
+                                                implicitWidth: 16
+                                                implicitHeight: 16
+                                                icon.source: "qrc:/assets/close.svg"
+                                                icon.width: 16
+                                                icon.height: 16
+                                                icon.color: hovered || down ? Maui.Theme.negativeTextColor : Maui.Theme.textColor
+                                                background: Rectangle
+                                                {
+                                                    radius: Maui.Style.radiusV
+                                                    color: _groupDismissButton.hovered || _groupDismissButton.down ? Maui.Theme.negativeBackgroundColor : "transparent"
+                                                }
+                                                enabled: !_groupCard._dismissing && !notificationsCenter._clearingAll
+                                                onClicked: _groupCard.startDismiss(0)
+                                            }
+
+                                        }
+
+                                        Label
+                                        {
+                                            Layout.fillWidth: true
+                                            text: latestMessageText
+                                            color: Qt.alpha(Maui.Theme.textColor, 0.87)
+                                            wrapMode: Text.WordWrap
+                                        }
+
+                                        ColumnLayout
+                                        {
+                                            Layout.fillWidth: true
+                                            visible: _groupCard._expanded && _groupCard._olderNotifications.length > 0
+                                            spacing: Maui.Style.space.small
+
+                                            Repeater
+                                            {
+                                                model: _groupCard._olderNotifications
+
+                                                delegate: Maui.SectionItem
+                                                {
+                                                    required property var modelData
+
+                                                    width: _groupCard.width - (notificationsCenter._cardPadding * 2)
+                                                    flat: false
+                                                    clip: true
+                                                    padding: notificationsCenter._cardPadding
+                                                    text: ""
+                                                    label2.text: ""
+                                                    background: Rectangle
+                                                    {
+                                                        color: Qt.alpha(Maui.Theme.backgroundColor, 0.42)
+                                                        radius: Maui.Style.radiusV
+                                                        border.width: 1
+                                                        border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+                                                    }
+
+                                                    ColumnLayout
+                                                    {
+                                                        Layout.fillWidth: true
+                                                        spacing: Maui.Style.space.small
+
+                                                        RowLayout
+                                                        {
+                                                            Layout.fillWidth: true
+                                                            spacing: Maui.Style.space.small
+
+                                                            Label
+                                                            {
+                                                                Layout.alignment: Qt.AlignVCenter
+                                                                text: modelData.timestampText
+                                                                color: Qt.alpha(Maui.Theme.textColor, 0.7)
+                                                            }
+
+                                                            Item
+                                                            {
+                                                                Layout.fillWidth: true
+                                                            }
+
+                                                            ToolButton
+                                                            {
+                                                                display: ToolButton.IconOnly
+                                                                padding: 0
+                                                                implicitWidth: 16
+                                                                implicitHeight: 16
+                                                                icon.source: "qrc:/assets/close.svg"
+                                                                icon.width: 16
+                                                                icon.height: 16
+                                                                icon.color: hovered || down ? Maui.Theme.negativeTextColor : Maui.Theme.textColor
+                                                                background: Rectangle
+                                                                {
+                                                                    radius: Maui.Style.radiusV
+                                                                    color: hovered || down ? Maui.Theme.negativeBackgroundColor : "transparent"
+                                                                }
+                                                                enabled: !notificationsCenter._clearingAll
+                                                                onClicked:
+                                                                {
+                                                                    if (notificationsCenter.controller && notificationsCenter.controller.dismissById)
+                                                                        notificationsCenter.controller.dismissById(modelData.id)
+                                                                }
+                                                            }
+                                                        }
+
+                                                        Label
+                                                        {
+                                                            Layout.fillWidth: true
+                                                            text: modelData.messageText
+                                                            color: Qt.alpha(Maui.Theme.textColor, 0.87)
+                                                            wrapMode: Text.WordWrap
+                                                        }
+
+                                                        RowLayout
+                                                        {
+                                                            Layout.fillWidth: true
+
+                                                            Item
+                                                            {
+                                                                Layout.fillWidth: true
+                                                            }
+
+                                                            Button
+                                                            {
+                                                                visible: modelData.actionText.length > 0
+                                                                text: modelData.actionText
+                                                                enabled: !notificationsCenter._clearingAll
+                                                                onClicked:
+                                                                {
+                                                                    if (notificationsCenter.controller && notificationsCenter.controller.invokeActionById)
+                                                                    {
+                                                                        notificationsCenter.controller.invokeActionById(modelData.id)
+                                                                        return
+                                                                    }
+
+                                                                    if (notificationsCenter.rootWindow && notificationsCenter.rootWindow.traceMenu)
+                                                                        notificationsCenter.rootWindow.traceMenu("notification_action", modelData.actionKey)
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        RowLayout
+                                        {
+                                            Layout.fillWidth: true
+                                            spacing: Maui.Style.space.small
+
+                                            Item
+                                            {
+                                                Layout.fillWidth: true
+                                            }
+
+                                            Button
+                                            {
+                                                visible: count > 1
+                                                text: _groupCard._expanded ? i18n("Hide") : i18n("Show more")
+                                                enabled: !_groupCard._dismissing && !notificationsCenter._clearingAll
+                                                onClicked: notificationsCenter.toggleGroupExpanded(key)
+                                            }
+
+                                            Button
+                                            {
+                                                visible: _groupCard._expanded && _groupCard.latestActionText.length > 0
+                                                text: latestActionText
+                                                enabled: !_groupCard._dismissing && !notificationsCenter._clearingAll
+                                                onClicked:
+                                                {
+                                                    if (notificationsCenter.controller && notificationsCenter.controller.invokeActionById)
+                                                    {
+                                                        notificationsCenter.controller.invokeActionById(latestId)
+                                                        return
+                                                    }
+
+                                                    if (notificationsCenter.rootWindow && notificationsCenter.rootWindow.traceMenu)
+                                                        notificationsCenter.rootWindow.traceMenu("notification_action", latestActionKey)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Column
+                    {
+                        width: parent.width
+                        visible: !notificationsCenter.controller && notificationsCenter.notificationCount > 0
+                        spacing: Maui.Style.space.small
+
+                        Repeater
+                        {
+                            model: _notificationsModel
+
+                            delegate: Maui.SectionItem
                         {
                             id: _notificationCard
                             required property int index
@@ -623,7 +1047,7 @@ Window
 
                             width: _notificationsColumn.width
                             flat: false
-                clip: true
+                            clip: true
                             padding: notificationsCenter._cardPadding
                             text: ""
                             label2.text: ""

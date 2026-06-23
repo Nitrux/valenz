@@ -3,8 +3,10 @@
 
 #include <QDBusConnection>
 #include <QDBusMessage>
+#include <QHash>
 #include <QStringList>
 #include <QTimer>
+#include <QVariant>
 #include <QtGlobal>
 
 namespace
@@ -146,6 +148,82 @@ bool NotificationsController::available() const
     return m_available;
 }
 
+QVariantList NotificationsController::groupedNotifications() const
+{
+    struct GroupData
+    {
+        QString key;
+        QString sourceName;
+        QVector<NotificationEntry> entries;
+    };
+
+    QVector<GroupData> groups;
+    groups.reserve(m_entries.size());
+    QHash<QString, int> groupIndexes;
+
+    for (const NotificationEntry &entry : m_entries)
+    {
+        const QString key = normalizedGroupKey(entry.sourceName);
+        const int groupIndex = groupIndexes.value(key, -1);
+
+        if (groupIndex < 0)
+        {
+            GroupData group;
+            group.key = key;
+            group.sourceName = entry.sourceName;
+            group.entries.push_back(entry);
+            groups.push_back(group);
+            groupIndexes.insert(key, groups.size() - 1);
+            continue;
+        }
+
+        groups[groupIndex].entries.push_back(entry);
+    }
+
+    QVariantList result;
+    result.reserve(groups.size());
+
+    for (const GroupData &group : std::as_const(groups))
+    {
+        QVariantMap groupMap;
+        groupMap.insert(QStringLiteral("key"), group.key);
+        groupMap.insert(QStringLiteral("sourceName"), group.sourceName);
+        groupMap.insert(QStringLiteral("count"), static_cast<int>(group.entries.size()));
+
+        if (!group.entries.isEmpty())
+        {
+            const NotificationEntry &latest = group.entries.first();
+            groupMap.insert(QStringLiteral("latestId"), static_cast<int>(latest.id));
+            groupMap.insert(QStringLiteral("latestMessageText"), latest.messageText);
+            groupMap.insert(QStringLiteral("latestTimestampText"), relativeTimestamp(latest.createdAt));
+            groupMap.insert(QStringLiteral("latestIconName"), latest.iconName);
+            groupMap.insert(QStringLiteral("latestUrgencyLevel"), latest.urgencyLevel);
+            groupMap.insert(QStringLiteral("latestActionText"), latest.actionText);
+            groupMap.insert(QStringLiteral("latestActionKey"), latest.actionKey);
+        }
+        else
+        {
+            groupMap.insert(QStringLiteral("latestId"), 0);
+            groupMap.insert(QStringLiteral("latestMessageText"), QString());
+            groupMap.insert(QStringLiteral("latestTimestampText"), QStringLiteral("Now"));
+            groupMap.insert(QStringLiteral("latestIconName"), QString::fromLatin1(kFallbackIcon));
+            groupMap.insert(QStringLiteral("latestUrgencyLevel"), 0);
+            groupMap.insert(QStringLiteral("latestActionText"), QString());
+            groupMap.insert(QStringLiteral("latestActionKey"), QString());
+        }
+
+        QVariantList notifications;
+        notifications.reserve(group.entries.size());
+        for (const NotificationEntry &entry : group.entries)
+            notifications.push_back(notificationEntryToMap(entry));
+        groupMap.insert(QStringLiteral("notifications"), notifications);
+
+        result.push_back(groupMap);
+    }
+
+    return result;
+}
+
 void NotificationsController::clearAllNotifications()
 {
     if (m_entries.isEmpty())
@@ -160,6 +238,7 @@ void NotificationsController::clearAllNotifications()
     m_entries.clear();
     endResetModel();
     Q_EMIT countChanged(0);
+    Q_EMIT notificationsChanged();
 
     for (uint id : ids)
     {
@@ -184,6 +263,24 @@ void NotificationsController::dismissById(uint id)
         return;
 
     removeByIndex(row, kCloseReasonDismissedByUser);
+}
+
+void NotificationsController::dismissGroup(const QString &sourceName)
+{
+    const QString groupKey = normalizedGroupKey(sourceName);
+    bool removedAny = false;
+
+    for (int row = m_entries.size() - 1; row >= 0; --row)
+    {
+        if (normalizedGroupKey(m_entries.at(row).sourceName) != groupKey)
+            continue;
+
+        removeByIndex(row, kCloseReasonDismissedByUser);
+        removedAny = true;
+    }
+
+    if (removedAny)
+        Q_EMIT notificationsChanged();
 }
 
 void NotificationsController::invokeAction(int index)
@@ -217,6 +314,7 @@ void NotificationsController::refreshTimestamps()
         return;
 
     Q_EMIT dataChanged(this->index(0, 0), this->index(m_entries.size() - 1, 0), {TimestampTextRole});
+    Q_EMIT notificationsChanged();
 }
 
 void NotificationsController::setDndEnabled(bool enabled)
@@ -268,12 +366,12 @@ uint NotificationsController::Notify(const QString &appName,
 
     const int replaceRow = replacesId > 0 ? indexOfId(replacesId) : -1;
     const bool suppressTransient = m_dndEnabled;
-    if (suppressTransient)
 
     if (replaceRow >= 0)
     {
         m_entries[replaceRow] = entry;
         Q_EMIT dataChanged(index(replaceRow, 0), index(replaceRow, 0));
+        Q_EMIT notificationsChanged();
         if (!suppressTransient)
             Q_EMIT transientNotification(entry.id, entry.sourceName, entry.messageText, relativeTimestamp(entry.createdAt), entry.iconName, entry.urgencyLevel, entry.actionText, entry.actionKey);
         return entry.id;
@@ -284,6 +382,7 @@ uint NotificationsController::Notify(const QString &appName,
     m_entries.prepend(entry);
     endInsertRows();
     Q_EMIT countChanged(m_entries.size());
+    Q_EMIT notificationsChanged();
     if (!suppressTransient)
         Q_EMIT transientNotification(entry.id, entry.sourceName, entry.messageText, relativeTimestamp(entry.createdAt), entry.iconName, entry.urgencyLevel, entry.actionText, entry.actionKey);
     return entry.id;
@@ -346,6 +445,15 @@ QString NotificationsController::relativeTimestamp(const QDateTime &createdAt) c
 
     const qint64 days = hours / 24;
     return QStringLiteral("%1 d ago").arg(days);
+}
+
+QString NotificationsController::normalizedGroupKey(const QString &sourceName)
+{
+    QString normalized = sourceName.simplified().trimmed().toLower();
+    if (normalized.isEmpty())
+        normalized = QStringLiteral("notification");
+
+    return normalized;
 }
 
 int NotificationsController::parseUrgency(const QVariantMap &hints)
@@ -416,6 +524,20 @@ QString NotificationsController::normalizeIconName(const QString &iconName, cons
     return QString::fromLatin1(kFallbackIcon);
 }
 
+QVariantMap NotificationsController::notificationEntryToMap(const NotificationEntry &entry) const
+{
+    QVariantMap result;
+    result.insert(QStringLiteral("id"), static_cast<int>(entry.id));
+    result.insert(QStringLiteral("sourceName"), entry.sourceName);
+    result.insert(QStringLiteral("messageText"), entry.messageText);
+    result.insert(QStringLiteral("timestampText"), relativeTimestamp(entry.createdAt));
+    result.insert(QStringLiteral("iconName"), entry.iconName);
+    result.insert(QStringLiteral("urgencyLevel"), entry.urgencyLevel);
+    result.insert(QStringLiteral("actionText"), entry.actionText);
+    result.insert(QStringLiteral("actionKey"), entry.actionKey);
+    return result;
+}
+
 void NotificationsController::removeByIndex(int row, uint closeReason)
 {
     if (row < 0 || row >= m_entries.size())
@@ -428,6 +550,7 @@ void NotificationsController::removeByIndex(int row, uint closeReason)
     endRemoveRows();
 
     Q_EMIT countChanged(m_entries.size());
+    Q_EMIT notificationsChanged();
     Q_EMIT NotificationClosed(id, closeReason);
     emitNotificationsSignal(QStringLiteral("NotificationClosed"),
                             {QVariant::fromValue(id), QVariant::fromValue(closeReason)});
