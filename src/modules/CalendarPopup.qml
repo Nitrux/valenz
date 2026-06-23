@@ -589,6 +589,7 @@ Window
                         {
                             Layout.fillWidth: true
                             columns: 7
+                            uniformCellWidths: true
                             rowSpacing: Maui.Style.space.tiny
                             columnSpacing: Maui.Style.space.small
 
@@ -612,6 +613,7 @@ Window
                         {
                             Layout.fillWidth: true
                             columns: 7
+                            uniformCellWidths: true
                             rowSpacing: Maui.Style.space.tiny
                             columnSpacing: Maui.Style.space.small
 
@@ -630,6 +632,11 @@ Window
                                     Layout.fillWidth: true
                                     Layout.preferredHeight: Math.max(32, Maui.Style.rowHeight - Maui.Style.space.tiny)
                                     display: ToolButton.TextOnly
+                                    padding: 0
+                                    leftPadding: 0
+                                    rightPadding: 0
+                                    topPadding: 0
+                                    bottomPadding: 0
                                     text: String(dayNumber)
                                     opacity: sameMonth ? 1 : 0.18
                                     enabled: sameMonth

@@ -97,7 +97,7 @@ Window
     color: "transparent"
 
     visible: false
-    flags: Qt.FramelessWindowHint | Qt.Popup
+    flags: Qt.ToolTip | Qt.FramelessWindowHint
     transientParent: rootWindow
 
     Shortcut

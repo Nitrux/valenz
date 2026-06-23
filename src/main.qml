@@ -372,7 +372,7 @@ Window
             id: _barInner
             anchors.fill: parent
             anchors.margins: barFrameInset
-            color: Maui.Theme.backgroundColor
+            color: Qt.darker(Maui.Theme.backgroundColor, 1.25)
             radius: Maui.Style.radiusV
             clip: true
 
