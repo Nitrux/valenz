@@ -1,6 +1,9 @@
-# Valenz
+# Valenz | [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
 Valenz is a QML-based status bar designed for Nitrux.
+
+![Valenz](https://nxos.org/wp-content/uploads/2026/06/valenz_image_1.png)
+> Valenz, a status bar for Nitrux.
 
 ## Features
 
