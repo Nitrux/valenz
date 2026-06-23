@@ -37,7 +37,7 @@ make install
 # -- Run checkinstall and Build Debian Package
 
 >> description-pak printf "%s\n" \
-	'MauiKit WireGuard Manager.' \
+	'Workspace Bar for Nitrux.' \
 	'' \
 	'A QML-based status bar designed for Nitrux.' \
 	''
