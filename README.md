@@ -1,6 +1,6 @@
 # Valenz | [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
-Valenz is a QML-based workspace shell bar designed for Nitrux. Built with MauiKit and LayerShellQt.
+Valenz is a QML-based workspace shell bar designed for Nitrux. Built with MauiKit and LayerShell-Qt.
 
 ![Valenz](https://nxos.org/wp-content/uploads/2026/06/screenshot-20260624-061936.png)
 > Valenz, an interactive workspace shell bar for Nitrux.
@@ -25,6 +25,7 @@ mauikit-system (>= 4.0.4)
 mauikit-calendar (>= 4.0.4)
 hyprland (>= 0.55.1)
 qt6 (>= 6.9.2)
+layer-shell-qt (>= 6.6.4)
 ```
 
 # Licensing
