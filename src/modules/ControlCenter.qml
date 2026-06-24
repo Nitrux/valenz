@@ -173,13 +173,13 @@ Window
 
     function _networkModeTitle()
     {
-        const state = controlCenter.bridge ? String(controlCenter.bridge.controlCenterNetworkMode).toLowerCase() : "wireless"
+        const state = controlCenter.bridge ? String(controlCenter.bridge.controlCenterNetworkState).toLowerCase() : "offline"
         return state === "wired" ? i18n("Wired") : i18n("WiFi")
     }
 
     function _networkModeSubtitle()
     {
-        const state = controlCenter.bridge ? String(controlCenter.bridge.controlCenterNetworkMode).toLowerCase() : "wireless"
+        const state = controlCenter.bridge ? String(controlCenter.bridge.controlCenterNetworkState).toLowerCase() : "offline"
         if (state === "offline")
             return i18n("Off")
         if (state === "wired")
@@ -587,6 +587,26 @@ Window
                             {
                                 Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                                 Layout.minimumHeight: 28
+                                icon.name: "settings-configure"
+                                display: ToolButton.IconOnly
+
+                                onClicked:
+                                {
+                                    if (controlCenter.bridge)
+                                        controlCenter.bridge.executeControlCenterSettingsCommand()
+                                }
+                            }
+
+                            Maui.Separator
+                            {
+                                Layout.preferredHeight: 8
+                                height: 8
+                            }
+
+                            ToolButton
+                            {
+                                Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                                Layout.minimumHeight: 28
                                 text: i18n("Shutdown")
                                 icon.name: "system-shutdown"
                                 display: ToolButton.TextBesideIcon
@@ -615,7 +635,7 @@ Window
                         text: ""
                         label2.text: ""
                         visible: true
-                        enabled: controlCenter.bridge ? controlCenter.bridge.controlCenterNetworkState === "wireless" : false
+                        enabled: controlCenter.bridge ? controlCenter.bridge.controlCenterWirelessAvailable : false
                         opacity: enabled ? 1.0 : 0.55
 
                         RowLayout
@@ -641,7 +661,7 @@ Window
 
                             Switch
                             {
-                                checked: controlCenter.bridge ? controlCenter.bridge.controlCenterNetworkMode !== "offline" : true
+                                checked: controlCenter.bridge ? (controlCenter.bridge.controlCenterNetworkState === "wireless" || controlCenter.bridge.controlCenterNetworkMode === "wireless") : false
                                 onToggled:
                                 {
                                     if (!controlCenter.bridge)
@@ -649,8 +669,7 @@ Window
 
                                     if (checked)
                                     {
-                                        const state = String(controlCenter.bridge.controlCenterNetworkMode).toLowerCase()
-                                        controlCenter.bridge.controlCenterNetworkMode = state === "wired" ? "wired" : "wireless"
+                                        controlCenter.bridge.controlCenterNetworkMode = "wireless"
                                     }
                                     else
                                     {

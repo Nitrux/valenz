@@ -85,6 +85,7 @@ void ValenzBridge::initializeConfig()
     ensureKey(QString::fromLatin1(kWindowBarWidthKey), QString::fromLatin1(kLegacyWindowPopupMaxWidthKey), 0);
     ensureKey(QString::fromLatin1(kWindowBarLayerSpacingKey), QString(), 0);
     ensureKey(QString::fromLatin1(kSystemTrayDebugDetailsKey), QString(), false);
+    ensureKey(QString::fromLatin1(kControlCenterSettingsCommandKey), QString(), QStringLiteral("systemsettings"));
     userSettings.remove(QString::fromLatin1(kLegacyWindowPopupMaxWidthKey));
 
     userSettings.remove("ControlCenter/batteryIconName");
@@ -119,6 +120,9 @@ void ValenzBridge::initializeConfig()
     m_controlCenterBatteryCharging = false;
     m_controlCenterBatteryPercentage = QStringLiteral("0%");
     m_controlCenterPowerCommand = normalizePowerCommand(userSettings.value(kControlCenterPowerCommandKey, "wlogout").toString());
+    m_controlCenterSettingsCommand = userSettings.value(kControlCenterSettingsCommandKey, QStringLiteral("systemsettings")).toString().trimmed();
+    if (m_controlCenterSettingsCommand.isEmpty())
+        m_controlCenterSettingsCommand = QStringLiteral("systemsettings");
     m_controlCenterDiskUsagePath = userSettings.value(kControlCenterDiskUsagePathKey, "/").toString().trimmed();
     if (m_controlCenterDiskUsagePath.isEmpty())
         m_controlCenterDiskUsagePath = QStringLiteral("/");
@@ -149,6 +153,7 @@ void ValenzBridge::persistControlCenterState() const
     QSettings userSettings(m_userConfigPath, QSettings::IniFormat);
     userSettings.setValue(kControlCenterIconModeKey, m_controlCenterIconMode);
     userSettings.setValue(kControlCenterPowerCommandKey, m_controlCenterPowerCommand);
+    userSettings.setValue(kControlCenterSettingsCommandKey, m_controlCenterSettingsCommand);
     userSettings.setValue(kControlCenterDiskUsagePathKey, m_controlCenterDiskUsagePath);
     userSettings.sync();
 }

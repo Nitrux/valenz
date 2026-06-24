@@ -19,10 +19,11 @@ ToolButton
     readonly property bool popupVisible: notificationsCenterButton.popup && notificationsCenterButton.popup.visible
     readonly property color activeContentColor: (notificationsCenterButton.down || notificationsCenterButton.popupVisible) ? Maui.Theme.highlightedTextColor : Maui.Theme.textColor
 
-    text: i18n("Notifications center")
     display: ToolButton.IconOnly
     checked: popupVisible
     padding: Maui.Style.space.small
+    ToolTip.visible: false
+    ToolTip.text: ""
 
     function togglePopup()
     {

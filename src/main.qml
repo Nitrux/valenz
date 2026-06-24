@@ -207,6 +207,7 @@ Window
     }
     readonly property bool controlCenterBluetoothEnabled: valenzBridge ? valenzBridge.controlCenterBluetoothEnabled : false
     readonly property bool controlCenterBluetoothAvailable: valenzBridge ? valenzBridge.controlCenterBluetoothAvailable : false
+    readonly property int controlCenterBluetoothConnectedDeviceCount: valenzBridge ? valenzBridge.controlCenterBluetoothConnectedDeviceCount : 0
     readonly property bool controlCenterVolumeMuted: valenzBridge ? valenzBridge.controlCenterVolumeMuted : false
     readonly property bool controlCenterBatteryAvailable: valenzBridge ? valenzBridge.controlCenterBatteryAvailable : false
     readonly property bool controlCenterBatteryOnAcPower: valenzBridge ? valenzBridge.controlCenterBatteryOnAcPower : false
@@ -454,7 +455,6 @@ Window
                         {
                             Layout.preferredHeight: 8
                             height: 8
-                            visible: root.mprisModuleVisible
                         }
 
                         Item
@@ -641,6 +641,7 @@ Window
                             networkIconName: root.controlCenterNetworkIconName
                             bluetoothIconName: root.controlCenterBluetoothIconName
                             bluetoothAvailable: root.controlCenterBluetoothAvailable
+                            bluetoothConnectedDeviceCount: root.controlCenterBluetoothConnectedDeviceCount
                             volumeIconName: root.controlCenterVolumeIconName
                             volumePercentageText: root.controlCenterVolumePercentageText
                             batteryIconName: root.controlCenterBatteryIconName

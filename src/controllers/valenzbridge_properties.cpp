@@ -759,6 +759,35 @@ void ValenzBridge::setControlCenterBluetoothAvailable(bool available)
     Q_EMIT controlCenterBluetoothAvailableChanged(m_controlCenterBluetoothAvailable);
 }
 
+bool ValenzBridge::controlCenterWirelessAvailable() const
+{
+    return m_controlCenterWirelessAvailable;
+}
+
+void ValenzBridge::setControlCenterWirelessAvailable(bool available)
+{
+    if (m_controlCenterWirelessAvailable == available)
+        return;
+
+    m_controlCenterWirelessAvailable = available;
+    Q_EMIT controlCenterWirelessAvailableChanged(m_controlCenterWirelessAvailable);
+}
+
+int ValenzBridge::controlCenterBluetoothConnectedDeviceCount() const
+{
+    return m_controlCenterBluetoothConnectedDeviceCount;
+}
+
+void ValenzBridge::setControlCenterBluetoothConnectedDeviceCount(int count)
+{
+    const int normalized = qMax(0, count);
+    if (m_controlCenterBluetoothConnectedDeviceCount == normalized)
+        return;
+
+    m_controlCenterBluetoothConnectedDeviceCount = normalized;
+    Q_EMIT controlCenterBluetoothConnectedDeviceCountChanged(m_controlCenterBluetoothConnectedDeviceCount);
+}
+
 bool ValenzBridge::controlCenterVolumeMuted() const
 {
     return m_controlCenterVolumeMuted;
@@ -834,6 +863,22 @@ void ValenzBridge::setControlCenterPowerCommand(const QString &command)
     m_controlCenterPowerCommand = normalized;
     persistControlCenterState();
     Q_EMIT controlCenterPowerCommandChanged(m_controlCenterPowerCommand);
+}
+
+QString ValenzBridge::controlCenterSettingsCommand() const
+{
+    return m_controlCenterSettingsCommand;
+}
+
+void ValenzBridge::setControlCenterSettingsCommand(const QString &command)
+{
+    const QString normalized = command.trimmed().isEmpty() ? QStringLiteral("systemsettings") : command.trimmed();
+    if (m_controlCenterSettingsCommand == normalized)
+        return;
+
+    m_controlCenterSettingsCommand = normalized;
+    persistControlCenterState();
+    Q_EMIT controlCenterSettingsCommandChanged(m_controlCenterSettingsCommand);
 }
 
 QString ValenzBridge::controlCenterDiskUsagePath() const

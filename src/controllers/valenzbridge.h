@@ -52,12 +52,15 @@ class ValenzBridge : public QObject
     Q_PROPERTY(QString controlCenterNetworkState READ controlCenterNetworkState WRITE setControlCenterNetworkState NOTIFY controlCenterNetworkStateChanged FINAL)
     Q_PROPERTY(bool controlCenterBluetoothEnabled READ controlCenterBluetoothEnabled WRITE setControlCenterBluetoothEnabled NOTIFY controlCenterBluetoothEnabledChanged FINAL)
     Q_PROPERTY(bool controlCenterBluetoothAvailable READ controlCenterBluetoothAvailable WRITE setControlCenterBluetoothAvailable NOTIFY controlCenterBluetoothAvailableChanged FINAL)
+    Q_PROPERTY(bool controlCenterWirelessAvailable READ controlCenterWirelessAvailable WRITE setControlCenterWirelessAvailable NOTIFY controlCenterWirelessAvailableChanged FINAL)
+    Q_PROPERTY(int controlCenterBluetoothConnectedDeviceCount READ controlCenterBluetoothConnectedDeviceCount WRITE setControlCenterBluetoothConnectedDeviceCount NOTIFY controlCenterBluetoothConnectedDeviceCountChanged FINAL)
     Q_PROPERTY(bool controlCenterVolumeMuted READ controlCenterVolumeMuted WRITE setControlCenterVolumeMuted NOTIFY controlCenterVolumeMutedChanged FINAL)
     Q_PROPERTY(bool controlCenterBatteryAvailable READ controlCenterBatteryAvailable WRITE setControlCenterBatteryAvailable NOTIFY controlCenterBatteryAvailableChanged FINAL)
     Q_PROPERTY(bool controlCenterBatteryOnAcPower READ controlCenterBatteryOnAcPower WRITE setControlCenterBatteryOnAcPower NOTIFY controlCenterBatteryOnAcPowerChanged FINAL)
     Q_PROPERTY(bool controlCenterNightLightEnabled READ controlCenterNightLightEnabled WRITE setControlCenterNightLightEnabled NOTIFY controlCenterNightLightEnabledChanged FINAL)
     Q_PROPERTY(bool controlCenterNightLightAvailable READ controlCenterNightLightAvailable WRITE setControlCenterNightLightAvailable NOTIFY controlCenterNightLightAvailableChanged FINAL)
     Q_PROPERTY(QString controlCenterPowerCommand READ controlCenterPowerCommand WRITE setControlCenterPowerCommand NOTIFY controlCenterPowerCommandChanged FINAL)
+    Q_PROPERTY(QString controlCenterSettingsCommand READ controlCenterSettingsCommand WRITE setControlCenterSettingsCommand NOTIFY controlCenterSettingsCommandChanged FINAL)
     Q_PROPERTY(QString controlCenterDiskUsagePath READ controlCenterDiskUsagePath WRITE setControlCenterDiskUsagePath NOTIFY controlCenterDiskUsagePathChanged FINAL)
     Q_PROPERTY(int barHeight READ barHeight CONSTANT FINAL)
     Q_PROPERTY(int barWidth READ barWidth CONSTANT FINAL)
@@ -144,6 +147,10 @@ public:
     void setControlCenterBluetoothEnabled(bool enabled);
     bool controlCenterBluetoothAvailable() const;
     void setControlCenterBluetoothAvailable(bool available);
+    bool controlCenterWirelessAvailable() const;
+    void setControlCenterWirelessAvailable(bool available);
+    int controlCenterBluetoothConnectedDeviceCount() const;
+    void setControlCenterBluetoothConnectedDeviceCount(int count);
     bool controlCenterVolumeMuted() const;
     void setControlCenterVolumeMuted(bool muted);
     bool controlCenterBatteryAvailable() const;
@@ -156,6 +163,8 @@ public:
     void setControlCenterNightLightAvailable(bool available);
     QString controlCenterPowerCommand() const;
     void setControlCenterPowerCommand(const QString &command);
+    QString controlCenterSettingsCommand() const;
+    void setControlCenterSettingsCommand(const QString &command);
     QString controlCenterDiskUsagePath() const;
     void setControlCenterDiskUsagePath(const QString &path);
     int barHeight() const;
@@ -181,6 +190,7 @@ public:
 
     Q_INVOKABLE void trace(const QString &source, const QString &action, const QString &detail = QString());
     Q_INVOKABLE void executeControlCenterPowerCommand();
+    Q_INVOKABLE void executeControlCenterSettingsCommand();
     Q_INVOKABLE void setControlCenterVolumePercentageFromSlider(int percent);
     Q_INVOKABLE void setControlCenterBrightnessPercentageFromSlider(int percent);
     Q_INVOKABLE void goToPreviousWorkspace();
@@ -214,6 +224,7 @@ Q_SIGNALS:
     void focusedWindowFullscreenClientChanged(int fullscreen);
     void focusedWindowFullscreenChanged(bool fullscreen);
     void controlCenterPowerCommandChanged(const QString &command);
+    void controlCenterSettingsCommandChanged(const QString &command);
     void controlCenterDiskUsagePathChanged(const QString &path);
     void controlCenterIconModeChanged(const QString &mode);
     void controlCenterNetworkModeChanged(const QString &state);
@@ -233,6 +244,8 @@ Q_SIGNALS:
     void controlCenterNetworkStateChanged(const QString &state);
     void controlCenterBluetoothEnabledChanged(bool enabled);
     void controlCenterBluetoothAvailableChanged(bool available);
+    void controlCenterWirelessAvailableChanged(bool available);
+    void controlCenterBluetoothConnectedDeviceCountChanged(int count);
     void controlCenterVolumeMutedChanged(bool muted);
     void controlCenterBatteryAvailableChanged(bool available);
     void controlCenterBatteryOnAcPowerChanged(bool onAcPower);
@@ -331,11 +344,14 @@ private:
     QString m_controlCenterNetworkState = QStringLiteral("offline");
     bool m_controlCenterBluetoothEnabled = false;
     bool m_controlCenterBluetoothAvailable = false;
+    bool m_controlCenterWirelessAvailable = false;
+    int m_controlCenterBluetoothConnectedDeviceCount = 0;
     bool m_controlCenterBatteryAvailable = false;
     bool m_controlCenterBatteryOnAcPower = false;
     bool m_controlCenterNightLightEnabled = false;
     bool m_controlCenterNightLightAvailable = false;
     QString m_controlCenterPowerCommand = QStringLiteral("wlogout");
+    QString m_controlCenterSettingsCommand = QStringLiteral("systemsettings");
     QString m_controlCenterDiskUsagePath = QStringLiteral("/");
     int m_barHeight = 56;
     int m_barWidth = 0;

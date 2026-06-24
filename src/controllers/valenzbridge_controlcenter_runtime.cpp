@@ -32,6 +32,8 @@ void ValenzBridge::refreshControlCenterRuntimeState()
 
 void ValenzBridge::refreshControlCenterNetworkState()
 {
+    setControlCenterWirelessAvailable(MauiKitSystem::controlCenterWirelessAvailable());
+
     const QString iface = MauiKitSystem::defaultRouteInterface();
     if (!iface.isEmpty())
     {
@@ -48,6 +50,7 @@ void ValenzBridge::refreshControlCenterBluetoothState()
 {
     const bool available = MauiKitSystem::controlCenterBluetoothAvailable();
     setControlCenterBluetoothAvailable(available);
+    setControlCenterBluetoothConnectedDeviceCount(MauiKitSystem::controlCenterBluetoothConnectedDeviceCount());
     if (!available)
     {
         setControlCenterBluetoothEnabled(false);
@@ -121,6 +124,14 @@ void ValenzBridge::executeControlCenterPowerCommand()
 {
     const QString command = normalizePowerCommand(m_controlCenterPowerCommand);
     MauiKitSystem::executeControlCenterPowerCommand(command);
+}
+
+void ValenzBridge::executeControlCenterSettingsCommand()
+{
+    const QString command = m_controlCenterSettingsCommand.trimmed().isEmpty()
+            ? QStringLiteral("systemsettings")
+            : m_controlCenterSettingsCommand.trimmed();
+    MauiKitSystem::executeControlCenterSettingsCommand(command);
 }
 
 void ValenzBridge::refreshControlCenterNightLightState()

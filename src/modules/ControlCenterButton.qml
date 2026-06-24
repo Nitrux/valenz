@@ -13,6 +13,7 @@ ToolButton
     property string networkIconName
     property string bluetoothIconName
     property bool bluetoothAvailable: false
+    property int bluetoothConnectedDeviceCount: 0
     property string volumeIconName
     property string volumePercentageText
     property string batteryIconName
@@ -27,10 +28,11 @@ ToolButton
     readonly property bool popupVisible: controlCenterButton.popup && controlCenterButton.popup.visible
     readonly property color activeContentColor: (controlCenterButton.down || controlCenterButton.popupVisible) ? Maui.Theme.highlightedTextColor : Maui.Theme.textColor
 
-    text: i18n("Control center")
     display: ToolButton.IconOnly
     checked: popupVisible
     padding: Maui.Style.space.small
+    ToolTip.visible: false
+    ToolTip.text: ""
 
     function togglePopup()
     {
@@ -125,6 +127,14 @@ ToolButton
                 textFormat: Text.PlainText
                 renderType: Text.QtRendering
             }
+        }
+
+        WorkspaceBadge
+        {
+            Layout.alignment: Qt.AlignVCenter
+            visible: controlCenterButton.bluetoothAvailable && controlCenterButton.bluetoothConnectedDeviceCount > 0
+            badgeText: String(controlCenterButton.bluetoothConnectedDeviceCount)
+            bridge: null
         }
 
         Item
