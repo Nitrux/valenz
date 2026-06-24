@@ -15,14 +15,14 @@ Window
     readonly property int barHeightClamped: Math.max(1, Math.min(barHeight, Screen.height > 0 ? Screen.height : barHeight))
     readonly property int barFrameInset: 6
     readonly property int barContentHeight: Math.max(0, barHeightClamped - (barFrameInset * 2))
-    readonly property int barSeparatorPadding: 12
+    readonly property int barMinimumWidth: 1023
     readonly property int barLayerSpacing: valenzBridge ? valenzBridge.barLayerSpacing : 0
     readonly property bool systemTrayDebugDetails: valenzBridge ? valenzBridge.systemTrayDebugDetails : false
     readonly property real popupSurfaceOpacity: 0.76
     readonly property color popupSurfaceColor: Qt.lighter(Maui.Theme.backgroundColor, 1.25)
     readonly property int popupSurfaceRadius: Maui.Style.radiusV + 3
     visible: !valenzBridge || !valenzBridge.focusedWindowFullscreen
-    width: barWidth > 0 ? Math.min(Screen.width, barWidth) : Screen.width
+    width: barWidth > 0 ? Math.min(Screen.width, Math.max(barMinimumWidth, barWidth)) : Screen.width
     x: Math.max(0, Math.round((Screen.width - width) / 2))
     height: barHeightClamped
     minimumHeight: barHeightClamped
@@ -387,6 +387,7 @@ Window
                     id: _leftSection
                     Layout.alignment: Qt.AlignVCenter
                     Layout.fillHeight: true
+                    Layout.leftMargin: Maui.Style.space.small
                     implicitWidth: _leftSectionRow.implicitWidth
                     implicitHeight: _leftSectionRow.implicitHeight
 
@@ -395,17 +396,11 @@ Window
                         id: _leftSectionRow
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 0
-
-                        Item
-                        {
-                            Layout.preferredWidth: Maui.Style.space.small
-                            Layout.fillHeight: true
-                        }
-
                         WorkspaceBadge
                         {
                             bridge: valenzBridge
-                                                    }
+                            padding: Maui.Style.space.small
+                        }
 
                         Item
                         {
@@ -413,10 +408,10 @@ Window
                             Layout.fillHeight: true
                         }
 
-                        ToolSeparator
+                        Maui.Separator
                         {
-                            topPadding: barSeparatorPadding
-                            bottomPadding: barSeparatorPadding
+                            Layout.preferredHeight: 8
+                            height: 8
                         }
 
                         Item
@@ -455,10 +450,10 @@ Window
                             Layout.fillHeight: true
                         }
 
-                        ToolSeparator
+                        Maui.Separator
                         {
-                            topPadding: barSeparatorPadding
-                            bottomPadding: barSeparatorPadding
+                            Layout.preferredHeight: 8
+                            height: 8
                             visible: root.mprisModuleVisible
                         }
 
@@ -482,20 +477,15 @@ Window
                             Layout.fillHeight: true
                         }
 
-                        ToolSeparator
+                        Maui.Separator
                         {
-                            topPadding: barSeparatorPadding
-                            bottomPadding: barSeparatorPadding
-                        }
-
-                        Item
-                        {
-                            Layout.preferredWidth: Maui.Style.space.small
-                            Layout.fillHeight: true
+                            Layout.preferredHeight: 8
+                            height: 8
+                            visible: root.mprisModuleVisible
                         }
                     }
                 }
-
+                
                 Item
                 {
                     id: _middleContentArea
@@ -513,12 +503,13 @@ Window
                         id: _windowTitleMiddle
                         bridge: valenzBridge
                         fallbackTitle: ""
-                                                referenceHeight: barContentHeight
+                        referenceHeight: barContentHeight
                         anchors.left: parent.left
+                        anchors.leftMargin: Maui.Style.space.small
                         anchors.verticalCenter: parent.verticalCenter
                         width:
                         {
-                            const available = _weatherBlock.x - Maui.Style.space.small - x
+                            const available = _weatherBlock.x - (Maui.Style.space.small * 2) - x
                             return Math.max(0, Math.min(implicitWidth, available))
                         }
                     }
@@ -537,10 +528,16 @@ Window
                             return Math.min(maxX, Math.max(minX, shiftedX))
                         }
 
-                        ToolSeparator
+                        Item
                         {
-                            topPadding: barSeparatorPadding
-                            bottomPadding: barSeparatorPadding
+                            Layout.preferredWidth: Maui.Style.space.small
+                            Layout.fillHeight: true
+                        }
+
+                        Maui.Separator
+                        {
+                            Layout.preferredHeight: 8
+                            height: 8
                         }
 
                         WeatherClock
@@ -561,10 +558,10 @@ Window
                             }
                         }
 
-                        ToolSeparator
+                        Maui.Separator
                         {
-                            topPadding: barSeparatorPadding
-                            bottomPadding: barSeparatorPadding
+                            Layout.preferredHeight: 8
+                            height: 8
                         }
                     }
 
@@ -598,11 +595,11 @@ Window
                         id: _rightSectionRow
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: Maui.Style.space.medium
-
-                        ToolSeparator
+                        Maui.Separator
                         {
-                            topPadding: barSeparatorPadding
-                            bottomPadding: barSeparatorPadding
+                            Layout.preferredHeight: 8
+                            height: 8
+                            visible: systemTrayController && systemTrayController.count > 0
                         }
 
                         SystemTray
@@ -613,10 +610,11 @@ Window
                             debugDetails: root.systemTrayDebugDetails
                         }
 
-                        ToolSeparator
+                        Maui.Separator
                         {
-                            topPadding: barSeparatorPadding
-                            bottomPadding: barSeparatorPadding
+                            Layout.preferredHeight: 8
+                            height: 8
+                            visible: systemTrayController && systemTrayController.count > 0
                         }
 
                         NotificationsCenterButton
@@ -629,10 +627,10 @@ Window
                             countText: String(Math.max(0, notificationsController ? notificationsController.count : 0))
                         }
 
-                        ToolSeparator
+                        Maui.Separator
                         {
-                            topPadding: barSeparatorPadding
-                            bottomPadding: barSeparatorPadding
+                            Layout.preferredHeight: 8
+                            height: 8
                         }
 
                         ControlCenterButton
