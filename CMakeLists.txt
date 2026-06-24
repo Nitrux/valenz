@@ -17,6 +17,7 @@ set(REQUIRED_KF_VERSION 6.13.0)
 set(REQUIRED_MAUIKIT_VERSION 4.0.4)
 
 include(CheckCXXCompilerFlag)
+include(GNUInstallDirs)
 include(FeatureSummary)
 
 string(TOLOWER "${CMAKE_HOST_SYSTEM_PROCESSOR}" VALENZ_HOST_PROCESSOR)
