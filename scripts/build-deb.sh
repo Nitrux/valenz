@@ -28,8 +28,9 @@ cmake \
 	-DCMAKE_VERBOSE_MAKEFILE=ON \
 	-DCMAKE_INSTALL_LIBDIR="/usr/lib/${HOST_MULTIARCH}" \
 	..
-
 make -j"$(nproc)"
+
+make install
 
 
 # -- Run checkinstall and Build Debian Package
