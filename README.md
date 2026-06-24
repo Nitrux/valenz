@@ -2,7 +2,7 @@
 
 Valenz is a QML-based workspace shell bar designed for Nitrux.
 
-![Valenz](https://nxos.org/wp-content/uploads/2026/06/valenz_image_1.png)
+![Valenz](https://nxos.org/wp-content/uploads/2026/06/screenshot-20260624-061936.png)
 > Valenz, an interactive workspace shell bar for Nitrux.
 
 ## Features
