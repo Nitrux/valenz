@@ -416,7 +416,7 @@ QString ValenzBridge::preferredMprisService() const
             return m_mprisServiceName;
     }
 
-    QString fallbackService = services.constFirst();
+    QString fallbackService = services.isEmpty() ? QString() : services.constFirst();
     for (const QString &service : services)
     {
         const QVariantMap properties = mprisPlayerProperties(service);
