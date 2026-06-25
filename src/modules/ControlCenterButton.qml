@@ -16,6 +16,9 @@ ToolButton
     property int bluetoothConnectedDeviceCount: 0
     property string volumeIconName
     property string volumePercentageText
+    property string brightnessIconName
+    property string brightnessPercentageText
+    property bool brightnessAvailable: false
     property string batteryIconName
     property string batteryPercentageText
     property bool batteryAvailable: false
@@ -169,7 +172,10 @@ ToolButton
         Item
         {
             Layout.alignment: Qt.AlignVCenter
-            width: _volumeRow.implicitWidth
+            implicitWidth: _volumeRow.implicitWidth
+            Layout.minimumWidth: implicitWidth
+            Layout.preferredWidth: implicitWidth
+            Layout.rightMargin: (controlCenterButton.brightnessAvailable || controlCenterButton.batteryAvailable) ? Maui.Style.space.medium : 0
             height: 20
 
             RowLayout
@@ -220,9 +226,65 @@ ToolButton
         Item
         {
             Layout.alignment: Qt.AlignVCenter
+            visible: controlCenterButton.brightnessAvailable
+            implicitWidth: _brightnessRow.implicitWidth
+            Layout.minimumWidth: visible ? implicitWidth : 0
+            Layout.preferredWidth: visible ? implicitWidth : 0
+            Layout.rightMargin: controlCenterButton.batteryAvailable ? Maui.Style.space.medium : 0
+            height: 20
+
+            RowLayout
+            {
+                id: _brightnessRow
+                anchors.centerIn: parent
+                spacing: Maui.Style.space.tiny
+
+                Item
+                {
+                    Layout.alignment: Qt.AlignVCenter
+                    width: 20
+                    height: 20
+
+                    Maui.Icon
+                    {
+                        id: _brightnessIcon
+                        anchors.centerIn: parent
+                        width: 16
+                        height: 16
+                        source: controlCenterButton.brightnessIconName
+                        color: controlCenterButton.activeContentColor
+                        visible: controlCenterButton.useSystemThemeIcons && valid
+                    }
+
+                    Label
+                    {
+                        anchors.centerIn: parent
+                        visible: !controlCenterButton.useSystemThemeIcons || !_brightnessIcon.valid
+                        text: controlCenterButton.glyphForIcon ? controlCenterButton.glyphForIcon(controlCenterButton.brightnessIconName) : ""
+                        color: controlCenterButton.activeContentColor
+                        font: Qt.font({ family: "Symbols Nerd Font", weight: Font.Normal, pixelSize: Math.max(10, Math.round(parent.height * 0.65)) })
+                        textFormat: Text.PlainText
+                        renderType: Text.QtRendering
+                    }
+                }
+
+                WorkspaceBadge
+                {
+                    Layout.alignment: Qt.AlignVCenter
+                    visible: controlCenterButton.brightnessPercentageText.length > 0
+                    badgeText: controlCenterButton.brightnessPercentageText
+                    bridge: null
+                }
+            }
+        }
+
+        Item
+        {
+            Layout.alignment: Qt.AlignVCenter
             visible: controlCenterButton.batteryAvailable
-            Layout.preferredWidth: visible ? _batteryRow.implicitWidth : 0
-            width: _batteryRow.implicitWidth
+            implicitWidth: _batteryRow.implicitWidth
+            Layout.minimumWidth: visible ? implicitWidth : 0
+            Layout.preferredWidth: visible ? implicitWidth : 0
             height: 20
 
             RowLayout

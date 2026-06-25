@@ -93,7 +93,9 @@ ToolButton
         Item
         {
             Layout.alignment: Qt.AlignVCenter
-            width: _badgeRow.implicitWidth
+            implicitWidth: _badgeRow.implicitWidth
+            Layout.minimumWidth: implicitWidth
+            Layout.preferredWidth: implicitWidth
             height: 20
 
             RowLayout

@@ -151,6 +151,7 @@ Window
             case "audio-volume-high": return "\uF028"
             case "audio-volume-medium": return "\uF027"
             case "audio-volume-low": return "\uF026"
+            case "display-brightness": return "\uF185"
             case "battery": return "\uF240"
             case "battery-full": return "\uF240"
             case "battery-100": return "\uF240"
@@ -248,6 +249,7 @@ Window
             return "audio-volume-medium"
         return "audio-volume-high"
     }
+    readonly property string controlCenterBrightnessIconName: "display-brightness"
     readonly property string controlCenterPowerProfileIconName:
     {
         switch (controlCenterPowerProfileCurrent)
@@ -461,18 +463,21 @@ Window
                         {
                             Layout.preferredWidth: Maui.Style.space.small
                             Layout.fillHeight: true
+                            visible: root.mprisModuleVisible
                         }
 
                         Maui.Separator
                         {
                             Layout.preferredHeight: 8
                             height: 8
+                            visible: root.mprisModuleVisible
                         }
 
                         Item
                         {
                             Layout.preferredWidth: Maui.Style.space.small
                             Layout.fillHeight: true
+                            visible: root.mprisModuleVisible
                         }
 
                         MprisControl
@@ -487,6 +492,7 @@ Window
                         {
                             Layout.preferredWidth: Maui.Style.space.small
                             Layout.fillHeight: true
+                            visible: root.mprisModuleVisible
                         }
 
                         Maui.Separator
@@ -656,6 +662,9 @@ Window
                             bluetoothConnectedDeviceCount: root.controlCenterBluetoothConnectedDeviceCount
                             volumeIconName: root.controlCenterVolumeIconName
                             volumePercentageText: root.controlCenterVolumePercentageText
+                            brightnessIconName: root.controlCenterBrightnessIconName
+                            brightnessPercentageText: root.controlCenterBrightnessPercentageText
+                            brightnessAvailable: root.controlCenterBrightnessAvailable
                             batteryIconName: root.controlCenterBatteryIconName
                             batteryPercentageText: root.controlCenterBatteryPercentageText
                             batteryAvailable: root.controlCenterBatteryAvailable
