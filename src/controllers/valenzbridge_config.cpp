@@ -16,14 +16,29 @@ int ValenzBridge::barHeight() const
     return m_barHeight;
 }
 
-int ValenzBridge::barWidth() const
-{
-    return m_barWidth;
-}
-
 int ValenzBridge::barLayerSpacing() const
 {
     return m_barLayerSpacing;
+}
+
+int ValenzBridge::barLayerSpacingTop() const
+{
+    return m_barLayerSpacingTop;
+}
+
+int ValenzBridge::barLayerSpacingBottom() const
+{
+    return m_barLayerSpacingBottom;
+}
+
+int ValenzBridge::barLayerSpacingLeft() const
+{
+    return m_barLayerSpacingLeft;
+}
+
+int ValenzBridge::barLayerSpacingRight() const
+{
+    return m_barLayerSpacingRight;
 }
 
 bool ValenzBridge::systemTrayDebugDetails() const
@@ -82,12 +97,16 @@ void ValenzBridge::initializeConfig()
     ensureKey(QString::fromLatin1(kMprisAlwaysVisibleKey), QString(), false);
     ensureKey(QString::fromLatin1(kControlCenterDiskUsagePathKey), QString::fromLatin1(kLegacyControlCenterDiskUsagePathKey), "/");
     ensureKey(QString::fromLatin1(kWindowBarHeightKey), QString(), 56);
-    ensureKey(QString::fromLatin1(kWindowBarWidthKey), QString::fromLatin1(kLegacyWindowPopupMaxWidthKey), 0);
     ensureKey(QString::fromLatin1(kWindowBarLayerSpacingKey), QString(), 0);
+
+    userSettings.remove(QStringLiteral("Window/barWidth"));
+    userSettings.remove(QStringLiteral("Window/popupMaxWidth"));
+    ensureKey(QString::fromLatin1(kWindowBarLayerSpacingTopKey), QString(), 0);
+    ensureKey(QString::fromLatin1(kWindowBarLayerSpacingBottomKey), QString(), 0);
+    ensureKey(QString::fromLatin1(kWindowBarLayerSpacingLeftKey), QString(), 0);
+    ensureKey(QString::fromLatin1(kWindowBarLayerSpacingRightKey), QString(), 0);
     ensureKey(QString::fromLatin1(kSystemTrayDebugDetailsKey), QString(), false);
     ensureKey(QString::fromLatin1(kControlCenterSettingsCommandKey), QString(), QStringLiteral("systemsettings"));
-    userSettings.remove(QString::fromLatin1(kLegacyWindowPopupMaxWidthKey));
-
     userSettings.remove("ControlCenter/batteryIconName");
     userSettings.remove("controlCenter/batteryIconName");
     userSettings.remove("ControlCenter/powerProfileIconName");
@@ -130,8 +149,11 @@ void ValenzBridge::initializeConfig()
         m_controlCenterDiskUsagePath.prepend(QLatin1Char('/'));
     m_mprisAlwaysVisible = userSettings.value(kMprisAlwaysVisibleKey, false).toBool();
     m_barHeight = qBound(1, userSettings.value(kWindowBarHeightKey, 56).toInt(), kWindowBarHeightMax);
-    m_barWidth = qMax(0, userSettings.value(kWindowBarWidthKey, 0).toInt());
     m_barLayerSpacing = qBound(0, userSettings.value(kWindowBarLayerSpacingKey, 0).toInt(), 64);
+    m_barLayerSpacingTop = qBound(0, userSettings.value(kWindowBarLayerSpacingTopKey, m_barLayerSpacing).toInt(), 64);
+    m_barLayerSpacingBottom = qBound(0, userSettings.value(kWindowBarLayerSpacingBottomKey, m_barLayerSpacing).toInt(), 64);
+    m_barLayerSpacingLeft = qBound(0, userSettings.value(kWindowBarLayerSpacingLeftKey, m_barLayerSpacing).toInt(), 64);
+    m_barLayerSpacingRight = qBound(0, userSettings.value(kWindowBarLayerSpacingRightKey, m_barLayerSpacing).toInt(), 64);
     m_systemTrayDebugDetails = userSettings.value(kSystemTrayDebugDetailsKey, false).toBool();
 
     m_weatherLatitude = normalizeWeatherCoordinate(userSettings.value(kWeatherLatitudeKey, 40.7128), -90.0, 90.0, 40.7128);

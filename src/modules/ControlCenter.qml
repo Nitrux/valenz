@@ -173,24 +173,23 @@ Window
 
     function _networkModeTitle()
     {
-        const state = controlCenter.bridge ? String(controlCenter.bridge.controlCenterNetworkState).toLowerCase() : "offline"
-        return state === "wired" ? i18n("Wired") : i18n("WiFi")
+        return i18n("WiFi")
     }
 
     function _networkModeSubtitle()
     {
         const state = controlCenter.bridge ? String(controlCenter.bridge.controlCenterNetworkState).toLowerCase() : "offline"
-        if (state === "offline")
-            return i18n("Off")
-        if (state === "wired")
+        if (state === "wireless")
             return i18n("Connected")
+        if (state === "offline" || state === "wired")
+            return i18n("Off")
         if (state === "hotspot")
             return i18n("Hotspot")
         if (state === "vpn")
             return i18n("VPN")
         if (state === "cellular")
             return i18n("Cellular")
-        return i18n("Connected")
+        return i18n("Off")
     }
 
     function _commitVolumeFromSlider()
@@ -661,7 +660,7 @@ Window
 
                             Switch
                             {
-                                checked: controlCenter.bridge ? (controlCenter.bridge.controlCenterNetworkState === "wireless" || controlCenter.bridge.controlCenterNetworkMode === "wireless") : false
+                                checked: controlCenter.bridge ? controlCenter.bridge.controlCenterNetworkState === "wireless" : false
                                 onToggled:
                                 {
                                     if (!controlCenter.bridge)

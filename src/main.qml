@@ -11,19 +11,31 @@ Window
 {
     id: root
     readonly property int barHeight: valenzBridge ? valenzBridge.barHeight : 56
-    readonly property int barWidth: valenzBridge ? valenzBridge.barWidth : 0
     readonly property int barHeightClamped: Math.max(1, Math.min(barHeight, Screen.height > 0 ? Screen.height : barHeight))
     readonly property int barFrameInset: 6
     readonly property int barContentHeight: Math.max(0, barHeightClamped - (barFrameInset * 2))
-    readonly property int barMinimumWidth: 1023
     readonly property int barLayerSpacing: valenzBridge ? valenzBridge.barLayerSpacing : 0
+    readonly property int barLayerSpacingTop: valenzBridge ? valenzBridge.barLayerSpacingTop : 0
+    readonly property int barLayerSpacingBottom: valenzBridge ? valenzBridge.barLayerSpacingBottom : 0
+    readonly property int barLayerSpacingLeft: valenzBridge ? valenzBridge.barLayerSpacingLeft : 0
+    readonly property int barLayerSpacingRight: valenzBridge ? valenzBridge.barLayerSpacingRight : 0
     readonly property bool systemTrayDebugDetails: valenzBridge ? valenzBridge.systemTrayDebugDetails : false
     readonly property real popupSurfaceOpacity: 0.76
     readonly property color popupSurfaceColor: Qt.lighter(Maui.Theme.backgroundColor, 1.25)
     readonly property int popupSurfaceRadius: Maui.Style.radiusV + 3
     visible: !valenzBridge || !valenzBridge.focusedWindowFullscreen
-    width: barWidth > 0 ? Math.min(Screen.width, Math.max(barMinimumWidth, barWidth)) : Screen.width
-    x: Math.max(0, Math.round((Screen.width - width) / 2))
+    readonly property bool useDirectionalSpacing: barLayerSpacingTop > 0 || barLayerSpacingBottom > 0 || barLayerSpacingLeft > 0 || barLayerSpacingRight > 0
+    width:
+    {
+        if (useDirectionalSpacing)
+            return Math.max(0, Screen.width - barLayerSpacingLeft - barLayerSpacingRight)
+
+        return Screen.width
+    }
+    x:
+    {
+        return 0
+    }
     height: barHeightClamped
     minimumHeight: barHeightClamped
     maximumHeight: barHeightClamped

@@ -99,17 +99,28 @@ static void configureLayerShellWindow(QWindow *window)
     layerShellWindow->setLayer(LayerShellQt::Window::LayerOverlay);
     layerShellWindow->setKeyboardInteractivity(LayerShellQt::Window::KeyboardInteractivityNone);
     const int barHeight = window->property("barHeight").toInt();
-    const int barLayerSpacing = qMax(0, window->property("barLayerSpacing").toInt());
-    const int exclusiveZone = barHeight + barLayerSpacing;
+    const int legacySpacing = qMax(0, window->property("barLayerSpacing").toInt());
+    const int spacingTop = qMax(0, window->property("barLayerSpacingTop").toInt());
+    const int spacingBottom = qMax(0, window->property("barLayerSpacingBottom").toInt());
+    const int spacingLeft = qMax(0, window->property("barLayerSpacingLeft").toInt());
+    const int spacingRight = qMax(0, window->property("barLayerSpacingRight").toInt());
+    const bool hasDirectionalSpacing = spacingTop > 0 || spacingBottom > 0 || spacingLeft > 0 || spacingRight > 0;
+    const int appliedTop = hasDirectionalSpacing ? spacingTop : legacySpacing;
+    const int appliedBottom = hasDirectionalSpacing ? spacingBottom : 0;
+    const int appliedLeft = hasDirectionalSpacing ? spacingLeft : 0;
+    const int appliedRight = hasDirectionalSpacing ? spacingRight : 0;
+    const int exclusiveZone = barHeight + appliedTop + appliedBottom;
     layerShellWindow->setExclusiveZone(exclusiveZone > 0 ? exclusiveZone : window->height());
     layerShellWindow->setWantsToBeOnActiveScreen(true);
     layerShellWindow->setScreen(window->screen());
 
     LayerShellQt::Window::Anchors anchors;
     anchors |= LayerShellQt::Window::AnchorTop;
+    anchors |= LayerShellQt::Window::AnchorLeft;
+    anchors |= LayerShellQt::Window::AnchorRight;
     layerShellWindow->setAnchors(anchors);
     layerShellWindow->setDesiredSize(QSize(window->width(), window->height()));
-    layerShellWindow->setMargins(QMargins(0, barLayerSpacing, 0, 0));
+    layerShellWindow->setMargins(QMargins(appliedLeft, appliedTop, appliedRight, appliedBottom));
 }
 
 static QString desktopFileNameForPortal()

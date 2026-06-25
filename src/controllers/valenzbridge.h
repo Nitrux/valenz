@@ -63,8 +63,11 @@ class ValenzBridge : public QObject
     Q_PROPERTY(QString controlCenterSettingsCommand READ controlCenterSettingsCommand WRITE setControlCenterSettingsCommand NOTIFY controlCenterSettingsCommandChanged FINAL)
     Q_PROPERTY(QString controlCenterDiskUsagePath READ controlCenterDiskUsagePath WRITE setControlCenterDiskUsagePath NOTIFY controlCenterDiskUsagePathChanged FINAL)
     Q_PROPERTY(int barHeight READ barHeight CONSTANT FINAL)
-    Q_PROPERTY(int barWidth READ barWidth CONSTANT FINAL)
     Q_PROPERTY(int barLayerSpacing READ barLayerSpacing CONSTANT FINAL)
+    Q_PROPERTY(int barLayerSpacingTop READ barLayerSpacingTop CONSTANT FINAL)
+    Q_PROPERTY(int barLayerSpacingBottom READ barLayerSpacingBottom CONSTANT FINAL)
+    Q_PROPERTY(int barLayerSpacingLeft READ barLayerSpacingLeft CONSTANT FINAL)
+    Q_PROPERTY(int barLayerSpacingRight READ barLayerSpacingRight CONSTANT FINAL)
     Q_PROPERTY(bool systemTrayDebugDetails READ systemTrayDebugDetails CONSTANT FINAL)
     Q_PROPERTY(bool agendaInstalled READ agendaInstalled NOTIFY agendaInstalledChanged FINAL)
     Q_PROPERTY(QString weatherIconName READ weatherIconName WRITE setWeatherIconName NOTIFY weatherIconNameChanged FINAL)
@@ -168,8 +171,11 @@ public:
     QString controlCenterDiskUsagePath() const;
     void setControlCenterDiskUsagePath(const QString &path);
     int barHeight() const;
-    int barWidth() const;
     int barLayerSpacing() const;
+    int barLayerSpacingTop() const;
+    int barLayerSpacingBottom() const;
+    int barLayerSpacingLeft() const;
+    int barLayerSpacingRight() const;
     bool systemTrayDebugDetails() const;
     bool agendaInstalled() const;
     QString weatherIconName() const;
@@ -354,8 +360,11 @@ private:
     QString m_controlCenterSettingsCommand = QStringLiteral("systemsettings");
     QString m_controlCenterDiskUsagePath = QStringLiteral("/");
     int m_barHeight = 56;
-    int m_barWidth = 0;
     int m_barLayerSpacing = 0;
+    int m_barLayerSpacingTop = 0;
+    int m_barLayerSpacingBottom = 0;
+    int m_barLayerSpacingLeft = 0;
+    int m_barLayerSpacingRight = 0;
     bool m_agendaInstalled = false;
     QString m_weatherIconName = QStringLiteral("weather-severe-alert");
     QString m_weatherTemperature = QStringLiteral("--°C");

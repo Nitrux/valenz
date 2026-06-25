@@ -89,8 +89,21 @@ Window
         if (!source)
             return ""
 
+        const backend = String(source.backend || "").trim().toLowerCase()
+        const title = String(source.title || "").trim()
+        const artist = String(source.artist || "").trim()
+        const subtitle = String(source.subtitle || "").trim()
         const serviceName = String(source.serviceName || "").trim()
-        return serviceName.replace(/^org\.mpris\.MediaPlayer2\./, "")
+
+        if (backend === "bluez")
+        {
+            if (title.length === 0 && artist.length === 0)
+                return i18n("Bluetooth")
+
+            return subtitle.length > 0 ? subtitle : i18n("Bluetooth")
+        }
+
+        return subtitle.length > 0 ? subtitle : serviceName.replace(/^org\.mpris\.MediaPlayer2\./, "")
     }
 
     function _anchorPointInScreen(offsetX, offsetY)
