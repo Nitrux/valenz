@@ -244,7 +244,6 @@ SystemTrayController::SystemTrayController(QObject *parent)
     m_refreshTimer->setTimerType(Qt::CoarseTimer);
     m_refreshTimer->setInterval(15000);
     connect(m_refreshTimer, &QTimer::timeout, this, &SystemTrayController::refresh);
-    m_refreshTimer->start();
 
     QTimer::singleShot(0, this, &SystemTrayController::refresh);
 }

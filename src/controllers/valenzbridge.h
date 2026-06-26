@@ -291,6 +291,7 @@ private:
     QString formatMprisTimeUs(qint64 microseconds) const;
     QString formatMprisTimestamp(qint64 positionUs, qint64 lengthUs) const;
     void refreshMprisState();
+    void updateMprisRefreshTimer();
     void clearMprisState();
     void setMprisSources(const QVariantList &sources);
     void updateMprisPlaybackTicker();

@@ -23,7 +23,6 @@ ValenzBridge::ValenzBridge(QObject *parent)
     m_mprisRefreshTimer->setInterval(kMprisRefreshIntervalMs);
     m_mprisRefreshTimer->setTimerType(Qt::CoarseTimer);
     connect(m_mprisRefreshTimer, &QTimer::timeout, this, &ValenzBridge::refreshMprisState);
-    m_mprisRefreshTimer->start();
 
     m_mprisPlaybackTimer = new QTimer(this);
     m_mprisPlaybackTimer->setInterval(kMprisPlaybackTickMs);
@@ -31,6 +30,7 @@ ValenzBridge::ValenzBridge(QObject *parent)
     connect(m_mprisPlaybackTimer, &QTimer::timeout, this, &ValenzBridge::updateMprisTimestampFromTicker);
 
     refreshMprisState();
+    updateMprisRefreshTimer();
     refreshWeather();
     initializeControlCenterRuntime();
 }

@@ -267,6 +267,25 @@ void ValenzBridge::clearMprisState()
     setMprisVisible(false);
     setMprisSources({});
     updateMprisPlaybackTicker();
+    updateMprisRefreshTimer();
+}
+
+void ValenzBridge::updateMprisRefreshTimer()
+{
+    if (!m_mprisRefreshTimer)
+        return;
+
+    const bool needsPolling = !m_mprisServiceName.isEmpty() && isBluezMediaSourceId(m_mprisServiceName);
+
+    if (needsPolling)
+    {
+        if (!m_mprisRefreshTimer->isActive())
+            m_mprisRefreshTimer->start();
+    }
+    else if (m_mprisRefreshTimer->isActive())
+    {
+        m_mprisRefreshTimer->stop();
+    }
 }
 
 void ValenzBridge::setMprisSources(const QVariantList &sources)
@@ -664,6 +683,7 @@ void ValenzBridge::refreshMprisState()
     setMediaPlaying(selectedPlaying);
     setMprisVisible(true);
     updateMprisPlaybackTicker();
+    updateMprisRefreshTimer();
 }
 
 void ValenzBridge::mediaPreviousTrack()
