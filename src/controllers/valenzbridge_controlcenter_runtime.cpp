@@ -3,20 +3,54 @@
 #include "mauikit_system_control.h"
 
 
+namespace
+{
+constexpr int kControlCenterIdleRefreshIntervalMs = 15000;
+constexpr int kControlCenterActiveRefreshIntervalMs = 1000;
+}
+
 void ValenzBridge::initializeControlCenterRuntime()
 {
     if (!m_controlCenterStatusTimer)
     {
         m_controlCenterStatusTimer = new QTimer(this);
-        m_controlCenterStatusTimer->setInterval(1000);
         m_controlCenterStatusTimer->setTimerType(Qt::CoarseTimer);
         connect(m_controlCenterStatusTimer, &QTimer::timeout, this, &ValenzBridge::refreshControlCenterRuntimeState);
     }
 
-    if (!m_controlCenterStatusTimer->isActive())
-        m_controlCenterStatusTimer->start();
-
+    updateControlCenterRuntimeTimer();
     refreshControlCenterRuntimeState();
+}
+
+void ValenzBridge::setControlCenterRuntimeActive(bool active)
+{
+    if (m_controlCenterRuntimeActive == active)
+    {
+        if (active)
+            refreshControlCenterRuntimeState();
+        return;
+    }
+
+    m_controlCenterRuntimeActive = active;
+    updateControlCenterRuntimeTimer();
+
+    if (m_controlCenterRuntimeActive)
+        refreshControlCenterRuntimeState();
+}
+
+void ValenzBridge::updateControlCenterRuntimeTimer()
+{
+    if (!m_controlCenterStatusTimer)
+        return;
+
+    const int interval = m_controlCenterRuntimeActive
+            ? kControlCenterActiveRefreshIntervalMs
+            : kControlCenterIdleRefreshIntervalMs;
+
+    if (m_controlCenterStatusTimer->interval() != interval)
+        m_controlCenterStatusTimer->setInterval(interval);
+
+    m_controlCenterStatusTimer->start();
 }
 
 void ValenzBridge::refreshControlCenterRuntimeState()
@@ -159,6 +193,13 @@ void ValenzBridge::refreshControlCenterNightLightState()
 
 void ValenzBridge::refreshControlCenterBrightnessState()
 {
+    if (m_debugSimulatedBrightnessAvailable)
+    {
+        setControlCenterBrightnessAvailable(true);
+        setControlCenterBrightnessPercentage(QStringLiteral("%1%").arg(qBound(0, m_debugSimulatedBrightnessPercentage, 100)));
+        return;
+    }
+
     QString percentText;
     const bool available = MauiKitSystem::currentControlCenterBrightnessPercent(&percentText);
     setControlCenterBrightnessAvailable(available);
@@ -203,6 +244,15 @@ void ValenzBridge::refreshControlCenterSystemResourcesState()
 
 void ValenzBridge::refreshControlCenterBatteryState()
 {
+    if (m_debugSimulatedBatteryAvailable)
+    {
+        setControlCenterBatteryAvailable(true);
+        setControlCenterBatteryOnAcPower(m_debugSimulatedBatteryOnAcPower || m_debugSimulatedBatteryCharging);
+        setControlCenterBatteryCharging(m_debugSimulatedBatteryCharging);
+        setControlCenterBatteryPercentage(QStringLiteral("%1%").arg(qBound(0, m_debugSimulatedBatteryPercentage, 100)));
+        return;
+    }
+
     QString batteryPath;
     bool mainsOnline = false;
     const bool hasBattery = MauiKitSystem::batteryPowerSupplyState(&batteryPath, &mainsOnline);

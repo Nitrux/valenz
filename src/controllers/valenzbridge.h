@@ -199,6 +199,7 @@ public:
     Q_INVOKABLE void executeControlCenterSettingsCommand();
     Q_INVOKABLE void setControlCenterVolumePercentageFromSlider(int percent);
     Q_INVOKABLE void setControlCenterBrightnessPercentageFromSlider(int percent);
+    Q_INVOKABLE void setControlCenterRuntimeActive(bool active);
     Q_INVOKABLE void goToPreviousWorkspace();
     Q_INVOKABLE void goToNextWorkspace();
     Q_INVOKABLE bool refreshWorkspaceState();
@@ -279,6 +280,8 @@ private:
     void scheduleHyprlandEventSocketReconnect();
     void handleHyprlandEventData();
     void handleHyprlandEventLine(const QString &line);
+    void scheduleWorkspaceStateRefresh(int delayMs = 0);
+    void scheduleFocusedWindowStateRefresh(int delayMs = 0);
     bool refreshFocusedWindowState();
     QStringList mprisServiceNames() const;
     QString preferredMprisService() const;
@@ -303,6 +306,7 @@ private:
     void setAgendaInstalled(bool installed);
     void setWeatherLocationName(const QString &locationName);
     void initializeControlCenterRuntime();
+    void updateControlCenterRuntimeTimer();
     void refreshControlCenterRuntimeState();
     void refreshControlCenterNetworkState();
     void refreshControlCenterBluetoothState();
@@ -347,6 +351,8 @@ private:
     QString m_controlCenterDiskUsageText;
     QString m_controlCenterBrightnessPercentage = QStringLiteral("0%");
     bool m_controlCenterBrightnessAvailable = false;
+    bool m_debugSimulatedBrightnessAvailable = false;
+    int m_debugSimulatedBrightnessPercentage = 65;
     QString m_controlCenterNetworkState = QStringLiteral("offline");
     bool m_controlCenterBluetoothEnabled = false;
     bool m_controlCenterBluetoothAvailable = false;
@@ -354,6 +360,10 @@ private:
     int m_controlCenterBluetoothConnectedDeviceCount = 0;
     bool m_controlCenterBatteryAvailable = false;
     bool m_controlCenterBatteryOnAcPower = false;
+    bool m_debugSimulatedBatteryAvailable = false;
+    int m_debugSimulatedBatteryPercentage = 72;
+    bool m_debugSimulatedBatteryCharging = false;
+    bool m_debugSimulatedBatteryOnAcPower = false;
     bool m_controlCenterNightLightEnabled = false;
     bool m_controlCenterNightLightAvailable = false;
     QString m_controlCenterPowerCommand = QStringLiteral("wlogout");
@@ -377,11 +387,14 @@ private:
     QString m_userConfigPath;
     QLocalSocket *m_hyprlandEventSocket = nullptr;
     QByteArray m_hyprlandEventBuffer;
+    QTimer *m_workspaceRefreshTimer = nullptr;
+    QTimer *m_focusedWindowRefreshTimer = nullptr;
     QTimer *m_mprisRefreshTimer = nullptr;
     QTimer *m_mprisPlaybackTimer = nullptr;
     QNetworkAccessManager *m_weatherNetwork = nullptr;
     QTimer *m_weatherRefreshTimer = nullptr;
     QTimer *m_controlCenterStatusTimer = nullptr;
+    bool m_controlCenterRuntimeActive = false;
     QString m_mprisServiceName;
     QString m_mprisPropertiesServiceName;
     qint64 m_mprisTrackLengthUs = 0;

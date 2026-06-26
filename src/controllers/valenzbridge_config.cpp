@@ -105,7 +105,13 @@ void ValenzBridge::initializeConfig()
     ensureKey(QString::fromLatin1(kWindowBarLayerSpacingBottomKey), QString(), 0);
     ensureKey(QString::fromLatin1(kWindowBarLayerSpacingLeftKey), QString(), 0);
     ensureKey(QString::fromLatin1(kWindowBarLayerSpacingRightKey), QString(), 0);
-    ensureKey(QString::fromLatin1(kSystemTrayDebugDetailsKey), QString(), false);
+    ensureKey(QString::fromLatin1(kSystemTrayDebugDetailsKey), QString::fromLatin1(kLegacySystemTrayDebugDetailsKey), false);
+    ensureKey(QString::fromLatin1(kDebugSimulatedBrightnessAvailableKey), QString(), false);
+    ensureKey(QString::fromLatin1(kDebugSimulatedBrightnessPercentageKey), QString(), 65);
+    ensureKey(QString::fromLatin1(kDebugSimulatedBatteryAvailableKey), QString(), false);
+    ensureKey(QString::fromLatin1(kDebugSimulatedBatteryPercentageKey), QString(), 72);
+    ensureKey(QString::fromLatin1(kDebugSimulatedBatteryChargingKey), QString(), false);
+    ensureKey(QString::fromLatin1(kDebugSimulatedBatteryOnAcPowerKey), QString(), false);
     ensureKey(QString::fromLatin1(kControlCenterSettingsCommandKey), QString(), QStringLiteral("systemsettings"));
     userSettings.remove("ControlCenter/batteryIconName");
     userSettings.remove("controlCenter/batteryIconName");
@@ -155,6 +161,12 @@ void ValenzBridge::initializeConfig()
     m_barLayerSpacingLeft = qBound(0, userSettings.value(kWindowBarLayerSpacingLeftKey, m_barLayerSpacing).toInt(), 64);
     m_barLayerSpacingRight = qBound(0, userSettings.value(kWindowBarLayerSpacingRightKey, m_barLayerSpacing).toInt(), 64);
     m_systemTrayDebugDetails = userSettings.value(kSystemTrayDebugDetailsKey, false).toBool();
+    m_debugSimulatedBrightnessAvailable = userSettings.value(kDebugSimulatedBrightnessAvailableKey, false).toBool();
+    m_debugSimulatedBrightnessPercentage = qBound(0, userSettings.value(kDebugSimulatedBrightnessPercentageKey, 65).toInt(), 100);
+    m_debugSimulatedBatteryAvailable = userSettings.value(kDebugSimulatedBatteryAvailableKey, false).toBool();
+    m_debugSimulatedBatteryPercentage = qBound(0, userSettings.value(kDebugSimulatedBatteryPercentageKey, 72).toInt(), 100);
+    m_debugSimulatedBatteryCharging = userSettings.value(kDebugSimulatedBatteryChargingKey, false).toBool();
+    m_debugSimulatedBatteryOnAcPower = userSettings.value(kDebugSimulatedBatteryOnAcPowerKey, false).toBool();
 
     m_weatherLatitude = normalizeWeatherCoordinate(userSettings.value(kWeatherLatitudeKey, 40.7128), -90.0, 90.0, 40.7128);
     m_weatherLongitude = normalizeWeatherCoordinate(userSettings.value(kWeatherLongitudeKey, -74.0060), -180.0, 180.0, -74.0060);

@@ -355,7 +355,10 @@ Window
             _logPopupGeometry("visible")
             _systemResourcesRefreshActive = true
             if (bridge)
+            {
+                bridge.setControlCenterRuntimeActive(true)
                 bridge.refreshControlCenterSystemResources()
+            }
         }
         else
         {
@@ -363,6 +366,8 @@ Window
             _panelOpen = false
             closed()
             _systemResourcesRefreshActive = false
+            if (bridge)
+                bridge.setControlCenterRuntimeActive(false)
         }
     }
     x:
@@ -484,7 +489,7 @@ Window
                 easing.type: Easing.InOutCubic
             }
         }
-        layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software
+        layer.enabled: visible && GraphicsInfo.api !== GraphicsInfo.Software
         layer.effect: MultiEffect
         {
             autoPaddingEnabled: true

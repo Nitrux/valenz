@@ -78,8 +78,6 @@ public:
             return;
 
         m_proxy.start(proxyExecutable);
-        if (!m_proxy.waitForStarted(3000))
-            m_proxy.close();
     }
 
 private:

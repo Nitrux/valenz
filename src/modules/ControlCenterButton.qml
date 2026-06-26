@@ -105,6 +105,7 @@ ToolButton
         Item
         {
             Layout.alignment: Qt.AlignVCenter
+            Layout.leftMargin: Math.max(2, Maui.Style.space.tiny)
             visible: controlCenterButton.bluetoothAvailable
             width: 20
             height: 20
@@ -175,14 +176,14 @@ ToolButton
             implicitWidth: _volumeRow.implicitWidth
             Layout.minimumWidth: implicitWidth
             Layout.preferredWidth: implicitWidth
-            Layout.rightMargin: (controlCenterButton.brightnessAvailable || controlCenterButton.batteryAvailable) ? Maui.Style.space.medium : 0
+            Layout.rightMargin: (controlCenterButton.brightnessAvailable || controlCenterButton.batteryAvailable) ? Maui.Style.space.small : 0
             height: 20
 
             RowLayout
             {
                 id: _volumeRow
                 anchors.centerIn: parent
-                spacing: Maui.Style.space.tiny
+                spacing: 1
 
                 Item
                 {
@@ -230,14 +231,14 @@ ToolButton
             implicitWidth: _brightnessRow.implicitWidth
             Layout.minimumWidth: visible ? implicitWidth : 0
             Layout.preferredWidth: visible ? implicitWidth : 0
-            Layout.rightMargin: controlCenterButton.batteryAvailable ? Maui.Style.space.medium : 0
+            Layout.rightMargin: controlCenterButton.batteryAvailable ? Maui.Style.space.small : 0
             height: 20
 
             RowLayout
             {
                 id: _brightnessRow
                 anchors.centerIn: parent
-                spacing: Maui.Style.space.tiny
+                spacing: Math.max(4, Maui.Style.space.tiny - 1)
 
                 Item
                 {
@@ -291,7 +292,7 @@ ToolButton
             {
                 id: _batteryRow
                 anchors.centerIn: parent
-                spacing: Maui.Style.space.tiny
+                spacing: 1
 
                 Item
                 {

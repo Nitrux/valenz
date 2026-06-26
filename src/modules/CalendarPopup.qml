@@ -515,7 +515,7 @@ Window
                 easing.type: Easing.InOutCubic
             }
         }
-        layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software
+        layer.enabled: visible && GraphicsInfo.api !== GraphicsInfo.Software
         layer.effect: MultiEffect
         {
             autoPaddingEnabled: true

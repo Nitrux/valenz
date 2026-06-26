@@ -342,7 +342,7 @@ RowLayout
             border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
             clip: true
 
-            layer.enabled: GraphicsInfo.api !== GraphicsInfo.Software
+            layer.enabled: visible && GraphicsInfo.api !== GraphicsInfo.Software
             layer.effect: MultiEffect
             {
                 autoPaddingEnabled: true

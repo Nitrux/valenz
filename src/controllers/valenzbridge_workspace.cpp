@@ -3,24 +3,62 @@
 
 void ValenzBridge::goToPreviousWorkspace()
 {
-
     if (!dispatchWorkspaceFocus(QStringLiteral("-1")))
-    {
         return;
-    }
-    refreshWorkspaceState();
 
+    scheduleWorkspaceStateRefresh(50);
 }
 
 void ValenzBridge::goToNextWorkspace()
 {
-
     if (!dispatchWorkspaceFocus(QStringLiteral("+1")))
+        return;
+
+    scheduleWorkspaceStateRefresh(50);
+}
+
+void ValenzBridge::scheduleWorkspaceStateRefresh(int delayMs)
+{
+    if (delayMs <= 0)
     {
+        refreshWorkspaceState();
         return;
     }
-    refreshWorkspaceState();
 
+    if (!m_workspaceRefreshTimer)
+    {
+        m_workspaceRefreshTimer = new QTimer(this);
+        m_workspaceRefreshTimer->setSingleShot(true);
+        m_workspaceRefreshTimer->setTimerType(Qt::CoarseTimer);
+        connect(m_workspaceRefreshTimer, &QTimer::timeout, this, [this]()
+        {
+            refreshWorkspaceState();
+        });
+    }
+
+    m_workspaceRefreshTimer->start(delayMs);
+}
+
+void ValenzBridge::scheduleFocusedWindowStateRefresh(int delayMs)
+{
+    if (delayMs <= 0)
+    {
+        refreshFocusedWindowState();
+        return;
+    }
+
+    if (!m_focusedWindowRefreshTimer)
+    {
+        m_focusedWindowRefreshTimer = new QTimer(this);
+        m_focusedWindowRefreshTimer->setSingleShot(true);
+        m_focusedWindowRefreshTimer->setTimerType(Qt::CoarseTimer);
+        connect(m_focusedWindowRefreshTimer, &QTimer::timeout, this, [this]()
+        {
+            refreshFocusedWindowState();
+        });
+    }
+
+    m_focusedWindowRefreshTimer->start(delayMs);
 }
 
 bool ValenzBridge::refreshWorkspaceState()
@@ -209,9 +247,9 @@ void ValenzBridge::handleHyprlandEventLine(const QString &line)
     const QString eventName = line.left(separatorIndex).trimmed();
 
     if (isWorkspaceRelatedHyprlandEvent(eventName))
-        refreshWorkspaceState();
+        scheduleWorkspaceStateRefresh(50);
 
     if (isFocusedWindowRelatedHyprlandEvent(eventName))
-        refreshFocusedWindowState();
+        scheduleFocusedWindowStateRefresh(50);
 }
 
