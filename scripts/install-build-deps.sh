@@ -35,11 +35,12 @@ $APT_COMMAND install -y --no-install-recommends \
     extra-cmake-modules \
     gettext \
     gnupg2 \
-    liblayershellqtinterface-dev \
+    libkf6bluezqt-dev \
     libkf6coreaddons-dev \
     libkf6i18n-dev \
     libkf6notifications-dev \
     libkf6windowsystem-dev \
+    liblayershellqtinterface-dev \
     lintian \
     qt6-base-dev \
     qt6-declarative-dev \
