@@ -329,6 +329,21 @@ Window
 
     Timer
     {
+        id: _initialDataRefreshTimer
+        interval: 0
+        repeat: false
+        onTriggered:
+        {
+            if (visible && bridge)
+            {
+                bridge.refreshControlCenterSystemResources()
+                bridge.refreshControlCenterRuntimeState()
+            }
+        }
+    }
+
+    Timer
+    {
         id: _fadeOutTimer
         interval: controlCenter._fadeOutDurationMs
         repeat: false
@@ -357,7 +372,7 @@ Window
             if (bridge)
             {
                 bridge.setControlCenterRuntimeActive(true)
-                bridge.refreshControlCenterSystemResources()
+                _initialDataRefreshTimer.restart()
             }
         }
         else
@@ -366,6 +381,7 @@ Window
             _panelOpen = false
             closed()
             _systemResourcesRefreshActive = false
+            _initialDataRefreshTimer.stop()
             if (bridge)
                 bridge.setControlCenterRuntimeActive(false)
         }

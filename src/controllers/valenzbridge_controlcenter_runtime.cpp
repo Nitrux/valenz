@@ -25,17 +25,10 @@ void ValenzBridge::initializeControlCenterRuntime()
 void ValenzBridge::setControlCenterRuntimeActive(bool active)
 {
     if (m_controlCenterRuntimeActive == active)
-    {
-        if (active)
-            refreshControlCenterRuntimeState();
         return;
-    }
 
     m_controlCenterRuntimeActive = active;
     updateControlCenterRuntimeTimer();
-
-    if (m_controlCenterRuntimeActive)
-        refreshControlCenterRuntimeState();
 }
 
 void ValenzBridge::updateControlCenterRuntimeTimer()
