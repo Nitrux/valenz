@@ -317,6 +317,7 @@ private:
     void refreshControlCenterBrightnessState();
     void refreshControlCenterNightLightState();
     void refreshControlCenterPowerProfileState();
+    void updateControlCenterPowerProfileCurrentFromSystem(const QString &profile);
 
     bool m_enabled = true;
     int m_currentWorkspace = 1;
@@ -396,6 +397,10 @@ private:
     QTimer *m_weatherRefreshTimer = nullptr;
     QTimer *m_controlCenterStatusTimer = nullptr;
     bool m_controlCenterRuntimeActive = false;
+    bool m_controlCenterRuntimeRefreshInFlight = false;
+    bool m_controlCenterRuntimeRefreshPending = false;
+    bool m_controlCenterSystemResourcesRefreshInFlight = false;
+    bool m_controlCenterSystemResourcesRefreshPending = false;
     QString m_mprisServiceName;
     QString m_mprisPropertiesServiceName;
     qint64 m_mprisTrackLengthUs = 0;

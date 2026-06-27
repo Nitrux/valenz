@@ -478,6 +478,16 @@ QString ValenzBridge::controlCenterPowerProfileCurrent() const
     return m_controlCenterPowerProfileCurrent;
 }
 
+void ValenzBridge::updateControlCenterPowerProfileCurrentFromSystem(const QString &profile)
+{
+    const QString normalized = normalizeCurrentPowerProfile(profile, m_controlCenterPowerProfiles);
+    if (m_controlCenterPowerProfileCurrent == normalized)
+        return;
+
+    m_controlCenterPowerProfileCurrent = normalized;
+    Q_EMIT controlCenterPowerProfileCurrentChanged(m_controlCenterPowerProfileCurrent);
+}
+
 void ValenzBridge::setControlCenterPowerProfileCurrent(const QString &profile)
 {
     const QString normalized = normalizeCurrentPowerProfile(profile, m_controlCenterPowerProfiles);
@@ -490,8 +500,7 @@ void ValenzBridge::setControlCenterPowerProfileCurrent(const QString &profile)
         return;
     }
 
-    m_controlCenterPowerProfileCurrent = normalized;
-    Q_EMIT controlCenterPowerProfileCurrentChanged(m_controlCenterPowerProfileCurrent);
+    updateControlCenterPowerProfileCurrentFromSystem(normalized);
 }
 
 

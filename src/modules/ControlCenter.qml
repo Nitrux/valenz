@@ -29,8 +29,21 @@ Window
 
     Shortcut
     {
-        sequences: [ StandardKey.Cancel ]
+        sequences: [ StandardKey.Cancel, "Escape" ]
+        context: Qt.ApplicationShortcut
+        enabled: controlCenter.visible
         onActivated: controlCenter.close()
+    }
+
+    Item
+    {
+        anchors.fill: parent
+        focus: controlCenter.visible
+        Keys.onEscapePressed: function(event)
+        {
+            event.accepted = true
+            controlCenter.close()
+        }
     }
 
     onClosing: function(closeEvent)

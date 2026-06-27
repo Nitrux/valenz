@@ -492,14 +492,12 @@ Window
                         {
                             Layout.preferredWidth: Maui.Style.space.small
                             Layout.fillHeight: true
-                            visible: root.mprisModuleVisible
                         }
 
                         Maui.Separator
                         {
                             Layout.preferredHeight: 8
                             height: 8
-                            visible: root.mprisModuleVisible
                         }
                     }
                 }
