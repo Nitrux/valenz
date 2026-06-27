@@ -9,7 +9,7 @@
 
 namespace
 {
-constexpr int kControlCenterIdleRefreshIntervalMs = 15000;
+constexpr int kControlCenterIdleRefreshIntervalMs = 3000;
 constexpr int kControlCenterActiveRefreshIntervalMs = 1000;
 
 struct ControlCenterRuntimeSnapshot
@@ -29,6 +29,7 @@ struct ControlCenterRuntimeSnapshot
     QString batteryPercentage = QStringLiteral("0%");
     bool nightLightAvailable = false;
     bool nightLightEnabled = false;
+    bool powerProfileCurrentValid = false;
     QString powerProfileCurrent;
     QStringList powerProfiles;
 };
@@ -126,7 +127,7 @@ ControlCenterRuntimeSnapshot collectControlCenterRuntimeSnapshot(bool debugSimul
     snapshot.nightLightAvailable = MauiKitSystem::controlCenterNightLightAvailable();
     snapshot.nightLightEnabled = snapshot.nightLightAvailable && MauiKitSystem::controlCenterNightLightRunning();
 
-    MauiKitSystem::currentPowerProfile(&snapshot.powerProfileCurrent);
+    snapshot.powerProfileCurrentValid = MauiKitSystem::currentPowerProfile(&snapshot.powerProfileCurrent);
     snapshot.powerProfiles = MauiKitSystem::powerProfilesFromPowerProfilesCtl();
 
     return snapshot;
@@ -164,6 +165,9 @@ void ValenzBridge::setControlCenterRuntimeActive(bool active)
 
     m_controlCenterRuntimeActive = active;
     updateControlCenterRuntimeTimer();
+
+    if (m_controlCenterRuntimeActive)
+        refreshControlCenterRuntimeState();
 }
 
 void ValenzBridge::updateControlCenterRuntimeTimer()
@@ -248,7 +252,8 @@ void ValenzBridge::refreshControlCenterRuntimeState()
             if (!snapshot.powerProfiles.isEmpty())
                 bridge->setControlCenterPowerProfiles(snapshot.powerProfiles);
 
-            bridge->updateControlCenterPowerProfileCurrentFromSystem(snapshot.powerProfileCurrent);
+            if (snapshot.powerProfileCurrentValid)
+                bridge->updateControlCenterPowerProfileCurrentFromSystem(snapshot.powerProfileCurrent);
 
             if (bridge->m_controlCenterRuntimeRefreshPending)
             {

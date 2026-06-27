@@ -457,7 +457,9 @@ QStringList ValenzBridge::controlCenterPowerProfiles() const
 void ValenzBridge::setControlCenterPowerProfiles(const QStringList &profiles)
 {
     const QStringList normalizedProfiles = normalizePowerProfiles(profiles);
-    const QString normalizedCurrent = normalizeCurrentPowerProfile(m_controlCenterPowerProfileCurrent, normalizedProfiles);
+    QString normalizedCurrent = normalizeCurrentPowerProfile(m_controlCenterPowerProfileCurrent, normalizedProfiles);
+    if (normalizedCurrent.isEmpty())
+        normalizedCurrent = fallbackPowerProfile(normalizedProfiles);
 
     const bool profilesChanged = m_controlCenterPowerProfiles != normalizedProfiles;
     const bool currentChanged = m_controlCenterPowerProfileCurrent != normalizedCurrent;
@@ -481,7 +483,7 @@ QString ValenzBridge::controlCenterPowerProfileCurrent() const
 void ValenzBridge::updateControlCenterPowerProfileCurrentFromSystem(const QString &profile)
 {
     const QString normalized = normalizeCurrentPowerProfile(profile, m_controlCenterPowerProfiles);
-    if (m_controlCenterPowerProfileCurrent == normalized)
+    if (normalized.isEmpty() || m_controlCenterPowerProfileCurrent == normalized)
         return;
 
     m_controlCenterPowerProfileCurrent = normalized;
@@ -491,7 +493,7 @@ void ValenzBridge::updateControlCenterPowerProfileCurrentFromSystem(const QStrin
 void ValenzBridge::setControlCenterPowerProfileCurrent(const QString &profile)
 {
     const QString normalized = normalizeCurrentPowerProfile(profile, m_controlCenterPowerProfiles);
-    if (m_controlCenterPowerProfileCurrent == normalized)
+    if (normalized.isEmpty() || m_controlCenterPowerProfileCurrent == normalized)
         return;
 
     if (!MauiKitSystem::setCurrentPowerProfile(normalized))

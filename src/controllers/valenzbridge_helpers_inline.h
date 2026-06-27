@@ -34,25 +34,81 @@
 #include <cmath>
 #include <utility>
 
+inline QString defaultPowerProfileName()
+{
+    return QStringLiteral("balanced");
+}
+
+inline QString normalizePowerProfileName(const QString &value)
+{
+    const QString normalized = value.trimmed().toLower();
+    if (normalized == QLatin1String("performance")
+        || normalized == QLatin1String("balanced")
+        || normalized == QLatin1String("power-saver"))
+    {
+        return normalized;
+    }
+
+    return QString();
+}
+
 inline QStringList normalizePowerProfiles(const QVariant &value)
 {
-    Q_UNUSED(value)
-    return QStringList { QStringLiteral("performance"), QStringLiteral("balanced"), QStringLiteral("power-saver") };
+    QStringList requestedProfiles;
+    if (value.metaType().id() == QMetaType::QStringList)
+    {
+        requestedProfiles = value.toStringList();
+    }
+    else if (value.metaType().id() == QMetaType::QString)
+    {
+        requestedProfiles = QStringList { value.toString() };
+    }
+    else
+    {
+        const QVariantList entries = value.toList();
+        requestedProfiles.reserve(entries.size());
+        for (const QVariant &entry : entries)
+            requestedProfiles.push_back(entry.toString());
+    }
+
+    QStringList profiles;
+    const auto appendProfile = [&profiles](const QString &candidate) {
+        const QString normalized = normalizePowerProfileName(candidate);
+        if (!normalized.isEmpty() && !profiles.contains(normalized))
+            profiles.push_back(normalized);
+    };
+
+    for (const QString &candidate : requestedProfiles)
+        appendProfile(candidate);
+
+    if (profiles.isEmpty())
+    {
+        appendProfile(QStringLiteral("performance"));
+        appendProfile(defaultPowerProfileName());
+        appendProfile(QStringLiteral("power-saver"));
+    }
+
+    return profiles;
 }
 
 inline QString normalizeCurrentPowerProfile(const QString &value, const QStringList &profiles)
 {
-    const QString trimmed = value.trimmed();
-    if (trimmed.isEmpty())
-        return profiles.value(0, QStringLiteral("balanced"));
+    const QString normalized = normalizePowerProfileName(value);
+    if (normalized.isEmpty())
+        return QString();
 
-    for (const QString &profile : profiles)
-    {
-        if (profile.compare(trimmed, Qt::CaseInsensitive) == 0)
-            return profile;
-    }
+    if (profiles.isEmpty() || profiles.contains(normalized))
+        return normalized;
 
-    return profiles.value(0, QStringLiteral("balanced"));
+    return QString();
+}
+
+inline QString fallbackPowerProfile(const QStringList &profiles)
+{
+    if (profiles.contains(defaultPowerProfileName()))
+        return defaultPowerProfileName();
+
+    return profiles.value(0, defaultPowerProfileName());
 }
 
 inline bool normalizeControlCenterBatteryCharging(const QVariant &value)
