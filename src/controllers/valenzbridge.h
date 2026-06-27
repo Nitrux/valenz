@@ -210,6 +210,7 @@ public:
     Q_INVOKABLE QString configFilePath() const;
     Q_INVOKABLE QVariantList controlCenterDiskUsageOptions() const;
     Q_INVOKABLE void refreshControlCenterSystemResources();
+    Q_INVOKABLE void refreshControlCenterRuntimeState();
     Q_INVOKABLE void refreshWeather();
 
 Q_SIGNALS:
@@ -308,7 +309,6 @@ private:
     void setWeatherLocationName(const QString &locationName);
     void initializeControlCenterRuntime();
     void updateControlCenterRuntimeTimer();
-    void refreshControlCenterRuntimeState();
     void refreshControlCenterNetworkState();
     void refreshControlCenterBluetoothState();
     void refreshControlCenterVolumeState();
