@@ -28,15 +28,24 @@ void ValenzBridge::onWeatherReplyFinished(QNetworkReply *reply)
 
     const bool success = reply->error() == QNetworkReply::NoError;
     const QByteArray payload = reply->readAll();
+    const QString errorString = reply->errorString();
     reply->deleteLater();
 
     if (!success)
+    {
+        trace(QStringLiteral("weather"), QStringLiteral("refresh_failed"), errorString);
+        QTimer::singleShot(15000, this, &ValenzBridge::refreshWeather);
         return;
+    }
 
     QJsonParseError parseError;
     const QJsonDocument document = QJsonDocument::fromJson(payload, &parseError);
     if (parseError.error != QJsonParseError::NoError || !document.isObject())
+    {
+        trace(QStringLiteral("weather"), QStringLiteral("parse_failed"), QString::fromUtf8(payload.left(120)));
+        QTimer::singleShot(15000, this, &ValenzBridge::refreshWeather);
         return;
+    }
 
     const QJsonObject root = document.object();
     const QString locationName = weatherLocationFromTimezone(root.value(QStringLiteral("timezone")).toString());

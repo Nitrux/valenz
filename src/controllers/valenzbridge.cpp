@@ -31,6 +31,6 @@ ValenzBridge::ValenzBridge(QObject *parent)
 
     refreshMprisState();
     updateMprisRefreshTimer();
-    refreshWeather();
+    QTimer::singleShot(0, this, &ValenzBridge::refreshWeather);
     initializeControlCenterRuntime();
 }

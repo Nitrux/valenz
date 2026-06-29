@@ -149,6 +149,80 @@ QString variantToString(const QVariant &value)
     return {};
 }
 
+QString dbusMessageTypeName(QDBusMessage::MessageType type)
+{
+    switch (type)
+    {
+    case QDBusMessage::InvalidMessage:
+        return QStringLiteral("InvalidMessage");
+    case QDBusMessage::MethodCallMessage:
+        return QStringLiteral("MethodCallMessage");
+    case QDBusMessage::ReplyMessage:
+        return QStringLiteral("ReplyMessage");
+    case QDBusMessage::ErrorMessage:
+        return QStringLiteral("ErrorMessage");
+    case QDBusMessage::SignalMessage:
+        return QStringLiteral("SignalMessage");
+    }
+
+    return QStringLiteral("UnknownMessageType");
+}
+
+QString debugVariantValue(const QVariant &value)
+{
+    if (!value.isValid())
+        return QStringLiteral("<invalid>");
+
+    if (value.isNull())
+        return QStringLiteral("<null>");
+
+    if (value.canConvert<QDBusObjectPath>())
+        return value.value<QDBusObjectPath>().path();
+
+    if (value.canConvert<QString>())
+        return value.toString();
+
+    return QStringLiteral("%1 (%2)").arg(QString::fromUtf8(value.typeName()), value.toString());
+}
+
+void logDBusReply(const QString &context, const QDBusMessage &reply)
+{
+    QStringList arguments;
+    const QList<QVariant> replyArguments = reply.arguments();
+    arguments.reserve(replyArguments.size());
+    for (const QVariant &argument : replyArguments)
+        arguments.append(debugVariantValue(argument));
+
+    qInfo().noquote() << QStringLiteral("[systray] %1 reply type=%2 service=%3 path=%4 interface=%5 member=%6 error=%7 args=[%8]")
+                             .arg(context,
+                                  dbusMessageTypeName(reply.type()),
+                                  reply.service(),
+                                  reply.path(),
+                                  reply.interface(),
+                                  reply.member(),
+                                  reply.errorMessage().isEmpty() ? QStringLiteral("<none>") : reply.errorMessage(),
+                                  arguments.join(QStringLiteral(", ")));
+}
+
+void logMenuLayoutItem(const DBusMenuLayoutItem &item, int depth = 0)
+{
+    const QString indent(depth * 2, QLatin1Char(' '));
+    qInfo().noquote() << QStringLiteral("[systray] %1menu item id=%2 label=%3 enabled=%4 visible=%5 type=%6 childrenDisplay=%7 toggleType=%8 toggleState=%9 childCount=%10")
+                             .arg(indent,
+                                  QString::number(item.id),
+                                  item.properties.value(QStringLiteral("label")).toString(),
+                                  item.properties.value(QStringLiteral("enabled"), true).toBool() ? QStringLiteral("true") : QStringLiteral("false"),
+                                  item.properties.value(QStringLiteral("visible"), true).toBool() ? QStringLiteral("true") : QStringLiteral("false"),
+                                  item.properties.value(QStringLiteral("type")).toString(),
+                                  item.properties.value(QStringLiteral("children-display")).toString(),
+                                  item.properties.value(QStringLiteral("toggle-type")).toString(),
+                                  QString::number(item.properties.value(QStringLiteral("toggle-state")).toInt()),
+                                  QString::number(item.children.size()));
+
+    for (const DBusMenuLayoutItem &child : item.children)
+        logMenuLayoutItem(child, depth + 1);
+}
+
 bool resolveUsableIcon(const QString &candidate, QString *resolvedName, QString *resolvedSource)
 {
     if (!resolvedName || !resolvedSource)
@@ -917,6 +991,15 @@ void SystemTrayController::requestItemMethod(int index, const QString &method, i
     if (entry.service.isEmpty() || entry.objectPath.isEmpty() || method.trimmed().isEmpty())
         return;
 
+    qInfo().noquote() << QStringLiteral("[systray] requestItemMethod method=%1 index=%2 trayItemId=%3 title=%4 service=%5 objectPath=%6 x=%7 y=%8")
+                             .arg(method,
+                                  QString::number(index),
+                                  entry.id,
+                                  entry.title,
+                                  entry.service,
+                                  entry.objectPath,
+                                  QString::number(x),
+                                  QString::number(y));
 
     QDBusConnection bus = QDBusConnection::sessionBus();
     for (const QString &itemInterface : kItemInterfaces)
@@ -924,12 +1007,18 @@ void SystemTrayController::requestItemMethod(int index, const QString &method, i
         QDBusInterface itemIface(entry.service, entry.objectPath, itemInterface, bus);
         if (!itemIface.isValid())
         {
+            qInfo().noquote() << QStringLiteral("[systray] requestItemMethod skipped invalid interface=%1 lastError=%2")
+                                     .arg(itemInterface,
+                                          itemIface.lastError().message().isEmpty() ? QStringLiteral("<none>") : itemIface.lastError().message());
             continue;
         }
 
-        itemIface.call(method, x, y);
-        break;
+        const QDBusMessage reply = itemIface.call(method, x, y);
+        logDBusReply(QStringLiteral("item method %1").arg(method), reply);
+        return;
     }
+
+    qWarning().noquote() << QStringLiteral("[systray] requestItemMethod could not find a valid item interface for trayItemId=%1").arg(entry.id);
 }
 
 QVariantList SystemTrayController::trayMenuItems(int index) const
@@ -942,6 +1031,15 @@ QVariantList SystemTrayController::trayMenuItems(int index) const
     if (entry.service.isEmpty() || entry.objectPath.isEmpty())
         return items;
 
+    qInfo().noquote() << QStringLiteral("[systray] trayMenuItems index=%1 itemId=%2 title=%3 service=%4 objectPath=%5 menu=%6 itemIsMenu=%7")
+                             .arg(QString::number(index),
+                                  entry.id,
+                                  entry.title,
+                                  entry.service,
+                                  entry.objectPath,
+                                  entry.menu.isEmpty() ? QStringLiteral("<empty>") : entry.menu,
+                                  entry.itemIsMenu ? QStringLiteral("true") : QStringLiteral("false"));
+
     registerDBusMenuTypes();
 
     if (!entry.menu.trimmed().isEmpty())
@@ -953,6 +1051,7 @@ QVariantList SystemTrayController::trayMenuItems(int index) const
         if (menuIface.isValid())
         {
             const QDBusMessage reply = menuIface.call(QStringLiteral("GetLayout"), 0, 1, QStringList());
+            logDBusReply(QStringLiteral("GetLayout"), reply);
             if (reply.type() == QDBusMessage::ReplyMessage && reply.arguments().size() >= 2)
             {
                 const QVariant layoutVariant = reply.arguments().at(1);
@@ -966,13 +1065,27 @@ QVariantList SystemTrayController::trayMenuItems(int index) const
                 {
                     root = layoutVariant.value<DBusMenuLayoutItem>();
                 }
+                logMenuLayoutItem(root);
                 items = topLevelMenuItemsToList(root);
             }
+        }
+        else
+        {
+            qWarning().noquote() << QStringLiteral("[systray] trayMenuItems invalid menu interface service=%1 path=%2 lastError=%3")
+                                        .arg(entry.service,
+                                             entry.menu,
+                                             menuIface.lastError().message().isEmpty() ? QStringLiteral("<none>") : menuIface.lastError().message());
         }
     }
 
     if (!items.isEmpty())
+    {
+        qInfo().noquote() << QStringLiteral("[systray] trayMenuItems loaded %1 DBus menu entries for itemId=%2")
+                                 .arg(QString::number(items.size()), entry.id);
         return items;
+    }
+
+    qInfo().noquote() << QStringLiteral("[systray] trayMenuItems falling back to synthetic actions for itemId=%1").arg(entry.id);
 
     const QString activateText = entry.itemIsMenu ? QStringLiteral("Open") : QStringLiteral("Activate");
     items.push_back(QVariantMap {
@@ -1021,20 +1134,32 @@ void SystemTrayController::triggerTrayMenuItem(int index, int itemId)
     if (entry.service.isEmpty() || entry.objectPath.isEmpty())
         return;
 
+    qInfo().noquote() << QStringLiteral("[systray] triggerTrayMenuItem index=%1 itemId=%2 trayItemId=%3 title=%4 service=%5 objectPath=%6 menu=%7")
+                             .arg(QString::number(index),
+                                  QString::number(itemId),
+                                  entry.id,
+                                  entry.title,
+                                  entry.service,
+                                  entry.objectPath,
+                                  entry.menu.isEmpty() ? QStringLiteral("<empty>") : entry.menu);
+
     if (itemId == -1)
     {
+        qInfo().noquote() << QStringLiteral("[systray] triggerTrayMenuItem dispatching Activate for trayItemId=%1").arg(entry.id);
         activate(index);
         return;
     }
 
     if (itemId == -2)
     {
+        qInfo().noquote() << QStringLiteral("[systray] triggerTrayMenuItem dispatching SecondaryActivate for trayItemId=%1").arg(entry.id);
         secondaryActivate(index);
         return;
     }
 
     if (itemId == -3 || entry.menu.trimmed().isEmpty())
     {
+        qInfo().noquote() << QStringLiteral("[systray] triggerTrayMenuItem dispatching ContextMenu for trayItemId=%1").arg(entry.id);
         contextMenu(index);
         return;
     }
@@ -1045,14 +1170,23 @@ void SystemTrayController::triggerTrayMenuItem(int index, int itemId)
                              QStringLiteral("com.canonical.dbusmenu"),
                              QDBusConnection::sessionBus());
     if (!menuIface.isValid())
+    {
+        qWarning().noquote() << QStringLiteral("[systray] triggerTrayMenuItem invalid menu interface service=%1 path=%2 lastError=%3")
+                                    .arg(entry.service,
+                                         entry.menu,
+                                         menuIface.lastError().message().isEmpty() ? QStringLiteral("<none>") : menuIface.lastError().message());
         return;
+    }
 
     QDBusMessage eventCall = QDBusMessage::createMethodCall(entry.service,
                                                             entry.menu,
                                                             QStringLiteral("com.canonical.dbusmenu"),
                                                             QStringLiteral("Event"));
-    eventCall << itemId << QStringLiteral("clicked") << QString() << 0u;
-    QDBusConnection::sessionBus().call(eventCall);
+    eventCall << itemId << QStringLiteral("clicked") << QVariant::fromValue(QDBusVariant(QString())) << 0u;
+    qInfo().noquote() << QStringLiteral("[systray] triggerTrayMenuItem sending Event id=%1 eventId=clicked data=<empty-variant-string> timestamp=0")
+                             .arg(QString::number(itemId));
+    const QDBusMessage reply = QDBusConnection::sessionBus().call(eventCall);
+    logDBusReply(QStringLiteral("Event"), reply);
 }
 
 void SystemTrayController::setAvailable(bool available)
