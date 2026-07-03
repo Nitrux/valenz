@@ -22,6 +22,7 @@
 #include <QTimer>
 #include <QUrl>
 
+
 struct DBusMenuLayoutItem
 {
     int id = 0;
@@ -889,6 +890,21 @@ QVariantMap SystemTrayController::fetchItemProperties(const QString &service,
     return reply.value();
 }
 
+bool SystemTrayController::trayItemIsReachable(const TrayItemEntry &entry) const
+{
+    if (entry.service.isEmpty() || entry.objectPath.isEmpty())
+        return false;
+
+    for (const QString &itemInterface : kItemInterfaces)
+    {
+        const QVariantMap properties = fetchItemProperties(entry.service, entry.objectPath, itemInterface);
+        if (!properties.isEmpty())
+            return true;
+    }
+
+    return false;
+}
+
 int SystemTrayController::indexOfItemId(const QString &itemId) const
 {
     for (int i = 0; i < m_items.size(); ++i)
@@ -916,6 +932,12 @@ void SystemTrayController::requestItemMethod(int index, const QString &method, i
     const TrayItemEntry &entry = m_items.at(index);
     if (entry.service.isEmpty() || entry.objectPath.isEmpty() || method.trimmed().isEmpty())
         return;
+
+    if (!trayItemIsReachable(entry))
+    {
+        refresh();
+        return;
+    }
 
     QDBusConnection bus = QDBusConnection::sessionBus();
     for (const QString &itemInterface : kItemInterfaces)

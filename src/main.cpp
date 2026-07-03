@@ -5,6 +5,7 @@
 #include <QQmlContext>
 #include <QSurfaceFormat>
 #include <QProcess>
+#include <QTimer>
 #include <QDate>
 #include <QIcon>
 #include <QWindow>
@@ -194,6 +195,12 @@ int main(int argc, char *argv[])
             }
         }
     });
+
+    QObject::connect(&app, &QGuiApplication::applicationStateChanged, &systemTrayController,
+                     [&systemTrayController](Qt::ApplicationState state) {
+                         if (state == Qt::ApplicationActive)
+                             QTimer::singleShot(0, &systemTrayController, &SystemTrayController::refresh);
+                     });
 
     engine.load(url);
 

@@ -99,6 +99,7 @@ private:
     QVector<QString> fetchRegisteredItemIds() const;
     TrayItemEntry buildItem(const QString &itemId) const;
     QVariantMap fetchItemProperties(const QString &service, const QString &objectPath, const QString &itemInterface) const;
+    bool trayItemIsReachable(const TrayItemEntry &entry) const;
 
     int indexOfItemId(const QString &itemId) const;
     void replaceAllItems(const QVector<TrayItemEntry> &items);
