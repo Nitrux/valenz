@@ -9,6 +9,7 @@ constexpr auto kWindowBarLayerSpacingTopKey = "Window/barLayerSpacingTop";
 constexpr auto kWindowBarLayerSpacingBottomKey = "Window/barLayerSpacingBottom";
 constexpr auto kWindowBarLayerSpacingLeftKey = "Window/barLayerSpacingLeft";
 constexpr auto kWindowBarLayerSpacingRightKey = "Window/barLayerSpacingRight";
+constexpr auto kWindowScreenPlacementKey = "Window/screenPlacement";
 constexpr auto kSystemTrayDebugDetailsKey = "Debug/debugDetails";
 constexpr auto kDebugSimulatedBrightnessAvailableKey = "Debug/simulateBrightnessAvailable";
 constexpr auto kDebugSimulatedBrightnessPercentageKey = "Debug/simulateBrightnessPercentage";

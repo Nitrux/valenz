@@ -105,6 +105,7 @@ void ValenzBridge::initializeConfig()
     ensureKey(QString::fromLatin1(kWindowBarLayerSpacingBottomKey), QString(), 0);
     ensureKey(QString::fromLatin1(kWindowBarLayerSpacingLeftKey), QString(), 0);
     ensureKey(QString::fromLatin1(kWindowBarLayerSpacingRightKey), QString(), 0);
+    ensureKey(QString::fromLatin1(kWindowScreenPlacementKey), QString(), QStringLiteral("active"));
     ensureKey(QString::fromLatin1(kSystemTrayDebugDetailsKey), QString::fromLatin1(kLegacySystemTrayDebugDetailsKey), false);
     ensureKey(QString::fromLatin1(kDebugSimulatedBrightnessAvailableKey), QString(), false);
     ensureKey(QString::fromLatin1(kDebugSimulatedBrightnessPercentageKey), QString(), 65);
@@ -160,6 +161,9 @@ void ValenzBridge::initializeConfig()
     m_barLayerSpacingBottom = qBound(0, userSettings.value(kWindowBarLayerSpacingBottomKey, m_barLayerSpacing).toInt(), 64);
     m_barLayerSpacingLeft = qBound(0, userSettings.value(kWindowBarLayerSpacingLeftKey, m_barLayerSpacing).toInt(), 64);
     m_barLayerSpacingRight = qBound(0, userSettings.value(kWindowBarLayerSpacingRightKey, m_barLayerSpacing).toInt(), 64);
+    m_screenPlacement = normalizeScreenPlacement(userSettings.value(kWindowScreenPlacementKey, QStringLiteral("active")).toString());
+    userSettings.setValue(kWindowScreenPlacementKey, m_screenPlacement);
+    userSettings.sync();
     m_systemTrayDebugDetails = userSettings.value(kSystemTrayDebugDetailsKey, false).toBool();
     m_debugSimulatedBrightnessAvailable = userSettings.value(kDebugSimulatedBrightnessAvailableKey, false).toBool();
     m_debugSimulatedBrightnessPercentage = qBound(0, userSettings.value(kDebugSimulatedBrightnessPercentageKey, 65).toInt(), 100);
@@ -189,6 +193,7 @@ void ValenzBridge::persistControlCenterState() const
     userSettings.setValue(kControlCenterPowerCommandKey, m_controlCenterPowerCommand);
     userSettings.setValue(kControlCenterSettingsCommandKey, m_controlCenterSettingsCommand);
     userSettings.setValue(kControlCenterDiskUsagePathKey, m_controlCenterDiskUsagePath);
+    userSettings.setValue(kWindowScreenPlacementKey, m_screenPlacement);
     userSettings.sync();
 }
 

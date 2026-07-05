@@ -177,6 +177,15 @@ inline QString normalizeControlCenterIconMode(const QString &value)
     return QStringLiteral("system16");
 }
 
+inline QString normalizeScreenPlacement(const QString &value)
+{
+    const QString normalized = value.trimmed().toLower();
+    if (normalized == QLatin1String("all"))
+        return QStringLiteral("all");
+
+    return QStringLiteral("active");
+}
+
 inline QString weatherIconFromCode(int weatherCode, bool isDay)
 {
     Q_UNUSED(isDay)

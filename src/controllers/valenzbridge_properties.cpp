@@ -124,6 +124,22 @@ bool ValenzBridge::mediaPlaying() const
     return m_mediaPlaying;
 }
 
+QString ValenzBridge::screenPlacement() const
+{
+    return m_screenPlacement;
+}
+
+void ValenzBridge::setScreenPlacement(const QString &placement)
+{
+    const QString normalized = normalizeScreenPlacement(placement);
+    if (m_screenPlacement == normalized)
+        return;
+
+    m_screenPlacement = normalized;
+    persistControlCenterState();
+    Q_EMIT screenPlacementChanged(m_screenPlacement);
+}
+
 void ValenzBridge::setMediaPlaying(bool playing)
 {
     if (m_mediaPlaying == playing)

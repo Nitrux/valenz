@@ -68,6 +68,7 @@ class ValenzBridge : public QObject
     Q_PROPERTY(int barLayerSpacingBottom READ barLayerSpacingBottom CONSTANT FINAL)
     Q_PROPERTY(int barLayerSpacingLeft READ barLayerSpacingLeft CONSTANT FINAL)
     Q_PROPERTY(int barLayerSpacingRight READ barLayerSpacingRight CONSTANT FINAL)
+    Q_PROPERTY(QString screenPlacement READ screenPlacement WRITE setScreenPlacement NOTIFY screenPlacementChanged FINAL)
     Q_PROPERTY(bool systemTrayDebugDetails READ systemTrayDebugDetails CONSTANT FINAL)
     Q_PROPERTY(bool agendaInstalled READ agendaInstalled NOTIFY agendaInstalledChanged FINAL)
     Q_PROPERTY(QString weatherIconName READ weatherIconName WRITE setWeatherIconName NOTIFY weatherIconNameChanged FINAL)
@@ -176,6 +177,8 @@ public:
     int barLayerSpacingBottom() const;
     int barLayerSpacingLeft() const;
     int barLayerSpacingRight() const;
+    QString screenPlacement() const;
+    void setScreenPlacement(const QString &placement);
     bool systemTrayDebugDetails() const;
     bool agendaInstalled() const;
     QString weatherIconName() const;
@@ -234,6 +237,7 @@ Q_SIGNALS:
     void controlCenterPowerCommandChanged(const QString &command);
     void controlCenterSettingsCommandChanged(const QString &command);
     void controlCenterDiskUsagePathChanged(const QString &path);
+    void screenPlacementChanged(const QString &placement);
     void controlCenterIconModeChanged(const QString &mode);
     void controlCenterNetworkModeChanged(const QString &state);
     void controlCenterBluetoothStateChanged(const QString &state);
@@ -371,6 +375,7 @@ private:
     QString m_controlCenterPowerCommand = QStringLiteral("wlogout");
     QString m_controlCenterSettingsCommand = QStringLiteral("systemsettings");
     QString m_controlCenterDiskUsagePath = QStringLiteral("/");
+    QString m_screenPlacement = QStringLiteral("active");
     int m_barHeight = 56;
     int m_barLayerSpacing = 0;
     int m_barLayerSpacingTop = 0;

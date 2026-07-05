@@ -2,10 +2,13 @@
 
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QQmlComponent>
 #include <QQmlContext>
 #include <QSurfaceFormat>
 #include <QProcess>
 #include <QTimer>
+#include <QDebug>
+#include <QQmlError>
 #include <QDate>
 #include <QIcon>
 #include <QWindow>
@@ -14,6 +17,8 @@
 #include <QMargins>
 #include <QStandardPaths>
 #include <QScreen>
+#include <QHash>
+#include <QPointer>
 
 #include <LayerShellQt/Shell>
 #include <LayerShellQt/Window>
@@ -34,7 +39,7 @@ class LayerShellPopupHelper : public QObject
 public:
     explicit LayerShellPopupHelper(QObject *parent = nullptr) : QObject(parent) {}
 
-    Q_INVOKABLE void configurePopupWindow(QWindow *window, const QString &scope, bool keyboardOnDemand)
+    Q_INVOKABLE void configurePopupWindow(QWindow *window, const QString &scope, bool keyboardOnDemand, bool wantsActiveScreen)
     {
         if (!window)
             return;
@@ -48,8 +53,9 @@ public:
         layerShellWindow->setKeyboardInteractivity(keyboardOnDemand
                                                         ? LayerShellQt::Window::KeyboardInteractivityOnDemand
                                                         : LayerShellQt::Window::KeyboardInteractivityNone);
-        layerShellWindow->setWantsToBeOnActiveScreen(true);
-        layerShellWindow->setScreen(window->screen());
+        layerShellWindow->setWantsToBeOnActiveScreen(wantsActiveScreen);
+        if (!wantsActiveScreen && window->screen())
+            layerShellWindow->setScreen(window->screen());
 
         LayerShellQt::Window::Anchors anchors{};
         layerShellWindow->setAnchors(anchors);
@@ -85,7 +91,7 @@ private:
     QProcess m_proxy;
 };
 
-static void configureLayerShellWindow(QWindow *window)
+static void configureLayerShellWindow(QWindow *window, bool wantsActiveScreen)
 {
     if (!window)
         return;
@@ -110,8 +116,9 @@ static void configureLayerShellWindow(QWindow *window)
     const int appliedRight = hasDirectionalSpacing ? spacingRight : 0;
     const int exclusiveZone = barHeight + appliedTop + appliedBottom;
     layerShellWindow->setExclusiveZone(exclusiveZone > 0 ? exclusiveZone : window->height());
-    layerShellWindow->setWantsToBeOnActiveScreen(true);
-    layerShellWindow->setScreen(window->screen());
+    layerShellWindow->setWantsToBeOnActiveScreen(wantsActiveScreen);
+    if (!wantsActiveScreen && window->screen())
+        layerShellWindow->setScreen(window->screen());
 
     LayerShellQt::Window::Anchors anchors;
     anchors |= LayerShellQt::Window::AnchorTop;
@@ -182,27 +189,75 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty(QStringLiteral("notificationsController"), &notificationsController);
 
     const QUrl url(QStringLiteral("qrc:/app/valenz/main.qml"));
-    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated, &app,
-                     [url](QObject *obj, const QUrl &objUrl)
-    {
-        if (!obj && url == objUrl)
-            QCoreApplication::exit(-1);
-        if (obj && url == objUrl) {
-            if (auto *window = qobject_cast<QWindow *>(obj)) {
-                window->close();
-                configureLayerShellWindow(window);
-                window->show();
-            }
+    QQmlComponent component(&engine, url);
+    if (component.isError()) {
+        for (const QQmlError &error : component.errors())
+            qWarning().noquote() << error.toString();
+        return -1;
+    }
+
+    const bool allScreensMode = valenzBridge.screenPlacement() == QLatin1String("all");
+    QHash<QScreen *, QPointer<QWindow>> screenWindows;
+
+    const auto createBarWindow = [&](QScreen *screen) -> QWindow * {
+        if (allScreensMode && screen && screenWindows.contains(screen) && screenWindows.value(screen))
+            return screenWindows.value(screen);
+
+        QObject *object = component.create(engine.rootContext());
+        if (!object) {
+            for (const QQmlError &error : component.errors())
+                qWarning().noquote() << error.toString();
+            return nullptr;
         }
-    });
+
+        auto *window = qobject_cast<QWindow *>(object);
+        if (!window) {
+            object->deleteLater();
+            return nullptr;
+        }
+
+        if (screen)
+            window->setScreen(screen);
+
+        window->close();
+        configureLayerShellWindow(window, !allScreensMode);
+        window->show();
+
+        if (allScreensMode && screen) {
+            screenWindows.insert(screen, window);
+            QObject::connect(window, &QObject::destroyed, &app, [&, screen]() {
+                screenWindows.remove(screen);
+            });
+        }
+
+        return window;
+    };
+
+    if (allScreensMode) {
+        const QList<QScreen *> screens = app.screens();
+        for (QScreen *screen : screens)
+            createBarWindow(screen);
+
+        QObject::connect(&app, &QGuiApplication::screenAdded, &app,
+                         [&](QScreen *screen) {
+                             createBarWindow(screen);
+                         });
+        QObject::connect(&app, &QGuiApplication::screenRemoved, &app,
+                         [&](QScreen *screen) {
+                             const auto it = screenWindows.find(screen);
+                             if (it != screenWindows.end() && it.value())
+                                 it.value()->deleteLater();
+                             screenWindows.remove(screen);
+                         });
+    } else {
+        createBarWindow(nullptr);
+    }
 
     QObject::connect(&app, &QGuiApplication::applicationStateChanged, &systemTrayController,
                      [&systemTrayController](Qt::ApplicationState state) {
                          if (state == Qt::ApplicationActive)
                              QTimer::singleShot(0, &systemTrayController, &SystemTrayController::refresh);
                      });
-
-    engine.load(url);
 
     return app.exec();
 }
