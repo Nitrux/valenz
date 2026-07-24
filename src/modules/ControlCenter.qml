@@ -641,7 +641,6 @@ Window
                                 Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                                 Layout.minimumHeight: 28
                                 text: i18n("Shutdown")
-                                icon.name: "system-shutdown"
                                 display: ToolButton.TextBesideIcon
 
                                 background: Rectangle

@@ -20,6 +20,9 @@
 #include <QHash>
 #include <QPointer>
 
+#include <functional>
+#include <utility>
+
 #include <LayerShellQt/Shell>
 #include <LayerShellQt/Window>
 
@@ -115,7 +118,9 @@ static void configureLayerShellWindow(QWindow *window, bool wantsActiveScreen)
     const int appliedLeft = hasDirectionalSpacing ? spacingLeft : 0;
     const int appliedRight = hasDirectionalSpacing ? spacingRight : 0;
     const int exclusiveZone = barHeight + appliedTop + appliedBottom;
-    layerShellWindow->setExclusiveZone(exclusiveZone > 0 ? exclusiveZone : window->height());
+    layerShellWindow->setExclusiveZone(window->isVisible()
+                                           ? (exclusiveZone > 0 ? exclusiveZone : window->height())
+                                           : 0);
     layerShellWindow->setWantsToBeOnActiveScreen(wantsActiveScreen);
     if (!wantsActiveScreen && window->screen())
         layerShellWindow->setScreen(window->screen());
@@ -196,12 +201,24 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    const bool allScreensMode = valenzBridge.screenPlacement() == QLatin1String("all");
+    bool allScreensMode = false;
     QHash<QScreen *, QPointer<QWindow>> screenWindows;
+    QPointer<QWindow> activeScreenWindow;
 
-    const auto createBarWindow = [&](QScreen *screen) -> QWindow * {
-        if (allScreensMode && screen && screenWindows.contains(screen) && screenWindows.value(screen))
+    const auto scheduleWindowConfigure = [&](QWindow *window) {
+        const QPointer<QWindow> guardedWindow(window);
+        QTimer::singleShot(0, &app, [guardedWindow, &allScreensMode] {
+            if (guardedWindow)
+                configureLayerShellWindow(guardedWindow, !allScreensMode);
+        });
+    };
+
+    std::function<QWindow *(QScreen *)> createBarWindow;
+    createBarWindow = [&](QScreen *screen) -> QWindow * {
+        if (allScreensMode && screen && screenWindows.value(screen))
             return screenWindows.value(screen);
+        if (!allScreensMode && activeScreenWindow)
+            return activeScreenWindow;
 
         QObject *object = component.create(engine.rootContext());
         if (!object) {
@@ -219,39 +236,119 @@ int main(int argc, char *argv[])
         if (screen)
             window->setScreen(screen);
 
+        QObject::connect(window, &QWindow::widthChanged, window,
+                         [&, window](int) { scheduleWindowConfigure(window); });
+        QObject::connect(window, &QWindow::heightChanged, window,
+                         [&, window](int) { scheduleWindowConfigure(window); });
+        QObject::connect(window, &QWindow::visibleChanged, window,
+                         [&, window](bool) { scheduleWindowConfigure(window); });
+
         window->close();
         configureLayerShellWindow(window, !allScreensMode);
         window->show();
 
         if (allScreensMode && screen) {
             screenWindows.insert(screen, window);
-            QObject::connect(window, &QObject::destroyed, &app, [&, screen]() {
-                screenWindows.remove(screen);
+            QObject::connect(window, &QObject::destroyed, &app, [&, screen, window] {
+                if (screenWindows.value(screen).data() == window)
+                    screenWindows.remove(screen);
+            });
+        } else {
+            activeScreenWindow = window;
+            QObject::connect(window, &QObject::destroyed, &app, [&, window] {
+                if (activeScreenWindow.data() == window)
+                    activeScreenWindow.clear();
             });
         }
 
         return window;
     };
 
-    if (allScreensMode) {
-        const QList<QScreen *> screens = app.screens();
-        for (QScreen *screen : screens)
-            createBarWindow(screen);
+    const auto reconcileBarWindows = [&] {
+        const bool wantsAllScreens = valenzBridge.screenPlacement() == QLatin1String("all");
+        if (wantsAllScreens) {
+            const QPointer<QWindow> previousActiveWindow = activeScreenWindow;
+            allScreensMode = true;
+            for (QScreen *screen : app.screens())
+                createBarWindow(screen);
 
-        QObject::connect(&app, &QGuiApplication::screenAdded, &app,
-                         [&](QScreen *screen) {
-                             createBarWindow(screen);
-                         });
-        QObject::connect(&app, &QGuiApplication::screenRemoved, &app,
-                         [&](QScreen *screen) {
-                             const auto it = screenWindows.find(screen);
-                             if (it != screenWindows.end() && it.value())
-                                 it.value()->deleteLater();
-                             screenWindows.remove(screen);
-                         });
-    } else {
+            if (!screenWindows.isEmpty()) {
+                activeScreenWindow.clear();
+                if (previousActiveWindow) {
+                    previousActiveWindow->close();
+                    previousActiveWindow->deleteLater();
+                }
+            } else {
+                allScreensMode = false;
+                activeScreenWindow = previousActiveWindow;
+                if (activeScreenWindow)
+                    scheduleWindowConfigure(activeScreenWindow);
+            }
+            return;
+        }
+
+        const auto previousScreenWindows = screenWindows;
+        screenWindows.clear();
+        allScreensMode = false;
         createBarWindow(nullptr);
-    }
+        if (!activeScreenWindow) {
+            screenWindows = previousScreenWindows;
+            allScreensMode = true;
+            for (const QPointer<QWindow> &window : std::as_const(screenWindows)) {
+                if (window)
+                    scheduleWindowConfigure(window);
+            }
+            return;
+        }
+
+        for (const QPointer<QWindow> &window : previousScreenWindows) {
+            if (window) {
+                window->close();
+                window->deleteLater();
+            }
+        }
+    };
+
+
+    const auto reconfigureBarWindows = [&] {
+        if (activeScreenWindow)
+            scheduleWindowConfigure(activeScreenWindow);
+        for (const QPointer<QWindow> &window : std::as_const(screenWindows)) {
+            if (window)
+                scheduleWindowConfigure(window);
+        }
+    };
+
+    QObject::connect(&valenzBridge, &ValenzBridge::screenPlacementChanged, &app,
+                     [&](const QString &) { reconcileBarWindows(); });
+    QObject::connect(&valenzBridge, &ValenzBridge::barHeightChanged, &app,
+                     [&](int) { reconfigureBarWindows(); });
+    QObject::connect(&valenzBridge, &ValenzBridge::barLayerSpacingChanged, &app,
+                     [&](int) { reconfigureBarWindows(); });
+    QObject::connect(&valenzBridge, &ValenzBridge::barLayerSpacingTopChanged, &app,
+                     [&](int) { reconfigureBarWindows(); });
+    QObject::connect(&valenzBridge, &ValenzBridge::barLayerSpacingBottomChanged, &app,
+                     [&](int) { reconfigureBarWindows(); });
+    QObject::connect(&valenzBridge, &ValenzBridge::barLayerSpacingLeftChanged, &app,
+                     [&](int) { reconfigureBarWindows(); });
+    QObject::connect(&valenzBridge, &ValenzBridge::barLayerSpacingRightChanged, &app,
+                     [&](int) { reconfigureBarWindows(); });
+
+    QObject::connect(&app, &QGuiApplication::screenAdded, &app,
+                     [&](QScreen *screen) {
+                         if (allScreensMode)
+                             createBarWindow(screen);
+                     });
+    QObject::connect(&app, &QGuiApplication::screenRemoved, &app,
+                     [&](QScreen *screen) {
+                         const QPointer<QWindow> window = screenWindows.take(screen);
+                         if (window) {
+                             window->close();
+                             window->deleteLater();
+                         }
+                     });
+
+    reconcileBarWindows();
 
     QObject::connect(&app, &QGuiApplication::applicationStateChanged, &systemTrayController,
                      [&systemTrayController](Qt::ApplicationState state) {

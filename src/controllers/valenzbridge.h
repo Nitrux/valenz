@@ -11,6 +11,7 @@
 class QLocalSocket;
 class QNetworkAccessManager;
 class QNetworkReply;
+class QFileSystemWatcher;
 class QTimer;
 
 class ValenzBridge : public QObject
@@ -62,14 +63,14 @@ class ValenzBridge : public QObject
     Q_PROPERTY(QString controlCenterPowerCommand READ controlCenterPowerCommand WRITE setControlCenterPowerCommand NOTIFY controlCenterPowerCommandChanged FINAL)
     Q_PROPERTY(QString controlCenterSettingsCommand READ controlCenterSettingsCommand WRITE setControlCenterSettingsCommand NOTIFY controlCenterSettingsCommandChanged FINAL)
     Q_PROPERTY(QString controlCenterDiskUsagePath READ controlCenterDiskUsagePath WRITE setControlCenterDiskUsagePath NOTIFY controlCenterDiskUsagePathChanged FINAL)
-    Q_PROPERTY(int barHeight READ barHeight CONSTANT FINAL)
-    Q_PROPERTY(int barLayerSpacing READ barLayerSpacing CONSTANT FINAL)
-    Q_PROPERTY(int barLayerSpacingTop READ barLayerSpacingTop CONSTANT FINAL)
-    Q_PROPERTY(int barLayerSpacingBottom READ barLayerSpacingBottom CONSTANT FINAL)
-    Q_PROPERTY(int barLayerSpacingLeft READ barLayerSpacingLeft CONSTANT FINAL)
-    Q_PROPERTY(int barLayerSpacingRight READ barLayerSpacingRight CONSTANT FINAL)
+    Q_PROPERTY(int barHeight READ barHeight NOTIFY barHeightChanged FINAL)
+    Q_PROPERTY(int barLayerSpacing READ barLayerSpacing NOTIFY barLayerSpacingChanged FINAL)
+    Q_PROPERTY(int barLayerSpacingTop READ barLayerSpacingTop NOTIFY barLayerSpacingTopChanged FINAL)
+    Q_PROPERTY(int barLayerSpacingBottom READ barLayerSpacingBottom NOTIFY barLayerSpacingBottomChanged FINAL)
+    Q_PROPERTY(int barLayerSpacingLeft READ barLayerSpacingLeft NOTIFY barLayerSpacingLeftChanged FINAL)
+    Q_PROPERTY(int barLayerSpacingRight READ barLayerSpacingRight NOTIFY barLayerSpacingRightChanged FINAL)
     Q_PROPERTY(QString screenPlacement READ screenPlacement WRITE setScreenPlacement NOTIFY screenPlacementChanged FINAL)
-    Q_PROPERTY(bool systemTrayDebugDetails READ systemTrayDebugDetails CONSTANT FINAL)
+    Q_PROPERTY(bool systemTrayDebugDetails READ systemTrayDebugDetails NOTIFY systemTrayDebugDetailsChanged FINAL)
     Q_PROPERTY(bool agendaInstalled READ agendaInstalled NOTIFY agendaInstalledChanged FINAL)
     Q_PROPERTY(QString weatherIconName READ weatherIconName WRITE setWeatherIconName NOTIFY weatherIconNameChanged FINAL)
     Q_PROPERTY(QString weatherTemperature READ weatherTemperature WRITE setWeatherTemperature NOTIFY weatherTemperatureChanged FINAL)
@@ -237,7 +238,14 @@ Q_SIGNALS:
     void controlCenterPowerCommandChanged(const QString &command);
     void controlCenterSettingsCommandChanged(const QString &command);
     void controlCenterDiskUsagePathChanged(const QString &path);
+    void barHeightChanged(int height);
+    void barLayerSpacingChanged(int spacing);
+    void barLayerSpacingTopChanged(int spacing);
+    void barLayerSpacingBottomChanged(int spacing);
+    void barLayerSpacingLeftChanged(int spacing);
+    void barLayerSpacingRightChanged(int spacing);
     void screenPlacementChanged(const QString &placement);
+    void systemTrayDebugDetailsChanged(bool enabled);
     void controlCenterIconModeChanged(const QString &mode);
     void controlCenterNetworkModeChanged(const QString &state);
     void controlCenterBluetoothStateChanged(const QString &state);
@@ -274,6 +282,8 @@ Q_SIGNALS:
     void weatherRefreshMinutesChanged(int minutes);
 
 private Q_SLOTS:
+    void scheduleConfigReload();
+    void reloadConfig();
     void onMprisPropertiesChanged(const QString &interfaceName, const QVariantMap &changedProperties, const QStringList &invalidatedProperties);
     void onMprisNameOwnerChanged(const QString &serviceName, const QString &oldOwner, const QString &newOwner);
     void onWeatherReplyFinished(QNetworkReply *reply);
@@ -281,6 +291,8 @@ private Q_SLOTS:
 private:
     int clampWorkspace(int workspace) const;
     void initializeConfig();
+    void initializeConfigWatcher();
+    void refreshConfigWatchPaths();
     void connectHyprlandEventSocket();
     void scheduleHyprlandEventSocketReconnect();
     void handleHyprlandEventData();
@@ -392,6 +404,9 @@ private:
     QString m_weatherTemperatureUnit = QStringLiteral("celsius");
     int m_weatherRefreshMinutes = 20;
     QString m_userConfigPath;
+    QString m_userConfigDirPath;
+    QFileSystemWatcher *m_configWatcher = nullptr;
+    QTimer *m_configReloadTimer = nullptr;
     QLocalSocket *m_hyprlandEventSocket = nullptr;
     QByteArray m_hyprlandEventBuffer;
     QTimer *m_workspaceRefreshTimer = nullptr;

@@ -4,6 +4,9 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QFileSystemWatcher>
+#include <QSettings>
+#include <QTimer>
 #include <QUrl>
 
 QString ValenzBridge::configFilePath() const
@@ -54,6 +57,7 @@ int ValenzBridge::clampWorkspace(int workspace) const
 void ValenzBridge::initializeConfig()
 {
     const QString configDir = QDir::home().filePath(".config/valenz");
+    m_userConfigDirPath = configDir;
     QDir dir;
     dir.mkpath(configDir);
 
@@ -181,6 +185,134 @@ void ValenzBridge::initializeConfig()
     m_weatherTemperature = m_weatherTemperatureUnit == QLatin1String("fahrenheit") ? QStringLiteral("--°F") : QStringLiteral("--°C");
     m_weatherConditionLabel = QString();
     m_weatherLocationName = QString();
+}
+
+void ValenzBridge::initializeConfigWatcher()
+{
+    m_configWatcher = new QFileSystemWatcher(this);
+    m_configReloadTimer = new QTimer(this);
+    m_configReloadTimer->setSingleShot(true);
+    m_configReloadTimer->setInterval(200);
+
+    connect(m_configWatcher, &QFileSystemWatcher::fileChanged, this, &ValenzBridge::scheduleConfigReload);
+    connect(m_configWatcher, &QFileSystemWatcher::directoryChanged, this, &ValenzBridge::scheduleConfigReload);
+    connect(m_configReloadTimer, &QTimer::timeout, this, &ValenzBridge::reloadConfig);
+    refreshConfigWatchPaths();
+}
+
+void ValenzBridge::refreshConfigWatchPaths()
+{
+    if (!m_configWatcher)
+        return;
+
+    if (!m_configWatcher->directories().contains(m_userConfigDirPath))
+        m_configWatcher->addPath(m_userConfigDirPath);
+
+    if (QFileInfo::exists(m_userConfigPath) && !m_configWatcher->files().contains(m_userConfigPath))
+        m_configWatcher->addPath(m_userConfigPath);
+}
+
+void ValenzBridge::scheduleConfigReload()
+{
+    if (m_configReloadTimer)
+        m_configReloadTimer->start();
+}
+
+void ValenzBridge::reloadConfig()
+{
+    refreshConfigWatchPaths();
+    if (!QFileInfo::exists(m_userConfigPath))
+        return;
+
+    QSettings settings(m_userConfigPath, QSettings::IniFormat);
+    settings.sync();
+
+    const auto update = [](auto &current, const auto &value, const auto &notify) {
+        if (current == value)
+            return false;
+        current = value;
+        notify();
+        return true;
+    };
+
+    update(m_controlCenterIconMode,
+           normalizeControlCenterIconMode(settings.value(kControlCenterIconModeKey, QStringLiteral("system16")).toString()),
+           [this] { Q_EMIT controlCenterIconModeChanged(m_controlCenterIconMode); });
+    update(m_controlCenterPowerCommand,
+           normalizePowerCommand(settings.value(kControlCenterPowerCommandKey, QStringLiteral("wlogout")).toString()),
+           [this] { Q_EMIT controlCenterPowerCommandChanged(m_controlCenterPowerCommand); });
+
+    QString settingsCommand = settings.value(kControlCenterSettingsCommandKey, QStringLiteral("systemsettings")).toString().trimmed();
+    if (settingsCommand.isEmpty())
+        settingsCommand = QStringLiteral("systemsettings");
+    update(m_controlCenterSettingsCommand, settingsCommand,
+           [this] { Q_EMIT controlCenterSettingsCommandChanged(m_controlCenterSettingsCommand); });
+
+    QString diskUsagePath = settings.value(kControlCenterDiskUsagePathKey, QStringLiteral("/")).toString().trimmed();
+    if (diskUsagePath.isEmpty())
+        diskUsagePath = QStringLiteral("/");
+    if (!diskUsagePath.startsWith(QLatin1Char('/')))
+        diskUsagePath.prepend(QLatin1Char('/'));
+    const bool diskUsagePathChanged = update(m_controlCenterDiskUsagePath, diskUsagePath,
+                                             [this] { Q_EMIT controlCenterDiskUsagePathChanged(m_controlCenterDiskUsagePath); });
+
+    update(m_mprisAlwaysVisible, settings.value(kMprisAlwaysVisibleKey, false).toBool(),
+           [this] { Q_EMIT mprisAlwaysVisibleChanged(m_mprisAlwaysVisible); });
+    update(m_barHeight, qBound(1, settings.value(kWindowBarHeightKey, 56).toInt(), kWindowBarHeightMax),
+           [this] { Q_EMIT barHeightChanged(m_barHeight); });
+    update(m_barLayerSpacing, qBound(0, settings.value(kWindowBarLayerSpacingKey, 0).toInt(), 64),
+           [this] { Q_EMIT barLayerSpacingChanged(m_barLayerSpacing); });
+    update(m_barLayerSpacingTop, qBound(0, settings.value(kWindowBarLayerSpacingTopKey, m_barLayerSpacing).toInt(), 64),
+           [this] { Q_EMIT barLayerSpacingTopChanged(m_barLayerSpacingTop); });
+    update(m_barLayerSpacingBottom, qBound(0, settings.value(kWindowBarLayerSpacingBottomKey, m_barLayerSpacing).toInt(), 64),
+           [this] { Q_EMIT barLayerSpacingBottomChanged(m_barLayerSpacingBottom); });
+    update(m_barLayerSpacingLeft, qBound(0, settings.value(kWindowBarLayerSpacingLeftKey, m_barLayerSpacing).toInt(), 64),
+           [this] { Q_EMIT barLayerSpacingLeftChanged(m_barLayerSpacingLeft); });
+    update(m_barLayerSpacingRight, qBound(0, settings.value(kWindowBarLayerSpacingRightKey, m_barLayerSpacing).toInt(), 64),
+           [this] { Q_EMIT barLayerSpacingRightChanged(m_barLayerSpacingRight); });
+    update(m_screenPlacement,
+           normalizeScreenPlacement(settings.value(kWindowScreenPlacementKey, QStringLiteral("active")).toString()),
+           [this] { Q_EMIT screenPlacementChanged(m_screenPlacement); });
+    update(m_systemTrayDebugDetails, settings.value(kSystemTrayDebugDetailsKey, false).toBool(),
+           [this] { Q_EMIT systemTrayDebugDetailsChanged(m_systemTrayDebugDetails); });
+
+    bool controlCenterRuntimeChanged = false;
+    controlCenterRuntimeChanged |= update(m_debugSimulatedBrightnessAvailable,
+                                          settings.value(kDebugSimulatedBrightnessAvailableKey, false).toBool(), [] {});
+    controlCenterRuntimeChanged |= update(m_debugSimulatedBrightnessPercentage,
+                                          qBound(0, settings.value(kDebugSimulatedBrightnessPercentageKey, 65).toInt(), 100), [] {});
+    controlCenterRuntimeChanged |= update(m_debugSimulatedBatteryAvailable,
+                                          settings.value(kDebugSimulatedBatteryAvailableKey, false).toBool(), [] {});
+    controlCenterRuntimeChanged |= update(m_debugSimulatedBatteryPercentage,
+                                          qBound(0, settings.value(kDebugSimulatedBatteryPercentageKey, 72).toInt(), 100), [] {});
+    controlCenterRuntimeChanged |= update(m_debugSimulatedBatteryCharging,
+                                          settings.value(kDebugSimulatedBatteryChargingKey, false).toBool(), [] {});
+    controlCenterRuntimeChanged |= update(m_debugSimulatedBatteryOnAcPower,
+                                          settings.value(kDebugSimulatedBatteryOnAcPowerKey, false).toBool(), [] {});
+
+    bool weatherChanged = false;
+    weatherChanged |= update(m_weatherLatitude,
+                             normalizeWeatherCoordinate(settings.value(kWeatherLatitudeKey, 40.7128), -90.0, 90.0, 40.7128),
+                             [this] { Q_EMIT weatherLatitudeChanged(m_weatherLatitude); });
+    weatherChanged |= update(m_weatherLongitude,
+                             normalizeWeatherCoordinate(settings.value(kWeatherLongitudeKey, -74.0060), -180.0, 180.0, -74.0060),
+                             [this] { Q_EMIT weatherLongitudeChanged(m_weatherLongitude); });
+    weatherChanged |= update(m_weatherTemperatureUnit,
+                             normalizeWeatherTemperatureUnit(settings.value(kWeatherTemperatureUnitKey, QStringLiteral("celsius")).toString()),
+                             [this] { Q_EMIT weatherTemperatureUnitChanged(m_weatherTemperatureUnit); });
+    const bool weatherIntervalChanged = update(m_weatherRefreshMinutes,
+                                               normalizeWeatherRefreshMinutes(settings.value(kWeatherRefreshMinutesKey, 20)),
+                                               [this] { Q_EMIT weatherRefreshMinutesChanged(m_weatherRefreshMinutes); });
+    weatherChanged |= weatherIntervalChanged;
+
+    if (weatherIntervalChanged)
+        updateWeatherRefreshTimerInterval();
+    if (weatherChanged)
+        refreshWeather();
+    if (diskUsagePathChanged)
+        refreshControlCenterSystemResourcesState();
+    if (controlCenterRuntimeChanged)
+        refreshControlCenterRuntimeState();
 }
 
 void ValenzBridge::persistControlCenterState() const

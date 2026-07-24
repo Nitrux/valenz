@@ -27,13 +27,22 @@ void ValenzBridge::onWeatherReplyFinished(QNetworkReply *reply)
         return;
 
     const bool success = reply->error() == QNetworkReply::NoError;
-    const QByteArray payload = reply->readAll();
+    const QByteArray payload = success && reply->isReadable()
+                                   ? reply->readAll()
+                                   : QByteArray();
     const QString errorString = reply->errorString();
     reply->deleteLater();
 
     if (!success)
     {
         trace(QStringLiteral("weather"), QStringLiteral("refresh_failed"), errorString);
+        QTimer::singleShot(15000, this, &ValenzBridge::refreshWeather);
+        return;
+    }
+
+    if (payload.isEmpty())
+    {
+        trace(QStringLiteral("weather"), QStringLiteral("empty_reply"));
         QTimer::singleShot(15000, this, &ValenzBridge::refreshWeather);
         return;
     }
