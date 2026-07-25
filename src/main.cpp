@@ -10,7 +10,9 @@
 #include <QDebug>
 #include <QQmlError>
 #include <QDate>
+#include <QDir>
 #include <QIcon>
+#include <QLockFile>
 #include <QWindow>
 #include <QObject>
 #include <QUrl>
@@ -20,6 +22,7 @@
 #include <QHash>
 #include <QPointer>
 
+#include <algorithm>
 #include <functional>
 #include <utility>
 
@@ -139,6 +142,20 @@ static QString desktopFileNameForPortal()
     return QStringLiteral("org.maui.valenz");
 }
 
+static bool isUsableScreen(const QScreen *screen)
+{
+    // Qt creates an unnamed placeholder QScreen while Wayland has no outputs.
+    // A layer surface created for it cannot be associated with a wl_output.
+    return screen && !screen->name().isEmpty();
+}
+
+static bool hasUsableScreen()
+{
+    const QList<QScreen *> screens = QGuiApplication::screens();
+    return std::any_of(screens.cbegin(), screens.cend(),
+                       [](const QScreen *screen) { return isUsableScreen(screen); });
+}
+
 int main(int argc, char *argv[])
 {
     KLocalizedString::setApplicationDomain("valenz");
@@ -158,11 +175,34 @@ int main(int argc, char *argv[])
     aboutData.setBugAddress(QByteArrayLiteral("https://github.com/Nitrux/valenz/issues"));
     aboutData.addAuthor(QStringLiteral("Uri Herrera"), i18n("Developer"), QStringLiteral("uri_herrera@nxos.org"));
     QGuiApplication app(argc, argv);
+    app.setQuitOnLastWindowClosed(false);
     app.setApplicationName(QStringLiteral("valenz"));
     app.setApplicationDisplayName(QStringLiteral("Valenz"));
     app.setApplicationVersion(QStringLiteral("0.1.0"));
     app.setWindowIcon(QIcon::fromTheme(QStringLiteral("preferences-system-windows")));
     app.setOrganizationName(QStringLiteral("Maui"));
+
+    QString instanceDirectory =
+        QStandardPaths::writableLocation(QStandardPaths::RuntimeLocation);
+    if (instanceDirectory.isEmpty())
+        instanceDirectory =
+            QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+    if (instanceDirectory.isEmpty() || !QDir().mkpath(instanceDirectory)) {
+        qCritical() << "Valenz could not create its single-instance lock directory.";
+        return -1;
+    }
+
+    QLockFile instanceLock(
+        QDir(instanceDirectory).filePath(QStringLiteral("org.maui.valenz.lock")));
+    if (!instanceLock.tryLock()) {
+        if (instanceLock.error() == QLockFile::LockFailedError) {
+            qInfo() << "Valenz is already running.";
+            return 0;
+        }
+
+        qCritical() << "Valenz could not acquire its single-instance lock.";
+        return -1;
+    }
 
     const QString desktopFileName = desktopFileNameForPortal();
     if (!desktopFileName.isEmpty())
@@ -215,6 +255,10 @@ int main(int argc, char *argv[])
 
     std::function<QWindow *(QScreen *)> createBarWindow;
     createBarWindow = [&](QScreen *screen) -> QWindow * {
+        if ((allScreensMode && !isUsableScreen(screen))
+            || (!allScreensMode && !hasUsableScreen()))
+            return nullptr;
+
         if (allScreensMode && screen && screenWindows.value(screen))
             return screenWindows.value(screen);
         if (!allScreensMode && activeScreenWindow)
@@ -269,16 +313,20 @@ int main(int argc, char *argv[])
         if (wantsAllScreens) {
             const QPointer<QWindow> previousActiveWindow = activeScreenWindow;
             allScreensMode = true;
-            for (QScreen *screen : app.screens())
-                createBarWindow(screen);
+            for (QScreen *screen : app.screens()) {
+                if (isUsableScreen(screen))
+                    createBarWindow(screen);
+            }
 
-            if (!screenWindows.isEmpty()) {
+            if (!screenWindows.isEmpty() || !hasUsableScreen()) {
                 activeScreenWindow.clear();
                 if (previousActiveWindow) {
                     previousActiveWindow->close();
                     previousActiveWindow->deleteLater();
                 }
             } else {
+                // Keep the existing active-screen window only if creating a bar
+                // failed while a real output was available.
                 allScreensMode = false;
                 activeScreenWindow = previousActiveWindow;
                 if (activeScreenWindow)
@@ -291,7 +339,9 @@ int main(int argc, char *argv[])
         screenWindows.clear();
         allScreensMode = false;
         createBarWindow(nullptr);
-        if (!activeScreenWindow) {
+        if (!activeScreenWindow && hasUsableScreen()) {
+            // Keep the existing per-screen windows only if creating the
+            // active-screen bar failed while a real output was available.
             screenWindows = previousScreenWindows;
             allScreensMode = true;
             for (const QPointer<QWindow> &window : std::as_const(screenWindows)) {
@@ -336,8 +386,18 @@ int main(int argc, char *argv[])
 
     QObject::connect(&app, &QGuiApplication::screenAdded, &app,
                      [&](QScreen *screen) {
-                         if (allScreensMode)
-                             createBarWindow(screen);
+                         if (!isUsableScreen(screen))
+                             return;
+
+                         if (allScreensMode) {
+                             const QPointer<QWindow> previousActiveWindow = activeScreenWindow;
+                             if (createBarWindow(screen) && previousActiveWindow) {
+                                 activeScreenWindow.clear();
+                                 previousActiveWindow->close();
+                                 previousActiveWindow->deleteLater();
+                             }
+                         } else if (!activeScreenWindow)
+                             createBarWindow(nullptr);
                      });
     QObject::connect(&app, &QGuiApplication::screenRemoved, &app,
                      [&](QScreen *screen) {
@@ -346,6 +406,18 @@ int main(int argc, char *argv[])
                              window->close();
                              window->deleteLater();
                          }
+
+                         if (activeScreenWindow
+                             && (activeScreenWindow->screen() == screen || !hasUsableScreen())) {
+                             activeScreenWindow->close();
+                             activeScreenWindow->deleteLater();
+                             activeScreenWindow.clear();
+                         }
+
+                         QTimer::singleShot(0, &app, [&] {
+                             if (!allScreensMode && !activeScreenWindow && hasUsableScreen())
+                                 createBarWindow(nullptr);
+                         });
                      });
 
     reconcileBarWindows();
