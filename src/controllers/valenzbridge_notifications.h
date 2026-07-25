@@ -31,6 +31,7 @@ public:
         ActionsRole,
         ReplyPlaceholderTextRole,
         ReplySubmitButtonTextRole,
+        TimeoutRole,
     };
 
     explicit NotificationsController(QObject *parent = nullptr);
@@ -85,7 +86,8 @@ Q_SIGNALS:
                                const QString &actionKey,
                                const QVariantList &actions,
                                const QString &replyPlaceholderText,
-                               const QString &replySubmitButtonText);
+                               const QString &replySubmitButtonText,
+                               int timeout);
 
     void NotificationClosed(uint id, uint reason);
     void ActionInvoked(uint id, const QString &actionKey);
@@ -111,6 +113,7 @@ private:
         QVector<NotificationAction> actions;
         QString replyPlaceholderText;
         QString replySubmitButtonText;
+        int timeout = 0;
     };
 
     int indexOfId(uint id) const;

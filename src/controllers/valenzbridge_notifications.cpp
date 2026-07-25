@@ -94,14 +94,13 @@ int NotificationsController::rowCount(const QModelIndex &parent) const
 QVariant NotificationsController::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid() || index.row() < 0 || index.row() >= m_entries.size())
-        return {};
+        return QVariant();
 
     const NotificationEntry &entry = m_entries.at(index.row());
-
     switch (role)
     {
     case IdRole:
-        return static_cast<int>(entry.id);
+        return entry.id;
     case SourceNameRole:
         return entry.sourceName;
     case MessageTextRole:
@@ -122,15 +121,17 @@ QVariant NotificationsController::data(const QModelIndex &index, int role) const
         return entry.replyPlaceholderText;
     case ReplySubmitButtonTextRole:
         return entry.replySubmitButtonText;
+    case TimeoutRole:
+        return entry.timeout;
     default:
-        return {};
+        return QVariant();
     }
 }
 
 QHash<int, QByteArray> NotificationsController::roleNames() const
 {
     return {
-        {IdRole, "id"},
+        {IdRole, "notificationId"},
         {SourceNameRole, "sourceName"},
         {MessageTextRole, "messageText"},
         {TimestampTextRole, "timestampText"},
@@ -141,6 +142,7 @@ QHash<int, QByteArray> NotificationsController::roleNames() const
         {ActionsRole, "actions"},
         {ReplyPlaceholderTextRole, "replyPlaceholderText"},
         {ReplySubmitButtonTextRole, "replySubmitButtonText"},
+        {TimeoutRole, "timeout"}
     };
 }
 
@@ -405,23 +407,14 @@ uint NotificationsController::Notify(const QString &appName,
                                      const QVariantMap &hints,
                                      int timeout)
 {
-    Q_UNUSED(timeout)
-
     NotificationEntry entry;
     entry.id = replacesId > 0 ? replacesId : m_nextId++;
-    entry.sourceName = appName.trimmed().isEmpty() ? QStringLiteral("Notification") : appName.trimmed();
-
-    const QString cleanSummary = normalizeNotificationText(summary);
-    const QString cleanBody = normalizeNotificationText(body);
-    if (!cleanSummary.isEmpty() && !cleanBody.isEmpty())
-        entry.messageText = QStringLiteral("%1\n\n%2").arg(cleanSummary, cleanBody);
-    else if (!cleanBody.isEmpty())
-        entry.messageText = cleanBody;
-    else if (!cleanSummary.isEmpty())
-        entry.messageText = cleanSummary;
-    else
-        entry.messageText = QStringLiteral("(No details)");
-
+    entry.sourceName = appName.trimmed();
+    if (entry.sourceName.isEmpty())
+        entry.sourceName = QStringLiteral("System");
+    entry.messageText = body.trimmed();
+    if (entry.messageText.isEmpty())
+        entry.messageText = summary.trimmed();
     entry.createdAt = QDateTime::currentDateTime();
     entry.iconName = normalizeIconName(appIcon, appName, hints);
     entry.urgencyLevel = parseUrgency(hints);
@@ -431,6 +424,7 @@ uint NotificationsController::Notify(const QString &appName,
     entry.actionKey = primaryAction.key;
     entry.replyPlaceholderText = hints.value(QStringLiteral("x-kde-reply-placeholder-text")).toString().trimmed();
     entry.replySubmitButtonText = hints.value(QStringLiteral("x-kde-reply-submit-button-text")).toString().trimmed();
+    entry.timeout = timeout;
 
     const int replaceRow = replacesId > 0 ? indexOfId(replacesId) : -1;
     const bool suppressTransient = m_dndEnabled;
@@ -441,7 +435,7 @@ uint NotificationsController::Notify(const QString &appName,
         Q_EMIT dataChanged(index(replaceRow, 0), index(replaceRow, 0));
         Q_EMIT notificationsChanged();
         if (!suppressTransient)
-            Q_EMIT transientNotification(entry.id, entry.sourceName, entry.messageText, relativeTimestamp(entry.createdAt), entry.iconName, entry.urgencyLevel, entry.actionText, entry.actionKey, actionsToVariantList(entry.actions), entry.replyPlaceholderText, entry.replySubmitButtonText);
+            Q_EMIT transientNotification(entry.id, entry.sourceName, entry.messageText, relativeTimestamp(entry.createdAt), entry.iconName, entry.urgencyLevel, entry.actionText, entry.actionKey, actionsToVariantList(entry.actions), entry.replyPlaceholderText, entry.replySubmitButtonText, entry.timeout);
         return entry.id;
     }
 
@@ -452,7 +446,7 @@ uint NotificationsController::Notify(const QString &appName,
     Q_EMIT countChanged(m_entries.size());
     Q_EMIT notificationsChanged();
     if (!suppressTransient)
-        Q_EMIT transientNotification(entry.id, entry.sourceName, entry.messageText, relativeTimestamp(entry.createdAt), entry.iconName, entry.urgencyLevel, entry.actionText, entry.actionKey, actionsToVariantList(entry.actions), entry.replyPlaceholderText, entry.replySubmitButtonText);
+        Q_EMIT transientNotification(entry.id, entry.sourceName, entry.messageText, relativeTimestamp(entry.createdAt), entry.iconName, entry.urgencyLevel, entry.actionText, entry.actionKey, actionsToVariantList(entry.actions), entry.replyPlaceholderText, entry.replySubmitButtonText, entry.timeout);
     return entry.id;
 }
 
@@ -623,19 +617,20 @@ QString NotificationsController::normalizeIconName(const QString &iconName, cons
 
 QVariantMap NotificationsController::notificationEntryToMap(const NotificationEntry &entry) const
 {
-    QVariantMap result;
-    result.insert(QStringLiteral("id"), static_cast<int>(entry.id));
-    result.insert(QStringLiteral("sourceName"), entry.sourceName);
-    result.insert(QStringLiteral("messageText"), entry.messageText);
-    result.insert(QStringLiteral("timestampText"), relativeTimestamp(entry.createdAt));
-    result.insert(QStringLiteral("iconName"), entry.iconName);
-    result.insert(QStringLiteral("urgencyLevel"), entry.urgencyLevel);
-    result.insert(QStringLiteral("actionText"), entry.actionText);
-    result.insert(QStringLiteral("actionKey"), entry.actionKey);
-    result.insert(QStringLiteral("actions"), actionsToVariantList(entry.actions));
-    result.insert(QStringLiteral("replyPlaceholderText"), entry.replyPlaceholderText);
-    result.insert(QStringLiteral("replySubmitButtonText"), entry.replySubmitButtonText);
-    return result;
+    QVariantMap map;
+    map.insert(QStringLiteral("notificationId"), entry.id);
+    map.insert(QStringLiteral("sourceName"), entry.sourceName);
+    map.insert(QStringLiteral("messageText"), entry.messageText);
+    map.insert(QStringLiteral("timestampText"), relativeTimestamp(entry.createdAt));
+    map.insert(QStringLiteral("iconName"), entry.iconName);
+    map.insert(QStringLiteral("urgencyLevel"), entry.urgencyLevel);
+    map.insert(QStringLiteral("actionText"), entry.actionText);
+    map.insert(QStringLiteral("actionKey"), entry.actionKey);
+    map.insert(QStringLiteral("actions"), actionsToVariantList(entry.actions));
+    map.insert(QStringLiteral("replyPlaceholderText"), entry.replyPlaceholderText);
+    map.insert(QStringLiteral("replySubmitButtonText"), entry.replySubmitButtonText);
+    map.insert(QStringLiteral("timeout"), entry.timeout);
+    return map;
 }
 
 void NotificationsController::removeByIndex(int row, uint closeReason)
