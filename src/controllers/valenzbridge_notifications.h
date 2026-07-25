@@ -28,6 +28,9 @@ public:
         UrgencyLevelRole,
         ActionTextRole,
         ActionKeyRole,
+        ActionsRole,
+        ReplyPlaceholderTextRole,
+        ReplySubmitButtonTextRole,
     };
 
     explicit NotificationsController(QObject *parent = nullptr);
@@ -47,6 +50,8 @@ public:
     Q_INVOKABLE void dismissGroup(const QString &sourceName);
     Q_INVOKABLE void invokeAction(int index);
     Q_INVOKABLE void invokeActionById(uint id);
+    Q_INVOKABLE void invokeActionByIdAndKey(uint id, const QString &actionKey);
+    Q_INVOKABLE void replyById(uint id, const QString &text);
     Q_INVOKABLE void refreshTimestamps();
 
 public Q_SLOTS:
@@ -70,12 +75,29 @@ Q_SIGNALS:
     void dndEnabledChanged(bool enabled);
     void availableChanged(bool available);
     void notificationsChanged();
-    void transientNotification(uint id, const QString &sourceName, const QString &messageText, const QString &timestampText, const QString &iconName, int urgencyLevel, const QString &actionText, const QString &actionKey);
+    void transientNotification(uint id,
+                               const QString &sourceName,
+                               const QString &messageText,
+                               const QString &timestampText,
+                               const QString &iconName,
+                               int urgencyLevel,
+                               const QString &actionText,
+                               const QString &actionKey,
+                               const QVariantList &actions,
+                               const QString &replyPlaceholderText,
+                               const QString &replySubmitButtonText);
 
     void NotificationClosed(uint id, uint reason);
     void ActionInvoked(uint id, const QString &actionKey);
+    void NotificationReplied(uint id, const QString &text);
 
 private:
+    struct NotificationAction
+    {
+        QString key;
+        QString text;
+    };
+
     struct NotificationEntry
     {
         uint id = 0;
@@ -86,14 +108,18 @@ private:
         int urgencyLevel = 0;
         QString actionText;
         QString actionKey;
+        QVector<NotificationAction> actions;
+        QString replyPlaceholderText;
+        QString replySubmitButtonText;
     };
 
     int indexOfId(uint id) const;
     QString relativeTimestamp(const QDateTime &createdAt) const;
     static QString normalizedGroupKey(const QString &sourceName);
     static int parseUrgency(const QVariantMap &hints);
-    static QString chooseActionText(const QStringList &actions);
-    static QString chooseActionKey(const QStringList &actions);
+    static QVector<NotificationAction> parseActions(const QStringList &actions);
+    static NotificationAction preferredAction(const QVector<NotificationAction> &actions);
+    static QVariantList actionsToVariantList(const QVector<NotificationAction> &actions);
     static QString normalizeIconName(const QString &iconName, const QString &appName, const QVariantMap &hints);
     QVariantMap notificationEntryToMap(const NotificationEntry &entry) const;
 

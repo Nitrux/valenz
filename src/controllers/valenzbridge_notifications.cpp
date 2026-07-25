@@ -9,6 +9,8 @@
 #include <QVariant>
 #include <QtGlobal>
 
+#include <algorithm>
+
 namespace
 {
 constexpr auto kNotificationService = "org.freedesktop.Notifications";
@@ -114,6 +116,12 @@ QVariant NotificationsController::data(const QModelIndex &index, int role) const
         return entry.actionText;
     case ActionKeyRole:
         return entry.actionKey;
+    case ActionsRole:
+        return actionsToVariantList(entry.actions);
+    case ReplyPlaceholderTextRole:
+        return entry.replyPlaceholderText;
+    case ReplySubmitButtonTextRole:
+        return entry.replySubmitButtonText;
     default:
         return {};
     }
@@ -130,6 +138,9 @@ QHash<int, QByteArray> NotificationsController::roleNames() const
         {UrgencyLevelRole, "urgencyLevel"},
         {ActionTextRole, "actionText"},
         {ActionKeyRole, "actionKey"},
+        {ActionsRole, "actions"},
+        {ReplyPlaceholderTextRole, "replyPlaceholderText"},
+        {ReplySubmitButtonTextRole, "replySubmitButtonText"},
     };
 }
 
@@ -200,6 +211,9 @@ QVariantList NotificationsController::groupedNotifications() const
             groupMap.insert(QStringLiteral("latestUrgencyLevel"), latest.urgencyLevel);
             groupMap.insert(QStringLiteral("latestActionText"), latest.actionText);
             groupMap.insert(QStringLiteral("latestActionKey"), latest.actionKey);
+            groupMap.insert(QStringLiteral("latestActions"), actionsToVariantList(latest.actions));
+            groupMap.insert(QStringLiteral("latestReplyPlaceholderText"), latest.replyPlaceholderText);
+            groupMap.insert(QStringLiteral("latestReplySubmitButtonText"), latest.replySubmitButtonText);
         }
         else
         {
@@ -210,6 +224,9 @@ QVariantList NotificationsController::groupedNotifications() const
             groupMap.insert(QStringLiteral("latestUrgencyLevel"), 0);
             groupMap.insert(QStringLiteral("latestActionText"), QString());
             groupMap.insert(QStringLiteral("latestActionKey"), QString());
+            groupMap.insert(QStringLiteral("latestActions"), QVariantList());
+            groupMap.insert(QStringLiteral("latestReplyPlaceholderText"), QString());
+            groupMap.insert(QStringLiteral("latestReplySubmitButtonText"), QString());
         }
 
         QVariantList notifications;
@@ -308,6 +325,53 @@ void NotificationsController::invokeActionById(uint id)
     invokeAction(row);
 }
 
+void NotificationsController::invokeActionByIdAndKey(uint id, const QString &actionKey)
+{
+    const int row = indexOfId(id);
+    if (row < 0)
+        return;
+
+    const QString requestedKey = actionKey.trimmed();
+    const NotificationEntry &entry = m_entries.at(row);
+    const auto action = std::find_if(entry.actions.cbegin(), entry.actions.cend(),
+                                     [&requestedKey](const NotificationAction &candidate) {
+                                         return candidate.key == requestedKey;
+                                     });
+    if (action == entry.actions.cend())
+        return;
+
+    Q_EMIT ActionInvoked(entry.id, requestedKey);
+    emitNotificationsSignal(QStringLiteral("ActionInvoked"),
+                            {QVariant::fromValue(entry.id), QVariant::fromValue(requestedKey)});
+
+    removeByIndex(row, kCloseReasonDismissedByUser);
+}
+
+void NotificationsController::replyById(uint id, const QString &text)
+{
+    const int row = indexOfId(id);
+    if (row < 0)
+        return;
+
+    const QString replyText = text.trimmed();
+    if (replyText.isEmpty())
+        return;
+
+    const NotificationEntry &entry = m_entries.at(row);
+    const bool hasReplyAction = std::any_of(entry.actions.cbegin(), entry.actions.cend(),
+                                            [](const NotificationAction &action) {
+                                                return action.key == QLatin1String("inline-reply");
+                                            });
+    if (!hasReplyAction)
+        return;
+
+    Q_EMIT NotificationReplied(entry.id, replyText);
+    emitNotificationsSignal(QStringLiteral("NotificationReplied"),
+                            {QVariant::fromValue(entry.id), QVariant::fromValue(replyText)});
+
+    removeByIndex(row, kCloseReasonDismissedByUser);
+}
+
 void NotificationsController::refreshTimestamps()
 {
     if (m_entries.isEmpty())
@@ -361,8 +425,12 @@ uint NotificationsController::Notify(const QString &appName,
     entry.createdAt = QDateTime::currentDateTime();
     entry.iconName = normalizeIconName(appIcon, appName, hints);
     entry.urgencyLevel = parseUrgency(hints);
-    entry.actionText = chooseActionText(actions);
-    entry.actionKey = chooseActionKey(actions);
+    entry.actions = parseActions(actions);
+    const NotificationAction primaryAction = preferredAction(entry.actions);
+    entry.actionText = primaryAction.text;
+    entry.actionKey = primaryAction.key;
+    entry.replyPlaceholderText = hints.value(QStringLiteral("x-kde-reply-placeholder-text")).toString().trimmed();
+    entry.replySubmitButtonText = hints.value(QStringLiteral("x-kde-reply-submit-button-text")).toString().trimmed();
 
     const int replaceRow = replacesId > 0 ? indexOfId(replacesId) : -1;
     const bool suppressTransient = m_dndEnabled;
@@ -373,7 +441,7 @@ uint NotificationsController::Notify(const QString &appName,
         Q_EMIT dataChanged(index(replaceRow, 0), index(replaceRow, 0));
         Q_EMIT notificationsChanged();
         if (!suppressTransient)
-            Q_EMIT transientNotification(entry.id, entry.sourceName, entry.messageText, relativeTimestamp(entry.createdAt), entry.iconName, entry.urgencyLevel, entry.actionText, entry.actionKey);
+            Q_EMIT transientNotification(entry.id, entry.sourceName, entry.messageText, relativeTimestamp(entry.createdAt), entry.iconName, entry.urgencyLevel, entry.actionText, entry.actionKey, actionsToVariantList(entry.actions), entry.replyPlaceholderText, entry.replySubmitButtonText);
         return entry.id;
     }
 
@@ -384,7 +452,7 @@ uint NotificationsController::Notify(const QString &appName,
     Q_EMIT countChanged(m_entries.size());
     Q_EMIT notificationsChanged();
     if (!suppressTransient)
-        Q_EMIT transientNotification(entry.id, entry.sourceName, entry.messageText, relativeTimestamp(entry.createdAt), entry.iconName, entry.urgencyLevel, entry.actionText, entry.actionKey);
+        Q_EMIT transientNotification(entry.id, entry.sourceName, entry.messageText, relativeTimestamp(entry.createdAt), entry.iconName, entry.urgencyLevel, entry.actionText, entry.actionKey, actionsToVariantList(entry.actions), entry.replyPlaceholderText, entry.replySubmitButtonText);
     return entry.id;
 }
 
@@ -402,6 +470,7 @@ QStringList NotificationsController::GetCapabilities() const
     return {
         QStringLiteral("body"),
         QStringLiteral("actions"),
+        QStringLiteral("inline-reply"),
         QStringLiteral("persistence"),
         QStringLiteral("icon-static")
     };
@@ -467,20 +536,48 @@ int NotificationsController::parseUrgency(const QVariantMap &hints)
     return qBound(0, parsed, 2);
 }
 
-QString NotificationsController::chooseActionText(const QStringList &actions)
+QVector<NotificationsController::NotificationAction> NotificationsController::parseActions(const QStringList &actions)
 {
-    if (actions.size() >= 2)
-        return actions.at(1).trimmed();
+    QVector<NotificationAction> result;
+    result.reserve(actions.size() / 2);
 
-    return QString();
+    for (int index = 0; index + 1 < actions.size(); index += 2)
+    {
+        NotificationAction action;
+        action.key = actions.at(index).trimmed();
+        action.text = actions.at(index + 1).trimmed();
+        if (!action.key.isEmpty() && !action.text.isEmpty())
+            result.push_back(action);
+    }
+
+    return result;
 }
 
-QString NotificationsController::chooseActionKey(const QStringList &actions)
+NotificationsController::NotificationAction NotificationsController::preferredAction(const QVector<NotificationAction> &actions)
 {
-    if (actions.size() >= 1)
-        return actions.at(0).trimmed();
+    for (const NotificationAction &action : actions)
+    {
+        if (action.key != QLatin1String("default"))
+            return action;
+    }
 
-    return QString();
+    return actions.isEmpty() ? NotificationAction() : actions.first();
+}
+
+QVariantList NotificationsController::actionsToVariantList(const QVector<NotificationAction> &actions)
+{
+    QVariantList result;
+    result.reserve(actions.size());
+
+    for (const NotificationAction &action : actions)
+    {
+        QVariantMap actionMap;
+        actionMap.insert(QStringLiteral("key"), action.key);
+        actionMap.insert(QStringLiteral("text"), action.text);
+        result.push_back(actionMap);
+    }
+
+    return result;
 }
 
 QString NotificationsController::normalizeIconName(const QString &iconName, const QString &appName, const QVariantMap &hints)
@@ -535,6 +632,9 @@ QVariantMap NotificationsController::notificationEntryToMap(const NotificationEn
     result.insert(QStringLiteral("urgencyLevel"), entry.urgencyLevel);
     result.insert(QStringLiteral("actionText"), entry.actionText);
     result.insert(QStringLiteral("actionKey"), entry.actionKey);
+    result.insert(QStringLiteral("actions"), actionsToVariantList(entry.actions));
+    result.insert(QStringLiteral("replyPlaceholderText"), entry.replyPlaceholderText);
+    result.insert(QStringLiteral("replySubmitButtonText"), entry.replySubmitButtonText);
     return result;
 }
 

@@ -26,6 +26,7 @@ Window
     property int urgencyLevel: 0
     property string actionText: ""
     property string actionKey: ""
+    property var actions: []
 
     property int _geometryRevision: 0
     property bool _fadeOutPending: false
@@ -201,7 +202,20 @@ Window
         }
     }
 
-    function showNotification(idValue, sourceNameValue, messageTextValue, timestampTextValue, iconNameValue, urgencyLevelValue, actionTextValue, actionKeyValue)
+    function _visibleActions(actionValues)
+    {
+        const values = actionValues || []
+        const nonDefault = []
+        for (let index = 0; index < values.length; ++index)
+        {
+            if (String(values[index].key || "") !== "default")
+                nonDefault.push(values[index])
+        }
+
+        return nonDefault.length > 0 ? nonDefault : values
+    }
+
+    function showNotification(idValue, sourceNameValue, messageTextValue, timestampTextValue, iconNameValue, urgencyLevelValue, actionTextValue, actionKeyValue, actionsValue)
     {
         if (notificationsPopup && notificationsPopup.visible)
             return
@@ -214,6 +228,7 @@ Window
         urgencyLevel = Number(urgencyLevelValue)
         actionText = String(actionTextValue || "").trim()
         actionKey = String(actionKeyValue || "").trim()
+        actions = actionsValue || []
 
         if (!isFinite(notificationId))
             notificationId = -1
@@ -253,6 +268,15 @@ Window
     }
 
     onActionTextChanged:
+    {
+        if (_bubbleContentColumn && _bubbleContentColumn.forceLayout)
+            _bubbleContentColumn.forceLayout()
+
+        if (visible)
+            _touchGeometryRevision()
+    }
+
+    onActionsChanged:
     {
         if (_bubbleContentColumn && _bubbleContentColumn.forceLayout)
             _bubbleContentColumn.forceLayout()
@@ -650,22 +674,38 @@ Window
                 RowLayout
                 {
                     Layout.fillWidth: true
+                    spacing: Maui.Style.space.small
 
                     Item
                     {
                         Layout.fillWidth: true
                     }
 
-                    Button
+                    Repeater
                     {
-                        visible: notificationsBubble.actionText.length > 0
-                        text: notificationsBubble.actionText
-                        onClicked:
-                        {
-                            if (notificationsBubble.controller && notificationsBubble.notificationId >= 0)
-                                notificationsBubble.controller.invokeActionById(notificationsBubble.notificationId)
+                        model: notificationsBubble._visibleActions(notificationsBubble.actions)
 
-                            notificationsBubble.dismissBubble()
+                        delegate: Button
+                        {
+                            required property var modelData
+                            text: String(modelData.text || "")
+                            onClicked:
+                            {
+                                const key = String(modelData.key || "")
+                                if (key === "inline-reply")
+                                {
+                                    _autoCloseTimer.stop()
+                                    if (notificationsBubble.notificationsPopup
+                                            && notificationsBubble.notificationsPopup.openReply)
+                                        notificationsBubble.notificationsPopup.openReply(notificationsBubble.notificationId)
+                                    return
+                                }
+
+                                if (notificationsBubble.controller && notificationsBubble.notificationId >= 0)
+                                    notificationsBubble.controller.invokeActionByIdAndKey(notificationsBubble.notificationId, key)
+
+                                notificationsBubble.dismissBubble()
+                            }
                         }
                     }
                 }

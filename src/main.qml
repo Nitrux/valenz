@@ -356,12 +356,12 @@ Window
     {
         target: notificationsController
 
-        function onTransientNotification(id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey)
+        function onTransientNotification(id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey, actions, replyPlaceholderText, replySubmitButtonText)
         {
             if (_notificationsCenterPopup.visible)
                 return
 
-            _notificationsBubble.showNotification(id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey)
+            _notificationsBubble.showNotification(id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey, actions, replyPlaceholderText, replySubmitButtonText)
         }
     }
 

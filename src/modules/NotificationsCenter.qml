@@ -59,6 +59,7 @@ Window
     property bool _clearingAll: false
     property bool _fadeOutPending: false
     property bool _panelOpen: false
+    property int _replyNotificationId: -1
 
     readonly property int _fadeInDurationMs: 25
     readonly property int _fadeOutDurationMs: 100
@@ -184,6 +185,57 @@ Window
             case 0: return Qt.alpha(Maui.Theme.textColor, 0.28)
             default: return "transparent"
         }
+    }
+
+    function _visibleActions(actionValues)
+    {
+        const values = actionValues || []
+        const nonDefault = []
+        for (let index = 0; index < values.length; ++index)
+        {
+            if (String(values[index].key || "") !== "default")
+                nonDefault.push(values[index])
+        }
+
+        return nonDefault.length > 0 ? nonDefault : values
+    }
+
+    function _invokeAction(notificationId, actionKey)
+    {
+        if (controller && controller.invokeActionByIdAndKey)
+            controller.invokeActionByIdAndKey(notificationId, actionKey)
+        else if (rootWindow && rootWindow.traceMenu)
+            rootWindow.traceMenu("notification_action", actionKey)
+    }
+
+    function openReply(notificationId)
+    {
+        const requestedId = Number(notificationId)
+        if (!isFinite(requestedId) || requestedId < 0)
+            return
+
+        for (let groupIndex = 0; groupIndex < _notificationGroups.length; ++groupIndex)
+        {
+            const group = _notificationGroups[groupIndex]
+            const notifications = group.notifications || []
+            for (let notificationIndex = 0; notificationIndex < notifications.length; ++notificationIndex)
+            {
+                if (Number(notifications[notificationIndex].id) !== requestedId)
+                    continue
+
+                if (notificationIndex > 0)
+                    _setGroupExpanded(_groupKey(group), true)
+                break
+            }
+        }
+
+        _replyNotificationId = requestedId
+        if (!visible)
+            open()
+        else
+            requestActivate()
+
+        _touchGeometryRevision()
     }
 
     function _groupKey(group)
@@ -374,6 +426,7 @@ Window
         {
             _fadeOutTimer.stop()
             _panelOpen = false
+            _replyNotificationId = -1
             closed()
         }
     }
@@ -657,10 +710,14 @@ Window
                                     required property int latestUrgencyLevel
                                     required property string latestActionText
                                     required property string latestActionKey
+                                    required property var latestActions
+                                    required property string latestReplyPlaceholderText
+                                    required property string latestReplySubmitButtonText
                                     required property var notifications
 
                                     property bool _dismissing: false
                                     property int _dismissDelayMs: 0
+                                    readonly property bool _replyExpanded: notificationsCenter._replyNotificationId === latestId
                                     readonly property bool _expanded: notificationsCenter._isGroupExpanded(key)
                                     readonly property var _olderNotifications: notifications.length > 1 ? notifications.slice(1) : []
 
@@ -855,7 +912,9 @@ Window
 
                                                 delegate: Maui.SectionItem
                                                 {
+                                                    id: _olderNotificationCard
                                                     required property var modelData
+                                                    readonly property bool _replyExpanded: notificationsCenter._replyNotificationId === Number(modelData.id)
 
                                                     width: _groupCard.width - (notificationsCenter._cardPadding * 2)
                                                     flat: false
@@ -934,21 +993,71 @@ Window
                                                                 Layout.fillWidth: true
                                                             }
 
+                                                            Repeater
+                                                            {
+                                                                model: notificationsCenter._visibleActions(modelData.actions)
+
+                                                                delegate: Button
+                                                                {
+                                                                    required property var modelData
+                                                                    text: String(modelData.text || "")
+                                                                    enabled: !notificationsCenter._clearingAll
+                                                                    onClicked:
+                                                                    {
+                                                                        const key = String(modelData.key || "")
+                                                                        if (key === "inline-reply")
+                                                                        {
+                                                                            notificationsCenter.openReply(_olderNotificationCard.modelData.id)
+                                                                            return
+                                                                        }
+
+                                                                        notificationsCenter._invokeAction(_olderNotificationCard.modelData.id, key)
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+
+                                                        RowLayout
+                                                        {
+                                                            Layout.fillWidth: true
+                                                            visible: _olderNotificationCard._replyExpanded
+                                                            spacing: Maui.Style.space.small
+                                                            onVisibleChanged:
+                                                            {
+                                                                if (visible)
+                                                                    Qt.callLater(function() { _olderReplyField.forceActiveFocus() })
+                                                            }
+
+                                                            Maui.TextField
+                                                            {
+                                                                id: _olderReplyField
+                                                                Layout.fillWidth: true
+                                                                placeholderText: String(_olderNotificationCard.modelData.replyPlaceholderText || "").length > 0
+                                                                                 ? String(_olderNotificationCard.modelData.replyPlaceholderText)
+                                                                                 : i18n("Type a reply…")
+                                                                Component.onCompleted:
+                                                                {
+                                                                    if (_olderNotificationCard._replyExpanded)
+                                                                        Qt.callLater(function() { _olderReplyField.forceActiveFocus() })
+                                                                }
+                                                                onAccepted: _olderSubmitReplyButton.clicked()
+                                                            }
+
                                                             Button
                                                             {
-                                                                visible: modelData.actionText.length > 0
-                                                                text: modelData.actionText
-                                                                enabled: !notificationsCenter._clearingAll
+                                                                id: _olderSubmitReplyButton
+                                                                text: String(_olderNotificationCard.modelData.replySubmitButtonText || "").length > 0
+                                                                      ? String(_olderNotificationCard.modelData.replySubmitButtonText)
+                                                                      : i18n("Send")
+                                                                enabled: _olderReplyField.text.trim().length > 0 && !notificationsCenter._clearingAll
                                                                 onClicked:
                                                                 {
-                                                                    if (notificationsCenter.controller && notificationsCenter.controller.invokeActionById)
-                                                                    {
-                                                                        notificationsCenter.controller.invokeActionById(modelData.id)
+                                                                    if (!enabled)
                                                                         return
-                                                                    }
 
-                                                                    if (notificationsCenter.rootWindow && notificationsCenter.rootWindow.traceMenu)
-                                                                        notificationsCenter.rootWindow.traceMenu("notification_action", modelData.actionKey)
+                                                                    const replyText = _olderReplyField.text
+                                                                    notificationsCenter._replyNotificationId = -1
+                                                                    notificationsCenter.controller.replyById(_olderNotificationCard.modelData.id, replyText)
                                                                 }
                                                             }
                                                         }
@@ -975,21 +1084,73 @@ Window
                                                 onClicked: notificationsCenter.toggleGroupExpanded(key)
                                             }
 
+                                            Repeater
+                                            {
+                                                model: notificationsCenter._visibleActions(_groupCard.latestActions)
+
+                                                delegate: Button
+                                                {
+                                                    required property var modelData
+                                                    text: String(modelData.text || "")
+                                                    enabled: !_groupCard._dismissing && !notificationsCenter._clearingAll
+                                                    onClicked:
+                                                    {
+                                                        const key = String(modelData.key || "")
+                                                        if (key === "inline-reply")
+                                                        {
+                                                            notificationsCenter.openReply(_groupCard.latestId)
+                                                            return
+                                                        }
+
+                                                        notificationsCenter._invokeAction(_groupCard.latestId, key)
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        RowLayout
+                                        {
+                                            Layout.fillWidth: true
+                                            visible: _groupCard._replyExpanded
+                                            spacing: Maui.Style.space.small
+                                            onVisibleChanged:
+                                            {
+                                                if (visible)
+                                                    Qt.callLater(function() { _latestReplyField.forceActiveFocus() })
+                                            }
+
+                                            Maui.TextField
+                                            {
+                                                id: _latestReplyField
+                                                Layout.fillWidth: true
+                                                placeholderText: _groupCard.latestReplyPlaceholderText.length > 0
+                                                                 ? _groupCard.latestReplyPlaceholderText
+                                                                 : i18n("Type a reply…")
+                                                Component.onCompleted:
+                                                {
+                                                    if (_groupCard._replyExpanded)
+                                                        Qt.callLater(function() { _latestReplyField.forceActiveFocus() })
+                                                }
+                                                onAccepted: _latestSubmitReplyButton.clicked()
+                                            }
+
                                             Button
                                             {
-                                                visible: _groupCard._expanded && _groupCard.latestActionText.length > 0
-                                                text: latestActionText
-                                                enabled: !_groupCard._dismissing && !notificationsCenter._clearingAll
+                                                id: _latestSubmitReplyButton
+                                                text: _groupCard.latestReplySubmitButtonText.length > 0
+                                                      ? _groupCard.latestReplySubmitButtonText
+                                                      : i18n("Send")
+                                                enabled: _latestReplyField.text.trim().length > 0
+                                                         && !_groupCard._dismissing
+                                                         && !notificationsCenter._clearingAll
                                                 onClicked:
                                                 {
-                                                    if (notificationsCenter.controller && notificationsCenter.controller.invokeActionById)
-                                                    {
-                                                        notificationsCenter.controller.invokeActionById(latestId)
+                                                    if (!enabled)
                                                         return
-                                                    }
 
-                                                    if (notificationsCenter.rootWindow && notificationsCenter.rootWindow.traceMenu)
-                                                        notificationsCenter.rootWindow.traceMenu("notification_action", latestActionKey)
+                                                    const replyText = _latestReplyField.text
+                                                    notificationsCenter._replyNotificationId = -1
+                                                    notificationsCenter.controller.replyById(_groupCard.latestId, replyText)
                                                 }
                                             }
                                         }
