@@ -201,6 +201,7 @@ public:
     Q_INVOKABLE void trace(const QString &source, const QString &action, const QString &detail = QString());
     Q_INVOKABLE void executeControlCenterPowerCommand();
     Q_INVOKABLE void executeControlCenterSettingsCommand();
+    Q_INVOKABLE void toggleVicinae();
     Q_INVOKABLE void setControlCenterVolumePercentageFromSlider(int percent);
     Q_INVOKABLE void setControlCenterBrightnessPercentageFromSlider(int percent);
     Q_INVOKABLE void setControlCenterRuntimeActive(bool active);

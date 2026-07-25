@@ -43,6 +43,7 @@ qt_add_qml_module(${PROJECT_NAME}
     modules/WeatherClock.qml
     modules/CalendarPopup.qml
     modules/SystemTray.qml
+    modules/VicinaeButton.qml
     modules/ControlCenterButton.qml
     modules/NotificationsCenter.qml
     modules/NotificationsCenterButton.qml

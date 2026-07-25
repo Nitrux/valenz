@@ -1,6 +1,8 @@
 #include "valenzbridge.h"
 #include "valenzbridge_p.h"
 
+#include <QProcess>
+
 ValenzBridge::ValenzBridge(QObject *parent)
     : QObject(parent)
 {
@@ -34,4 +36,9 @@ ValenzBridge::ValenzBridge(QObject *parent)
     QTimer::singleShot(0, this, &ValenzBridge::refreshWeather);
     initializeControlCenterRuntime();
     initializeConfigWatcher();
+}
+
+void ValenzBridge::toggleVicinae()
+{
+    QProcess::startDetached(QStringLiteral("vicinae"), {QStringLiteral("toggle")});
 }

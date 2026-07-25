@@ -181,6 +181,7 @@ Window
             case "power-profile-power-saver": return "\uF06C"
             case "notifications": return "\uF0F3"
             case "notifications-disabled": return "\uF0A2"
+            case "system-search": return "\uF002"
             default: return "\uF128"
         }
     }
@@ -611,6 +612,13 @@ Window
                         id: _rightSectionRow
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: Maui.Style.space.medium
+
+                        VicinaeButton
+                        {
+                            useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
+                            glyphForIcon: root.controlCenterButtonGlyph
+                        }
+
                         Maui.Separator
                         {
                             Layout.preferredHeight: 8
