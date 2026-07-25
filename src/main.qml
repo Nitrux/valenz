@@ -613,12 +613,6 @@ Window
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: Maui.Style.space.medium
 
-                        VicinaeButton
-                        {
-                            useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
-                            glyphForIcon: root.controlCenterButtonGlyph
-                        }
-
                         Maui.Separator
                         {
                             Layout.preferredHeight: 8
@@ -639,6 +633,18 @@ Window
                             Layout.preferredHeight: 8
                             height: 8
                             visible: systemTrayController && systemTrayController.count > 0
+                        }
+
+                        VicinaeButton
+                        {
+                            useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
+                            glyphForIcon: root.controlCenterButtonGlyph
+                        }
+
+                        Maui.Separator
+                        {
+                            Layout.preferredHeight: 8
+                            height: 8
                         }
 
                         NotificationsCenterButton
