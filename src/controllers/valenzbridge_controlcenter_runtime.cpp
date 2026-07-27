@@ -124,8 +124,7 @@ ControlCenterRuntimeSnapshot collectControlCenterRuntimeSnapshot(bool debugSimul
         }
     }
 
-    snapshot.nightLightAvailable = MauiKitSystem::controlCenterNightLightAvailable();
-    snapshot.nightLightEnabled = snapshot.nightLightAvailable && MauiKitSystem::controlCenterNightLightRunning();
+    snapshot.nightLightAvailable = MauiKitSystem::controlCenterNightLightState(&snapshot.nightLightEnabled);
 
     snapshot.powerProfileCurrentValid = MauiKitSystem::currentPowerProfile(&snapshot.powerProfileCurrent);
     snapshot.powerProfiles = MauiKitSystem::powerProfilesFromPowerProfilesCtl();
@@ -323,31 +322,36 @@ void ValenzBridge::setControlCenterBrightnessPercentageFromSlider(int percent)
 
 void ValenzBridge::setControlCenterNightLightEnabled(bool enabled)
 {
-    if (!MauiKitSystem::controlCenterNightLightAvailable())
+    bool actualEnabled = false;
+    const bool available = MauiKitSystem::controlCenterNightLightState(&actualEnabled);
+    setControlCenterNightLightAvailable(available);
+
+    if (!available)
     {
-        if (m_controlCenterNightLightEnabled && !enabled)
-        {
-            m_controlCenterNightLightEnabled = false;
+        const bool changed = m_controlCenterNightLightEnabled;
+        m_controlCenterNightLightEnabled = false;
+        if (changed || enabled)
             Q_EMIT controlCenterNightLightEnabledChanged(m_controlCenterNightLightEnabled);
-        }
         return;
     }
 
-    if (m_controlCenterNightLightEnabled == enabled)
-        return;
-
-    if (enabled)
+    if (actualEnabled != enabled)
     {
-        if (!MauiKitSystem::startControlCenterNightLight())
-            return;
-    }
-    else
-    {
-        MauiKitSystem::stopControlCenterNightLight();
+        if (enabled)
+            MauiKitSystem::startControlCenterNightLight();
+        else
+            MauiKitSystem::stopControlCenterNightLight();
     }
 
-    m_controlCenterNightLightEnabled = enabled;
-    Q_EMIT controlCenterNightLightEnabledChanged(m_controlCenterNightLightEnabled);
+    bool refreshedEnabled = false;
+    const bool stillAvailable = MauiKitSystem::controlCenterNightLightState(&refreshedEnabled);
+    setControlCenterNightLightAvailable(stillAvailable);
+
+    const bool authoritativeEnabled = stillAvailable && refreshedEnabled;
+    const bool changed = m_controlCenterNightLightEnabled != authoritativeEnabled;
+    m_controlCenterNightLightEnabled = authoritativeEnabled;
+    if (changed || authoritativeEnabled != enabled)
+        Q_EMIT controlCenterNightLightEnabledChanged(m_controlCenterNightLightEnabled);
 }
 
 void ValenzBridge::executeControlCenterPowerCommand()
@@ -366,10 +370,9 @@ void ValenzBridge::executeControlCenterSettingsCommand()
 
 void ValenzBridge::refreshControlCenterNightLightState()
 {
-    const bool available = MauiKitSystem::controlCenterNightLightAvailable();
+    bool enabled = false;
+    const bool available = MauiKitSystem::controlCenterNightLightState(&enabled);
     setControlCenterNightLightAvailable(available);
-
-    const bool running = MauiKitSystem::controlCenterNightLightRunning();
     if (!available)
     {
         if (m_controlCenterNightLightEnabled)
@@ -380,9 +383,9 @@ void ValenzBridge::refreshControlCenterNightLightState()
         return;
     }
 
-    if (m_controlCenterNightLightEnabled != running)
+    if (m_controlCenterNightLightEnabled != enabled)
     {
-        m_controlCenterNightLightEnabled = running;
+        m_controlCenterNightLightEnabled = enabled;
         Q_EMIT controlCenterNightLightEnabledChanged(m_controlCenterNightLightEnabled);
     }
 }
