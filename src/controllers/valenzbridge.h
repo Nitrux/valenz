@@ -54,6 +54,9 @@ class ValenzBridge : public QObject
     Q_PROPERTY(bool controlCenterBluetoothEnabled READ controlCenterBluetoothEnabled WRITE setControlCenterBluetoothEnabled NOTIFY controlCenterBluetoothEnabledChanged FINAL)
     Q_PROPERTY(bool controlCenterBluetoothAvailable READ controlCenterBluetoothAvailable WRITE setControlCenterBluetoothAvailable NOTIFY controlCenterBluetoothAvailableChanged FINAL)
     Q_PROPERTY(bool controlCenterWirelessAvailable READ controlCenterWirelessAvailable WRITE setControlCenterWirelessAvailable NOTIFY controlCenterWirelessAvailableChanged FINAL)
+    Q_PROPERTY(bool controlCenterWirelessEnabled READ controlCenterWirelessEnabled WRITE setControlCenterWirelessEnabled NOTIFY controlCenterWirelessEnabledChanged FINAL)
+    Q_PROPERTY(bool controlCenterWirelessConnected READ controlCenterWirelessConnected NOTIFY controlCenterWirelessConnectedChanged FINAL)
+    Q_PROPERTY(bool controlCenterWiredConnected READ controlCenterWiredConnected NOTIFY controlCenterWiredConnectedChanged FINAL)
     Q_PROPERTY(int controlCenterBluetoothConnectedDeviceCount READ controlCenterBluetoothConnectedDeviceCount WRITE setControlCenterBluetoothConnectedDeviceCount NOTIFY controlCenterBluetoothConnectedDeviceCountChanged FINAL)
     Q_PROPERTY(bool controlCenterVolumeMuted READ controlCenterVolumeMuted WRITE setControlCenterVolumeMuted NOTIFY controlCenterVolumeMutedChanged FINAL)
     Q_PROPERTY(bool controlCenterBatteryAvailable READ controlCenterBatteryAvailable WRITE setControlCenterBatteryAvailable NOTIFY controlCenterBatteryAvailableChanged FINAL)
@@ -154,6 +157,10 @@ public:
     void setControlCenterBluetoothAvailable(bool available);
     bool controlCenterWirelessAvailable() const;
     void setControlCenterWirelessAvailable(bool available);
+    bool controlCenterWirelessEnabled() const;
+    void setControlCenterWirelessEnabled(bool enabled);
+    bool controlCenterWirelessConnected() const;
+    bool controlCenterWiredConnected() const;
     int controlCenterBluetoothConnectedDeviceCount() const;
     void setControlCenterBluetoothConnectedDeviceCount(int count);
     bool controlCenterVolumeMuted() const;
@@ -266,6 +273,9 @@ Q_SIGNALS:
     void controlCenterBluetoothEnabledChanged(bool enabled);
     void controlCenterBluetoothAvailableChanged(bool available);
     void controlCenterWirelessAvailableChanged(bool available);
+    void controlCenterWirelessEnabledChanged(bool enabled);
+    void controlCenterWirelessConnectedChanged(bool connected);
+    void controlCenterWiredConnectedChanged(bool connected);
     void controlCenterBluetoothConnectedDeviceCountChanged(int count);
     void controlCenterVolumeMutedChanged(bool muted);
     void controlCenterBatteryAvailableChanged(bool available);
@@ -376,6 +386,9 @@ private:
     bool m_controlCenterBluetoothEnabled = false;
     bool m_controlCenterBluetoothAvailable = false;
     bool m_controlCenterWirelessAvailable = false;
+    bool m_controlCenterWirelessEnabled = false;
+    bool m_controlCenterWirelessConnected = false;
+    bool m_controlCenterWiredConnected = false;
     int m_controlCenterBluetoothConnectedDeviceCount = 0;
     bool m_controlCenterBatteryAvailable = false;
     bool m_controlCenterBatteryOnAcPower = false;

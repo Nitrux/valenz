@@ -15,6 +15,9 @@ constexpr int kControlCenterActiveRefreshIntervalMs = 1000;
 struct ControlCenterRuntimeSnapshot
 {
     bool wirelessAvailable = false;
+    bool wirelessEnabled = false;
+    bool wirelessConnected = false;
+    bool wiredConnected = false;
     QString networkState = QStringLiteral("offline");
     bool bluetoothAvailable = false;
     int bluetoothConnectedDeviceCount = 0;
@@ -45,6 +48,70 @@ struct ControlCenterSystemResourcesSnapshot
     bool diskValid = false;
 };
 
+void collectControlCenterNetworkState(ControlCenterRuntimeSnapshot *snapshot)
+{
+    if (!snapshot)
+        return;
+
+    snapshot->wirelessAvailable = MauiKitSystem::controlCenterWirelessAvailable();
+
+    QString radioState;
+    if (snapshot->wirelessAvailable
+        && MauiKitSystem::runCommandText(QStringLiteral("nmcli"),
+                                        QStringList { QStringLiteral("radio"), QStringLiteral("wifi") },
+                                        &radioState))
+    {
+        snapshot->wirelessEnabled = radioState.trimmed().compare(QStringLiteral("enabled"), Qt::CaseInsensitive) == 0;
+    }
+
+    QString deviceStatus;
+    if (MauiKitSystem::runCommandText(QStringLiteral("nmcli"),
+                                      QStringList { QStringLiteral("-t"),
+                                                    QStringLiteral("-f"),
+                                                    QStringLiteral("TYPE,STATE"),
+                                                    QStringLiteral("device"),
+                                                    QStringLiteral("status") },
+                                      &deviceStatus))
+    {
+        const QStringList lines = deviceStatus.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+        for (const QString &line : lines)
+        {
+            const QStringList fields = line.split(QLatin1Char(':'));
+            if (fields.size() < 2)
+                continue;
+
+            const QString type = fields.at(0).trimmed().toLower();
+            const QString state = fields.at(1).trimmed().toLower();
+            if (!state.startsWith(QStringLiteral("connected")))
+                continue;
+
+            if (type == QLatin1String("ethernet"))
+                snapshot->wiredConnected = true;
+            else if (type == QLatin1String("wifi") || type == QLatin1String("wireless"))
+                snapshot->wirelessConnected = true;
+        }
+    }
+
+    if (snapshot->wirelessConnected)
+        snapshot->wirelessEnabled = true;
+
+    const QString iface = MauiKitSystem::defaultRouteInterface();
+    if (!iface.isEmpty())
+    {
+        snapshot->networkState = MauiKitSystem::isWirelessInterface(iface)
+                ? QStringLiteral("wireless")
+                : QStringLiteral("wired");
+    }
+    else if (snapshot->wiredConnected)
+    {
+        snapshot->networkState = QStringLiteral("wired");
+    }
+    else if (snapshot->wirelessConnected)
+    {
+        snapshot->networkState = QStringLiteral("wireless");
+    }
+}
+
 ControlCenterRuntimeSnapshot collectControlCenterRuntimeSnapshot(bool debugSimulatedBrightnessAvailable,
                                                                 int debugSimulatedBrightnessPercentage,
                                                                 bool debugSimulatedBatteryAvailable,
@@ -54,19 +121,7 @@ ControlCenterRuntimeSnapshot collectControlCenterRuntimeSnapshot(bool debugSimul
 {
     ControlCenterRuntimeSnapshot snapshot;
 
-    snapshot.wirelessAvailable = MauiKitSystem::controlCenterWirelessAvailable();
-
-    const QString iface = MauiKitSystem::defaultRouteInterface();
-    if (!iface.isEmpty())
-    {
-        snapshot.networkState = MauiKitSystem::isWirelessInterface(iface)
-                ? QStringLiteral("wireless")
-                : QStringLiteral("wired");
-    }
-    else
-    {
-        snapshot.networkState = MauiKitSystem::networkStateFromNmcliStatus();
-    }
+    collectControlCenterNetworkState(&snapshot);
 
     snapshot.bluetoothAvailable = MauiKitSystem::controlCenterBluetoothAvailable();
     snapshot.bluetoothConnectedDeviceCount = MauiKitSystem::controlCenterBluetoothConnectedDeviceCount();
@@ -224,6 +279,21 @@ void ValenzBridge::refreshControlCenterRuntimeState()
 
             bridge->m_controlCenterRuntimeRefreshInFlight = false;
             bridge->setControlCenterWirelessAvailable(snapshot.wirelessAvailable);
+            if (bridge->m_controlCenterWirelessEnabled != snapshot.wirelessEnabled)
+            {
+                bridge->m_controlCenterWirelessEnabled = snapshot.wirelessEnabled;
+                Q_EMIT bridge->controlCenterWirelessEnabledChanged(bridge->m_controlCenterWirelessEnabled);
+            }
+            if (bridge->m_controlCenterWirelessConnected != snapshot.wirelessConnected)
+            {
+                bridge->m_controlCenterWirelessConnected = snapshot.wirelessConnected;
+                Q_EMIT bridge->controlCenterWirelessConnectedChanged(bridge->m_controlCenterWirelessConnected);
+            }
+            if (bridge->m_controlCenterWiredConnected != snapshot.wiredConnected)
+            {
+                bridge->m_controlCenterWiredConnected = snapshot.wiredConnected;
+                Q_EMIT bridge->controlCenterWiredConnectedChanged(bridge->m_controlCenterWiredConnected);
+            }
             bridge->setControlCenterNetworkState(snapshot.networkState);
             bridge->setControlCenterBluetoothAvailable(snapshot.bluetoothAvailable);
             bridge->setControlCenterBluetoothConnectedDeviceCount(snapshot.bluetoothConnectedDeviceCount);
@@ -265,18 +335,26 @@ void ValenzBridge::refreshControlCenterRuntimeState()
 
 void ValenzBridge::refreshControlCenterNetworkState()
 {
-    setControlCenterWirelessAvailable(MauiKitSystem::controlCenterWirelessAvailable());
+    ControlCenterRuntimeSnapshot snapshot;
+    collectControlCenterNetworkState(&snapshot);
 
-    const QString iface = MauiKitSystem::defaultRouteInterface();
-    if (!iface.isEmpty())
+    setControlCenterWirelessAvailable(snapshot.wirelessAvailable);
+    if (m_controlCenterWirelessEnabled != snapshot.wirelessEnabled)
     {
-        setControlCenterNetworkState(MauiKitSystem::isWirelessInterface(iface)
-                                         ? QStringLiteral("wireless")
-                                         : QStringLiteral("wired"));
-        return;
+        m_controlCenterWirelessEnabled = snapshot.wirelessEnabled;
+        Q_EMIT controlCenterWirelessEnabledChanged(m_controlCenterWirelessEnabled);
     }
-
-    setControlCenterNetworkState(MauiKitSystem::networkStateFromNmcliStatus());
+    if (m_controlCenterWirelessConnected != snapshot.wirelessConnected)
+    {
+        m_controlCenterWirelessConnected = snapshot.wirelessConnected;
+        Q_EMIT controlCenterWirelessConnectedChanged(m_controlCenterWirelessConnected);
+    }
+    if (m_controlCenterWiredConnected != snapshot.wiredConnected)
+    {
+        m_controlCenterWiredConnected = snapshot.wiredConnected;
+        Q_EMIT controlCenterWiredConnectedChanged(m_controlCenterWiredConnected);
+    }
+    setControlCenterNetworkState(snapshot.networkState);
 }
 
 void ValenzBridge::refreshControlCenterBluetoothState()

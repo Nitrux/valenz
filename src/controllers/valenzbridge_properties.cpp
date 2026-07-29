@@ -10,6 +10,16 @@ bool setBluezAdapterPowered(bool enabled)
     return MauiKitSystem::setControlCenterBluetoothEnabled(enabled);
 }
 
+bool setWirelessRadioEnabled(bool enabled)
+{
+    return MauiKitSystem::runCommandText(QStringLiteral("nmcli"),
+                                         QStringList { QStringLiteral("radio"),
+                                                       QStringLiteral("wifi"),
+                                                       enabled ? QStringLiteral("on") : QStringLiteral("off") },
+                                         nullptr,
+                                         1000);
+}
+
 }
 
 bool ValenzBridge::enabled() const
@@ -728,6 +738,48 @@ void ValenzBridge::setControlCenterWirelessAvailable(bool available)
 
     m_controlCenterWirelessAvailable = available;
     Q_EMIT controlCenterWirelessAvailableChanged(m_controlCenterWirelessAvailable);
+}
+
+bool ValenzBridge::controlCenterWirelessEnabled() const
+{
+    return m_controlCenterWirelessEnabled;
+}
+
+void ValenzBridge::setControlCenterWirelessEnabled(bool enabled)
+{
+    const bool available = MauiKitSystem::controlCenterWirelessAvailable();
+    setControlCenterWirelessAvailable(available);
+
+    if (!available)
+    {
+        if (m_controlCenterWirelessEnabled)
+        {
+            m_controlCenterWirelessEnabled = false;
+            Q_EMIT controlCenterWirelessEnabledChanged(m_controlCenterWirelessEnabled);
+        }
+        return;
+    }
+
+    if (m_controlCenterWirelessEnabled == enabled)
+        return;
+
+    if (setWirelessRadioEnabled(enabled))
+    {
+        m_controlCenterWirelessEnabled = enabled;
+        Q_EMIT controlCenterWirelessEnabledChanged(m_controlCenterWirelessEnabled);
+    }
+
+    refreshControlCenterRuntimeState();
+}
+
+bool ValenzBridge::controlCenterWirelessConnected() const
+{
+    return m_controlCenterWirelessConnected;
+}
+
+bool ValenzBridge::controlCenterWiredConnected() const
+{
+    return m_controlCenterWiredConnected;
 }
 
 int ValenzBridge::controlCenterBluetoothConnectedDeviceCount() const

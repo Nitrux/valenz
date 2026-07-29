@@ -191,18 +191,22 @@ Window
 
     function _networkModeSubtitle()
     {
-        const state = controlCenter.bridge ? String(controlCenter.bridge.controlCenterNetworkState).toLowerCase() : "offline"
-        if (state === "wireless")
-            return i18n("Connected")
-        if (state === "offline" || state === "wired")
+        const hasWirelessAdapter = controlCenter.bridge ? controlCenter.bridge.controlCenterWirelessAvailable : false
+        const wirelessEnabled = hasWirelessAdapter && controlCenter.bridge.controlCenterWirelessEnabled
+        const isWirelessConnected = wirelessEnabled && controlCenter.bridge.controlCenterWirelessConnected
+        const isWiredConnected = controlCenter.bridge ? controlCenter.bridge.controlCenterWiredConnected : false
+
+        if (!hasWirelessAdapter)
+            return i18n("Not Available")
+        if (!wirelessEnabled)
             return i18n("Off")
-        if (state === "hotspot")
-            return i18n("Hotspot")
-        if (state === "vpn")
-            return i18n("VPN")
-        if (state === "cellular")
-            return i18n("Cellular")
-        return i18n("Off")
+        if (isWirelessConnected && isWiredConnected)
+            return i18n("WiFi On - Wired Connected")
+        if (isWirelessConnected)
+            return i18n("Connected")
+        if (isWiredConnected)
+            return i18n("Disconnected")
+        return i18n("On")
     }
 
     function _commitVolumeFromSlider()
@@ -693,20 +697,16 @@ Window
 
                             Switch
                             {
-                                checked: controlCenter.bridge ? controlCenter.bridge.controlCenterNetworkState === "wireless" : false
+                                checked: controlCenter.bridge
+                                         ? controlCenter.bridge.controlCenterWirelessAvailable
+                                           && controlCenter.bridge.controlCenterWirelessEnabled
+                                         : false
                                 onToggled:
                                 {
                                     if (!controlCenter.bridge)
                                         return
 
-                                    if (checked)
-                                    {
-                                        controlCenter.bridge.controlCenterNetworkMode = "wireless"
-                                    }
-                                    else
-                                    {
-                                        controlCenter.bridge.controlCenterNetworkMode = "offline"
-                                    }
+                                    controlCenter.bridge.controlCenterWirelessEnabled = checked
                                 }
                             }
                         }
