@@ -12,6 +12,7 @@
 #include <QSaveFile>
 #include <QSslError>
 #include <QTemporaryDir>
+#include <QTimer>
 
 namespace
 {
@@ -149,7 +150,7 @@ void ValenzBridge::requestMediaArtwork(const QString &source)
     if (trimmed.isEmpty())
     {
         cancelMediaArtworkRequest();
-        m_artworkRequestedUrl = {};
+        m_artworkRequestedUrl = QUrl();
         updateMediaArtSource(QString());
         return;
     }
@@ -162,7 +163,7 @@ void ValenzBridge::requestMediaArtwork(const QString &source)
         && (url.host().isEmpty() || url.host().compare(QStringLiteral("localhost"), Qt::CaseInsensitive) == 0))
     {
         cancelMediaArtworkRequest();
-        m_artworkRequestedUrl = {};
+        m_artworkRequestedUrl = QUrl();
         const QString localPath = url.toLocalFile();
         updateMediaArtSource(validateLocalArtwork(localPath)
                                  ? QUrl::fromLocalFile(QFileInfo(localPath).absoluteFilePath()).toString()
@@ -173,7 +174,7 @@ void ValenzBridge::requestMediaArtwork(const QString &source)
     if (url.scheme().compare(QStringLiteral("qrc"), Qt::CaseInsensitive) == 0)
     {
         cancelMediaArtworkRequest();
-        m_artworkRequestedUrl = {};
+        m_artworkRequestedUrl = QUrl();
         updateMediaArtSource(url.toString());
         return;
     }
@@ -181,7 +182,7 @@ void ValenzBridge::requestMediaArtwork(const QString &source)
     if (!httpsArtworkUrlIsAllowed(url))
     {
         cancelMediaArtworkRequest();
-        m_artworkRequestedUrl = {};
+        m_artworkRequestedUrl = QUrl();
         updateMediaArtSource(QString());
         return;
     }
@@ -191,7 +192,7 @@ void ValenzBridge::requestMediaArtwork(const QString &source)
     if (!cachedSource.isEmpty() && QFileInfo(QUrl(cachedSource).toLocalFile()).isFile())
     {
         cancelMediaArtworkRequest();
-        m_artworkRequestedUrl = {};
+        m_artworkRequestedUrl = QUrl();
         m_artworkCacheOrder.removeAll(cacheKey);
         m_artworkCacheOrder.append(cacheKey);
         updateMediaArtSource(cachedSource);
@@ -276,7 +277,7 @@ void ValenzBridge::handleMediaArtworkFinished(QNetworkReply *reply)
         if (m_artworkTimeoutTimer)
             m_artworkTimeoutTimer->stop();
         m_artworkDownloadBuffer.clear();
-        m_artworkRequestedUrl = {};
+        m_artworkRequestedUrl = QUrl();
         return;
     }
 
@@ -285,8 +286,12 @@ void ValenzBridge::handleMediaArtworkFinished(QNetworkReply *reply)
 
     const QVariant declaredLengthHeader = reply->header(QNetworkRequest::ContentLengthHeader);
     const qint64 declaredLength = declaredLengthHeader.isValid() ? declaredLengthHeader.toLongLong() : -1;
-    const QByteArray mimeType = reply->header(QNetworkRequest::ContentTypeHeader)
-                                    .toByteArray().section(';', 0, 0).trimmed().toLower();
+    QByteArray mimeType = reply->header(QNetworkRequest::ContentTypeHeader).toByteArray();
+    const qsizetype mimeParameterIndex = mimeType.indexOf(';');
+    if (mimeParameterIndex >= 0) {
+        mimeType.truncate(mimeParameterIndex);
+    }
+    mimeType = mimeType.trimmed().toLower();
     const bool responseIsUsable = reply->error() == QNetworkReply::NoError
         && (declaredLength < 0 || declaredLength <= kArtworkDownloadLimit)
         && !m_artworkDownloadBuffer.isEmpty()
@@ -297,7 +302,7 @@ void ValenzBridge::handleMediaArtworkFinished(QNetworkReply *reply)
     if (!responseIsUsable || !m_artworkCacheDir || !m_artworkCacheDir->isValid())
     {
         m_artworkDownloadBuffer.clear();
-        m_artworkRequestedUrl = {};
+        m_artworkRequestedUrl = QUrl();
         return;
     }
 
@@ -310,7 +315,7 @@ void ValenzBridge::handleMediaArtworkFinished(QNetworkReply *reply)
         || !mimeMatchesArtworkFormat(mimeType, detectedFormat))
     {
         m_artworkDownloadBuffer.clear();
-        m_artworkRequestedUrl = {};
+        m_artworkRequestedUrl = QUrl();
         return;
     }
 
@@ -324,7 +329,7 @@ void ValenzBridge::handleMediaArtworkFinished(QNetworkReply *reply)
         || !cacheFile.commit())
     {
         m_artworkDownloadBuffer.clear();
-        m_artworkRequestedUrl = {};
+        m_artworkRequestedUrl = QUrl();
         return;
     }
 
@@ -339,7 +344,7 @@ void ValenzBridge::handleMediaArtworkFinished(QNetworkReply *reply)
     m_artworkCache.insert(cacheKey, localSource);
     m_artworkCacheOrder.append(cacheKey);
     m_artworkDownloadBuffer.clear();
-    m_artworkRequestedUrl = {};
+    m_artworkRequestedUrl = QUrl();
     updateMediaArtSource(localSource);
 }
 
