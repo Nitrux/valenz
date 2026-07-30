@@ -4,6 +4,7 @@
 
 #include <QMetaObject>
 #include <QPointer>
+#include <QProcess>
 #include <QTimer>
 #include <QThreadPool>
 
@@ -11,6 +12,16 @@ namespace
 {
 constexpr int kControlCenterIdleRefreshIntervalMs = 3000;
 constexpr int kControlCenterActiveRefreshIntervalMs = 1000;
+
+bool startDetachedCommand(const QString &command)
+{
+    QStringList parts = QProcess::splitCommand(command.trimmed());
+    if (parts.isEmpty())
+        return false;
+
+    const QString program = parts.takeFirst();
+    return !program.isEmpty() && QProcess::startDetached(program, parts);
+}
 
 struct ControlCenterRuntimeSnapshot
 {
@@ -415,27 +426,33 @@ void ValenzBridge::setControlCenterNightLightEnabled(bool enabled)
 
     if (actualEnabled != enabled)
     {
-        if (enabled)
-            MauiKitSystem::startControlCenterNightLight();
-        else
-            MauiKitSystem::stopControlCenterNightLight();
+        const bool succeeded = enabled
+                ? MauiKitSystem::startControlCenterNightLight()
+                : MauiKitSystem::stopControlCenterNightLight();
+        if (!succeeded)
+        {
+            refreshControlCenterNightLightState();
+            return;
+        }
     }
 
-    bool refreshedEnabled = false;
-    const bool stillAvailable = MauiKitSystem::controlCenterNightLightState(&refreshedEnabled);
-    setControlCenterNightLightAvailable(stillAvailable);
-
-    const bool authoritativeEnabled = stillAvailable && refreshedEnabled;
-    const bool changed = m_controlCenterNightLightEnabled != authoritativeEnabled;
-    m_controlCenterNightLightEnabled = authoritativeEnabled;
-    if (changed || authoritativeEnabled != enabled)
+    if (m_controlCenterNightLightEnabled != enabled)
+    {
+        m_controlCenterNightLightEnabled = enabled;
         Q_EMIT controlCenterNightLightEnabledChanged(m_controlCenterNightLightEnabled);
+    }
+
+    QTimer::singleShot(250, this, &ValenzBridge::refreshControlCenterNightLightState);
 }
 
 void ValenzBridge::executeControlCenterPowerCommand()
 {
     const QString command = normalizePowerCommand(m_controlCenterPowerCommand);
-    MauiKitSystem::executeControlCenterPowerCommand(command);
+    if (!startDetachedCommand(command)
+        && command.compare(QStringLiteral("wlogout"), Qt::CaseInsensitive) != 0)
+    {
+        startDetachedCommand(QStringLiteral("wlogout"));
+    }
 }
 
 void ValenzBridge::executeControlCenterSettingsCommand()
@@ -443,7 +460,11 @@ void ValenzBridge::executeControlCenterSettingsCommand()
     const QString command = m_controlCenterSettingsCommand.trimmed().isEmpty()
             ? QStringLiteral("systemsettings")
             : m_controlCenterSettingsCommand.trimmed();
-    MauiKitSystem::executeControlCenterSettingsCommand(command);
+    if (!startDetachedCommand(command)
+        && !startDetachedCommand(QStringLiteral("systemsettings")))
+    {
+        startDetachedCommand(QStringLiteral("maui-settings"));
+    }
 }
 
 void ValenzBridge::refreshControlCenterNightLightState()

@@ -1,7 +1,11 @@
 #include "valenzbridge.h"
 #include "valenzbridge_p.h"
 
+#include <QDir>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include <QProcess>
+#include <QTemporaryDir>
 
 ValenzBridge::ValenzBridge(QObject *parent)
     : QObject(parent)
@@ -11,6 +15,15 @@ ValenzBridge::ValenzBridge(QObject *parent)
 
     m_weatherNetwork = new QNetworkAccessManager(this);
     connect(m_weatherNetwork, &QNetworkAccessManager::finished, this, &ValenzBridge::onWeatherReplyFinished);
+
+    m_artworkNetwork = new QNetworkAccessManager(this);
+    m_artworkCacheDir = new QTemporaryDir(QDir::tempPath() + QStringLiteral("/valenz-artwork-XXXXXX"));
+    m_artworkTimeoutTimer = new QTimer(this);
+    m_artworkTimeoutTimer->setSingleShot(true);
+    connect(m_artworkTimeoutTimer, &QTimer::timeout, this, [this] {
+        if (m_artworkReply)
+            m_artworkReply->abort();
+    });
 
     m_weatherRefreshTimer = new QTimer(this);
     m_weatherRefreshTimer->setTimerType(Qt::CoarseTimer);
@@ -36,6 +49,12 @@ ValenzBridge::ValenzBridge(QObject *parent)
     QTimer::singleShot(0, this, &ValenzBridge::refreshWeather);
     initializeControlCenterRuntime();
     initializeConfigWatcher();
+}
+
+ValenzBridge::~ValenzBridge()
+{
+    cancelMediaArtworkRequest();
+    delete m_artworkCacheDir;
 }
 
 void ValenzBridge::toggleVicinae()

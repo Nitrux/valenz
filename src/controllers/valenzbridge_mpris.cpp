@@ -644,7 +644,7 @@ void ValenzBridge::refreshMprisState()
         entry.insert(QStringLiteral("artist"), sourceArtist);
         entry.insert(QStringLiteral("subtitle"), sourceArtist.isEmpty() ? sourceLabel : sourceArtist);
         entry.insert(QStringLiteral("status"), unwrapMprisVariant(properties.value(QStringLiteral("PlaybackStatus"))).toString().trimmed());
-        entry.insert(QStringLiteral("artSource"), unwrapMprisVariant(sourceMetadata.value(QStringLiteral("mpris:artUrl"))).toString().trimmed());
+        entry.insert(QStringLiteral("artSource"), QString());
         sources.append(entry);
     }
 

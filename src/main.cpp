@@ -12,6 +12,7 @@
 #include <QDate>
 #include <QDir>
 #include <QIcon>
+#include <QImageReader>
 #include <QLockFile>
 #include <QWindow>
 #include <QObject>
@@ -163,6 +164,7 @@ int main(int argc, char *argv[])
     QSurfaceFormat format;
     format.setAlphaBufferSize(8);
     QSurfaceFormat::setDefaultFormat(format);
+    QImageReader::setAllocationLimit(64);
 
     KAboutData aboutData(QStringLiteral("valenz"),
                          i18n("Valenz"),

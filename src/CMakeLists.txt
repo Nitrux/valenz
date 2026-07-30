@@ -6,6 +6,7 @@ set(valenz_SRCS
     controllers/valenzbridge_controlcenter_runtime.cpp
     controllers/valenzbridge_workspace.cpp
     controllers/valenzbridge_mpris.cpp
+    controllers/valenzbridge_artwork.cpp
     controllers/valenzbridge_weather.cpp
     controllers/valenzbridge_config.cpp
     controllers/valenzbridge_systray.cpp

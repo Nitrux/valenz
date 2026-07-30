@@ -185,10 +185,6 @@ Window
         return source.startsWith("file://")
                 || source.startsWith("qrc:/")
                 || source.startsWith(":/")
-                || source.startsWith("data:")
-                || source.startsWith("http://")
-                || source.startsWith("https://")
-                || source.startsWith("image://")
     }
 
     function _urgencyAccentColor(level)

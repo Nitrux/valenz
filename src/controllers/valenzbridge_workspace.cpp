@@ -1,6 +1,12 @@
 #include "valenzbridge.h"
 #include "valenzbridge_p.h"
 
+namespace
+{
+constexpr qsizetype kMaximumHyprlandEventLineBytes = 16 * 1024;
+constexpr qint64 kHyprlandReadChunkBytes = 4096;
+}
+
 void ValenzBridge::goToPreviousWorkspace()
 {
     if (!dispatchWorkspaceFocus(QStringLiteral("-1")))
@@ -188,6 +194,7 @@ void ValenzBridge::connectHyprlandEventSocket()
                 [this]()
         {
             m_hyprlandEventBuffer.clear();
+            m_discardOversizedHyprlandEvent = false;
             scheduleHyprlandEventSocketReconnect();
         });
 
@@ -205,6 +212,7 @@ void ValenzBridge::connectHyprlandEventSocket()
     }
 
     m_hyprlandEventBuffer.clear();
+    m_discardOversizedHyprlandEvent = false;
     m_hyprlandEventSocket->abort();
     m_hyprlandEventSocket->connectToServer(socketPath, QIODevice::ReadOnly);
 }
@@ -223,18 +231,42 @@ void ValenzBridge::handleHyprlandEventData()
     if (!m_hyprlandEventSocket)
         return;
 
-    m_hyprlandEventBuffer += m_hyprlandEventSocket->readAll();
-
-    int newlineIndex = m_hyprlandEventBuffer.indexOf('\n');
-    while (newlineIndex >= 0)
+    while (m_hyprlandEventSocket->bytesAvailable() > 0)
     {
-        const QByteArray lineBytes = m_hyprlandEventBuffer.left(newlineIndex).trimmed();
-        m_hyprlandEventBuffer.remove(0, newlineIndex + 1);
+        QByteArray chunk = m_hyprlandEventSocket->read(kHyprlandReadChunkBytes);
+        if (chunk.isEmpty())
+            break;
 
-        if (!lineBytes.isEmpty())
-            handleHyprlandEventLine(QString::fromUtf8(lineBytes));
+        if (m_discardOversizedHyprlandEvent)
+        {
+            const qsizetype newlineIndex = chunk.indexOf('\n');
+            if (newlineIndex < 0)
+                continue;
 
-        newlineIndex = m_hyprlandEventBuffer.indexOf('\n');
+            chunk.remove(0, newlineIndex + 1);
+            m_discardOversizedHyprlandEvent = false;
+        }
+
+        m_hyprlandEventBuffer += chunk;
+        qsizetype newlineIndex = m_hyprlandEventBuffer.indexOf('\n');
+        while (newlineIndex >= 0)
+        {
+            if (newlineIndex <= kMaximumHyprlandEventLineBytes)
+            {
+                const QByteArray lineBytes = m_hyprlandEventBuffer.left(newlineIndex).trimmed();
+                if (!lineBytes.isEmpty())
+                    handleHyprlandEventLine(QString::fromUtf8(lineBytes));
+            }
+
+            m_hyprlandEventBuffer.remove(0, newlineIndex + 1);
+            newlineIndex = m_hyprlandEventBuffer.indexOf('\n');
+        }
+
+        if (m_hyprlandEventBuffer.size() > kMaximumHyprlandEventLineBytes)
+        {
+            m_hyprlandEventBuffer.clear();
+            m_discardOversizedHyprlandEvent = true;
+        }
     }
 }
 

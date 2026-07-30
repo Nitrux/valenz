@@ -3,9 +3,12 @@
 
 #include <QDBusConnection>
 #include <QDBusMessage>
+#include <QFileInfo>
 #include <QHash>
+#include <QImageReader>
 #include <QStringList>
 #include <QTimer>
+#include <QUrl>
 #include <QVariant>
 #include <QtGlobal>
 
@@ -20,6 +23,16 @@ constexpr auto kFallbackIcon = "notifications";
 constexpr uint kCloseReasonExpired = 1;
 constexpr uint kCloseReasonDismissedByUser = 2;
 constexpr uint kCloseReasonClosedByCall = 3;
+constexpr int kMaximumNotifications = 200;
+constexpr int kMaximumSourceLength = 256;
+constexpr int kMaximumMessageLength = 8192;
+constexpr int kMaximumIconLength = 2048;
+constexpr int kMaximumActions = 16;
+constexpr int kMaximumActionFieldLength = 256;
+constexpr int kMaximumReplyLength = 4096;
+constexpr qint64 kMaximumLocalIconBytes = 5 * 1024 * 1024;
+constexpr int kMaximumIconDimension = 4096;
+constexpr qint64 kMaximumIconPixels = 16 * 1024 * 1024;
 
 void emitNotificationsSignal(const QString &member, const QVariantList &arguments)
 {
@@ -60,6 +73,65 @@ QString normalizeNotificationText(const QString &text)
         paragraphs.push_back(paragraphLines.join(QStringLiteral(" ")));
 
     return paragraphs.join(QStringLiteral("\n\n")).trimmed();
+}
+
+QString boundedNotificationText(const QString &text, int maximumLength)
+{
+    return normalizeNotificationText(text.left(maximumLength)).left(maximumLength);
+}
+
+bool localNotificationIconIsSafe(const QString &path)
+{
+    const QFileInfo fileInfo(path);
+    if (!fileInfo.isFile() || !fileInfo.isReadable()
+        || fileInfo.size() <= 0 || fileInfo.size() > kMaximumLocalIconBytes)
+    {
+        return false;
+    }
+
+    QImageReader reader(fileInfo.absoluteFilePath());
+    reader.setDecideFormatFromContent(true);
+    if (!reader.canRead())
+        return false;
+
+    const QSize size = reader.size();
+    return size.isValid()
+        && size.width() > 0
+        && size.height() > 0
+        && size.width() <= kMaximumIconDimension
+        && size.height() <= kMaximumIconDimension
+        && static_cast<qint64>(size.width()) * size.height() <= kMaximumIconPixels;
+}
+
+QString safeNotificationIconSource(const QString &value)
+{
+    const QString candidate = value.left(kMaximumIconLength).trimmed();
+    if (candidate.isEmpty())
+        return {};
+
+    QUrl url(candidate);
+    if (url.scheme().isEmpty() && QFileInfo(candidate).isAbsolute())
+        url = QUrl::fromLocalFile(candidate);
+
+    if (url.isLocalFile()
+        && (url.host().isEmpty() || url.host().compare(QStringLiteral("localhost"), Qt::CaseInsensitive) == 0))
+    {
+        const QString path = url.toLocalFile();
+        return localNotificationIconIsSafe(path)
+            ? QUrl::fromLocalFile(QFileInfo(path).absoluteFilePath()).toString()
+            : QString();
+    }
+
+    if (url.scheme().compare(QStringLiteral("qrc"), Qt::CaseInsensitive) == 0
+        || candidate.startsWith(QStringLiteral(":/")))
+    {
+        return candidate;
+    }
+
+    if (!url.scheme().isEmpty())
+        return {};
+
+    return candidate;
 }
 }
 
@@ -355,7 +427,7 @@ void NotificationsController::replyById(uint id, const QString &text)
     if (row < 0)
         return;
 
-    const QString replyText = text.trimmed();
+    const QString replyText = text.trimmed().left(kMaximumReplyLength);
     if (replyText.isEmpty())
         return;
 
@@ -407,14 +479,16 @@ uint NotificationsController::Notify(const QString &appName,
                                      const QVariantMap &hints,
                                      int timeout)
 {
+    const int replaceRow = replacesId > 0 ? indexOfId(replacesId) : -1;
+
     NotificationEntry entry;
-    entry.id = replacesId > 0 ? replacesId : m_nextId++;
-    entry.sourceName = appName.trimmed();
+    entry.id = replaceRow >= 0 ? replacesId : m_nextId++;
+    entry.sourceName = boundedNotificationText(appName, kMaximumSourceLength);
     if (entry.sourceName.isEmpty())
         entry.sourceName = QStringLiteral("System");
-    entry.messageText = body.trimmed();
+    entry.messageText = boundedNotificationText(body, kMaximumMessageLength);
     if (entry.messageText.isEmpty())
-        entry.messageText = summary.trimmed();
+        entry.messageText = boundedNotificationText(summary, kMaximumMessageLength);
     entry.createdAt = QDateTime::currentDateTime();
     entry.iconName = normalizeIconName(appIcon, appName, hints);
     entry.urgencyLevel = parseUrgency(hints);
@@ -422,11 +496,9 @@ uint NotificationsController::Notify(const QString &appName,
     const NotificationAction primaryAction = preferredAction(entry.actions);
     entry.actionText = primaryAction.text;
     entry.actionKey = primaryAction.key;
-    entry.replyPlaceholderText = hints.value(QStringLiteral("x-kde-reply-placeholder-text")).toString().trimmed();
-    entry.replySubmitButtonText = hints.value(QStringLiteral("x-kde-reply-submit-button-text")).toString().trimmed();
-    entry.timeout = timeout;
-
-    const int replaceRow = replacesId > 0 ? indexOfId(replacesId) : -1;
+    entry.replyPlaceholderText = boundedNotificationText(hints.value(QStringLiteral("x-kde-reply-placeholder-text")).toString(), kMaximumActionFieldLength);
+    entry.replySubmitButtonText = boundedNotificationText(hints.value(QStringLiteral("x-kde-reply-submit-button-text")).toString(), kMaximumActionFieldLength);
+    entry.timeout = qBound(-1, timeout, 60 * 60 * 1000);
     const bool suppressTransient = m_dndEnabled;
 
     if (replaceRow >= 0)
@@ -438,6 +510,9 @@ uint NotificationsController::Notify(const QString &appName,
             Q_EMIT transientNotification(entry.id, entry.sourceName, entry.messageText, relativeTimestamp(entry.createdAt), entry.iconName, entry.urgencyLevel, entry.actionText, entry.actionKey, actionsToVariantList(entry.actions), entry.replyPlaceholderText, entry.replySubmitButtonText, entry.timeout);
         return entry.id;
     }
+
+    if (m_entries.size() >= kMaximumNotifications)
+        removeByIndex(m_entries.size() - 1, kCloseReasonExpired);
 
     const int insertRow = 0;
     beginInsertRows(QModelIndex(), insertRow, insertRow);
@@ -533,13 +608,13 @@ int NotificationsController::parseUrgency(const QVariantMap &hints)
 QVector<NotificationsController::NotificationAction> NotificationsController::parseActions(const QStringList &actions)
 {
     QVector<NotificationAction> result;
-    result.reserve(actions.size() / 2);
+    result.reserve(qMin(kMaximumActions, actions.size() / 2));
 
-    for (int index = 0; index + 1 < actions.size(); index += 2)
+    for (int index = 0; index + 1 < actions.size() && result.size() < kMaximumActions; index += 2)
     {
         NotificationAction action;
-        action.key = actions.at(index).trimmed();
-        action.text = actions.at(index + 1).trimmed();
+        action.key = boundedNotificationText(actions.at(index), kMaximumActionFieldLength);
+        action.text = boundedNotificationText(actions.at(index + 1), kMaximumActionFieldLength);
         if (!action.key.isEmpty() && !action.text.isEmpty())
             result.push_back(action);
     }
@@ -576,19 +651,19 @@ QVariantList NotificationsController::actionsToVariantList(const QVector<Notific
 
 QString NotificationsController::normalizeIconName(const QString &iconName, const QString &appName, const QVariantMap &hints)
 {
-    const QString hintedIcon = hints.value(QStringLiteral("image-path")).toString().trimmed();
+    const QString hintedIcon = safeNotificationIconSource(hints.value(QStringLiteral("image-path")).toString());
     if (!hintedIcon.isEmpty())
         return hintedIcon;
 
-    const QString hintedIconAlt = hints.value(QStringLiteral("image_path")).toString().trimmed();
+    const QString hintedIconAlt = safeNotificationIconSource(hints.value(QStringLiteral("image_path")).toString());
     if (!hintedIconAlt.isEmpty())
         return hintedIconAlt;
 
     QStringList iconCandidates;
-    addWindowIconCandidates(&iconCandidates, iconName);
-    addWindowIconCandidates(&iconCandidates, appName);
-    addWindowIconCandidates(&iconCandidates, hints.value(QStringLiteral("desktop-entry")).toString());
-    addWindowIconCandidates(&iconCandidates, hints.value(QStringLiteral("desktop_entry")).toString());
+    addWindowIconCandidates(&iconCandidates, iconName.left(kMaximumIconLength));
+    addWindowIconCandidates(&iconCandidates, appName.left(kMaximumSourceLength));
+    addWindowIconCandidates(&iconCandidates, hints.value(QStringLiteral("desktop-entry")).toString().left(kMaximumSourceLength));
+    addWindowIconCandidates(&iconCandidates, hints.value(QStringLiteral("desktop_entry")).toString().left(kMaximumSourceLength));
 
     for (const QString &candidate : std::as_const(iconCandidates))
     {
@@ -598,17 +673,20 @@ QString NotificationsController::normalizeIconName(const QString &iconName, cons
 
     for (const QString &candidate : std::as_const(iconCandidates))
     {
-        const QString mappedIcon = lookupIconFromDesktopEntries(candidate);
+        const QString mappedIcon = safeNotificationIconSource(lookupIconFromDesktopEntries(candidate));
         if (mappedIcon.isEmpty())
             continue;
 
-        if (isUsableIconSource(mappedIcon))
-            return mappedIcon.trimmed();
-
-        return mappedIcon.trimmed();
+        if (isUsableIconSource(mappedIcon)
+            || mappedIcon.startsWith(QStringLiteral("file:"))
+            || mappedIcon.startsWith(QStringLiteral("qrc:"))
+            || mappedIcon.startsWith(QStringLiteral(":")))
+        {
+            return mappedIcon;
+        }
     }
 
-    const QString explicitIcon = iconName.trimmed();
+    const QString explicitIcon = safeNotificationIconSource(iconName);
     if (!explicitIcon.isEmpty())
         return explicitIcon;
 

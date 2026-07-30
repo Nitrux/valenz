@@ -122,6 +122,11 @@ QString ValenzBridge::mediaArtSource() const
 
 void ValenzBridge::setMediaArtSource(const QString &source)
 {
+    requestMediaArtwork(source);
+}
+
+void ValenzBridge::updateMediaArtSource(const QString &source)
+{
     if (m_mediaArtSource == source)
         return;
 

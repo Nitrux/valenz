@@ -47,22 +47,42 @@ QDBusArgument &operator<<(QDBusArgument &argument, const DBusMenuLayoutItem &obj
     return argument;
 }
 
-const QDBusArgument &operator>>(const QDBusArgument &argument, DBusMenuLayoutItem &obj)
+constexpr int kMaximumMenuDepth = 8;
+constexpr int kMaximumMenuNodes = 256;
+
+bool readDBusMenuLayoutItem(const QDBusArgument &argument,
+                            DBusMenuLayoutItem *obj,
+                            int depth,
+                            int *nodeCount)
 {
+    if (!obj || !nodeCount || *nodeCount >= kMaximumMenuNodes)
+        return false;
+
     argument.beginStructure();
-    argument >> obj.id >> obj.properties;
+    argument >> obj->id >> obj->properties;
+    ++(*nodeCount);
     argument.beginArray();
     while (!argument.atEnd())
     {
         QDBusVariant dbusVariant;
         argument >> dbusVariant;
-        const auto childArgument = dbusVariant.variant().value<QDBusArgument>();
+        if (depth >= kMaximumMenuDepth || *nodeCount >= kMaximumMenuNodes)
+            continue;
+
+        const QDBusArgument childArgument = dbusVariant.variant().value<QDBusArgument>();
         DBusMenuLayoutItem child;
-        childArgument >> child;
-        obj.children.append(child);
+        if (readDBusMenuLayoutItem(childArgument, &child, depth + 1, nodeCount))
+            obj->children.append(child);
     }
     argument.endArray();
     argument.endStructure();
+    return true;
+}
+
+const QDBusArgument &operator>>(const QDBusArgument &argument, DBusMenuLayoutItem &obj)
+{
+    int nodeCount = 0;
+    readDBusMenuLayoutItem(argument, &obj, 0, &nodeCount);
     return argument;
 }
 

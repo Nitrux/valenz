@@ -1,16 +1,19 @@
 #pragma once
 
 #include <QByteArray>
+#include <QHash>
 #include <QObject>
 #include <QString>
 #include <QStringList>
 #include <QtGlobal>
+#include <QUrl>
 #include <QVariantList>
 #include <QVariantMap>
 
 class QLocalSocket;
 class QNetworkAccessManager;
 class QNetworkReply;
+class QTemporaryDir;
 class QFileSystemWatcher;
 class QTimer;
 
@@ -86,6 +89,7 @@ class ValenzBridge : public QObject
 
 public:
     explicit ValenzBridge(QObject *parent = nullptr);
+    ~ValenzBridge() override;
 
     bool enabled() const;
     void setEnabled(bool enabled);
@@ -324,6 +328,12 @@ private:
     void setMprisSources(const QVariantList &sources);
     void updateMprisPlaybackTicker();
     void updateMprisTimestampFromTicker();
+    void requestMediaArtwork(const QString &source);
+    void startMediaArtworkRequest(const QUrl &url);
+    void handleMediaArtworkReadyRead(QNetworkReply *reply);
+    void handleMediaArtworkFinished(QNetworkReply *reply);
+    void cancelMediaArtworkRequest();
+    void updateMediaArtSource(const QString &source);
     void connectMprisSignalObservers();
     void updateMprisPropertiesSubscription(const QString &serviceName);
     void clearMprisPropertiesSubscription();
@@ -423,11 +433,21 @@ private:
     QTimer *m_configReloadTimer = nullptr;
     QLocalSocket *m_hyprlandEventSocket = nullptr;
     QByteArray m_hyprlandEventBuffer;
+    bool m_discardOversizedHyprlandEvent = false;
     QTimer *m_workspaceRefreshTimer = nullptr;
     QTimer *m_focusedWindowRefreshTimer = nullptr;
     QTimer *m_mprisRefreshTimer = nullptr;
     QTimer *m_mprisPlaybackTimer = nullptr;
     QNetworkAccessManager *m_weatherNetwork = nullptr;
+    QNetworkAccessManager *m_artworkNetwork = nullptr;
+    QNetworkReply *m_artworkReply = nullptr;
+    QTimer *m_artworkTimeoutTimer = nullptr;
+    QTemporaryDir *m_artworkCacheDir = nullptr;
+    QByteArray m_artworkDownloadBuffer;
+    QUrl m_artworkRequestedUrl;
+    int m_artworkRedirectCount = 0;
+    QHash<QString, QString> m_artworkCache;
+    QStringList m_artworkCacheOrder;
     QTimer *m_weatherRefreshTimer = nullptr;
     QTimer *m_controlCenterStatusTimer = nullptr;
     bool m_controlCenterRuntimeActive = false;
