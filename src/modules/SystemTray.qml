@@ -22,15 +22,27 @@ RowLayout
     readonly property int _panelInset: Math.max(Maui.Style.space.small, 6)
     readonly property int _preferredMenuWidth: Maui.Handy.isMobile ? 320 : 360
     readonly property int _minimumMenuWidth: Maui.Handy.isMobile ? 280 : 320
-    readonly property int _rowHeight: Math.max(40, Maui.Style.toolBarHeightAlt)
+    readonly property int _rowHeight: _menuItemMetrics.implicitHeight + 4
+    readonly property int _separatorHeight: Math.max(1, (Maui.Style.space.small * 2) + 1)
     property int _geometryRevision: 0
     property double _lastMenuClosedAtMs: -1
     property bool _menuOpen: false
     property real _trayMenuOriginX: 0
     property real _trayMenuOriginY: 0
-
     spacing: Maui.Style.space.tiny
     visible: !!controller && controller.count > 0
+
+    MenuItem
+    {
+        id: _menuItemMetrics
+        visible: false
+        text: ""
+        padding: 0
+        topPadding: Maui.Style.space.tiny
+        bottomPadding: Maui.Style.space.tiny
+        leftPadding: Maui.Style.space.medium
+        rightPadding: Maui.Style.space.medium
+    }
 
     function _touchGeometryRevision()
     {
@@ -67,6 +79,13 @@ RowLayout
     function _menuItems()
     {
         return systemTray.trayMenuItems.filter(function(item) { return item.visible !== false })
+    }
+
+    function _menuItemsHeight()
+    {
+        return _menuItems().reduce(function(total, item) {
+            return total + (item.separator === true ? _separatorHeight : _rowHeight)
+        }, 0)
     }
 
     function _availableHeightFromAnchor()
@@ -280,7 +299,7 @@ RowLayout
             const listHeight = _trayMenuList ? _trayMenuList.contentHeight : 0
             const contentHeight = listHeight > 0
                     ? (listHeight + (_panelInset * 2))
-                    : ((_menuItems().length * _rowHeight) + (_panelInset * 2))
+                    : (_menuItemsHeight() + (_panelInset * 2))
             return Math.min(contentHeight, systemTray._availableHeightFromAnchor())
         }
 
@@ -362,27 +381,54 @@ RowLayout
                 boundsBehavior: Flickable.StopAtBounds
                 interactive: contentHeight > height
 
-                delegate: MenuItem
+                delegate: Loader
                 {
                     required property var modelData
                     width: ListView.view ? ListView.view.width : implicitWidth
-                    text: String(modelData.label || "")
-                    enabled: modelData.enabled !== false
-                    checkable: modelData.checkable === true
-                    checked: modelData.checked === true
-                    display: ToolButton.TextOnly
-                    padding: 0
-                    leftPadding: Maui.Style.space.medium
-                    rightPadding: Maui.Style.space.medium
-                    topPadding: Maui.Style.space.tiny
-                    bottomPadding: Maui.Style.space.tiny
-                    icon.name: String(modelData.iconName || "")
+                    height: modelData.separator === true ? systemTray._separatorHeight : (item ? item.implicitHeight + 4 : systemTray._rowHeight)
+                    sourceComponent: modelData.separator === true ? _trayMenuSeparator : _trayMenuItem
 
-                    onTriggered:
+                    Component
                     {
-                        if (systemTray.controller && systemTray.trayMenuIndex >= 0)
-                            systemTray.controller.triggerTrayMenuItem(systemTray.trayMenuIndex, Number(modelData.id))
-                        _trayMenuWindow.close()
+                        id: _trayMenuSeparator
+
+                        MenuSeparator
+                        {
+                            anchors.fill: parent
+                            enabled: false
+                            hoverEnabled: false
+                            focusPolicy: Qt.NoFocus
+                        }
+                    }
+                    Component
+                    {
+                        id: _trayMenuItem
+
+                        MenuItem
+                        {
+                            property var menuData: parent ? parent.modelData : null
+                            width: parent ? parent.width : implicitWidth
+                            text: String(menuData && menuData.label || "")
+                            enabled: !!menuData && menuData.visible !== false && menuData.enabled !== false
+                            hoverEnabled: enabled && !Maui.Handy.isMobile
+                            focusPolicy: enabled ? Qt.StrongFocus : Qt.NoFocus
+                            checkable: !!menuData && menuData.checkable === true
+                            checked: !!menuData && menuData.checked === true
+                            display: ToolButton.TextOnly
+                            padding: 0
+                            leftPadding: Maui.Style.space.medium
+                            rightPadding: Maui.Style.space.medium
+                            topPadding: Maui.Style.space.tiny
+                            bottomPadding: Maui.Style.space.tiny
+                            icon.name: String(menuData && menuData.iconName || "")
+
+                            onTriggered:
+                            {
+                                if (systemTray.controller && systemTray.trayMenuIndex >= 0 && menuData)
+                                    systemTray.controller.triggerTrayMenuItem(systemTray.trayMenuIndex, Number(menuData.id))
+                                _trayMenuWindow.close()
+                            }
+                        }
                     }
                 }
             }
