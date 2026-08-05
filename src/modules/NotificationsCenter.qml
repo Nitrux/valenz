@@ -636,7 +636,9 @@ Window
                                     visible: !notificationsCenter.useSystemThemeIcons
                                     text: "\uee23"
                                     color: _clearAllButton.enabled ? Maui.Theme.textColor : Maui.Theme.disabledTextColor
-                                    font: Qt.font({ family: "Symbols Nerd Font", weight: Font.Normal, pixelSize: 12 })
+                                    font.family: "Symbols Nerd Font"
+                                    font.weight: Font.Normal
+                                    font.pointSize: 9
                                     textFormat: Text.PlainText
                                     renderType: Text.QtRendering
                                 }
@@ -828,7 +830,9 @@ Window
                                                     visible: !parent.isImageSource && (!notificationsCenter.useSystemThemeIcons || !_groupIcon.icon.valid)
                                                     text: notificationsCenter._notificationGlyph(latestIconName)
                                                     color: Maui.Theme.textColor
-                                                    font: Qt.font({ family: "Symbols Nerd Font", weight: Font.Normal, pixelSize: Math.max(12, Math.round(parent.height * 0.75)) })
+                                                    font.family: "Symbols Nerd Font"
+                                                    font.weight: Font.Normal
+                                                    font.pointSize: Math.max(9, Math.round(parent.height * 0.75 * 0.75))
                                                     textFormat: Text.PlainText
                                                     renderType: Text.QtRendering
                                                 }
@@ -1292,7 +1296,9 @@ Window
                                             visible: !parent.isImageSource && (!notificationsCenter.useSystemThemeIcons || !_notificationIcon.icon.valid)
                                             text: notificationsCenter._notificationGlyph(iconName)
                                             color: Maui.Theme.textColor
-                                            font: Qt.font({ family: "Symbols Nerd Font", weight: Font.Normal, pixelSize: Math.max(12, Math.round(parent.height * 0.75)) })
+                                            font.family: "Symbols Nerd Font"
+                                            font.weight: Font.Normal
+                                            font.pointSize: Math.max(9, Math.round(parent.height * 0.75 * 0.75))
                                             textFormat: Text.PlainText
                                             renderType: Text.QtRendering
                                         }

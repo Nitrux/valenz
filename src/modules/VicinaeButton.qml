@@ -48,7 +48,7 @@ ToolButton
             color: vicinaeButton.activeContentColor
             font.family: "Symbols Nerd Font"
             font.weight: Font.Normal
-            font.pixelSize: Math.max(10, Math.round(parent.height * 0.65))
+            font.pointSize: Math.max(7, Math.round(parent.height * 0.65 * 0.75))
             textFormat: Text.PlainText
             renderType: Text.QtRendering
         }

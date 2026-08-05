@@ -615,7 +615,7 @@ Window
                             color: Maui.Theme.textColor
                             font.family: "Symbols Nerd Font"
                             font.weight: Font.Normal
-                            font.pixelSize: Math.max(12, Math.round(parent.height * 0.75))
+                            font.pointSize: Math.max(9, Math.round(parent.height * 0.75 * 0.75))
                             textFormat: Text.PlainText
                             renderType: Text.QtRendering
                         }

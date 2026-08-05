@@ -66,6 +66,8 @@ Window
     readonly property string _nerdFontFamily: "Symbols Nerd Font Mono"
     readonly property int _glyphSize: Math.max(15, Math.round(Maui.Style.iconSizes.medium * 0.9))
     readonly property int _cardPadding: Maui.Style.space.small
+    readonly property color _volumeBarColor: (controlCenter.bridge ? controlCenter.bridge.controlCenterVolumeMuted : false) ? Maui.Theme.disabledTextColor : Maui.Theme.highlightColor
+    readonly property color _volumeIndicatorColor: (controlCenter.bridge ? controlCenter.bridge.controlCenterVolumeMuted : false) ? Maui.Theme.disabledTextColor : Maui.Theme.textColor
     readonly property int _toolActionMinSize: Math.max(28, Maui.Style.toolBarHeightAlt)
     readonly property int _minPanelWidth: Maui.Handy.isMobile ? _baseUnit * 16 : _baseUnit * 20
     property bool _cellularEnabled: false
@@ -605,7 +607,8 @@ Window
                                     anchors.centerIn: parent
                                     visible: !(controlCenter.bridge && controlCenter.bridge.userAvatarUrl.length > 0)
                                     text: "\uf007"
-                                    font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
+                                    font.family: controlCenter._nerdFontFamily
+                                    font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
                                     color: Maui.Theme.textColor
                                 }
                             }
@@ -682,7 +685,8 @@ Window
                             Label
                             {
                                 text: "\uf1eb"
-                                font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
+                                font.family: controlCenter._nerdFontFamily
+                                font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
                                 color: Maui.Theme.textColor
                             }
 
@@ -732,7 +736,8 @@ Window
                             Label
                             {
                                 text: "\uf294"
-                                font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
+                                font.family: controlCenter._nerdFontFamily
+                                font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
                                 color: Maui.Theme.textColor
                             }
 
@@ -787,7 +792,8 @@ Window
                             Label
                             {
                                 text: "\uf186"
-                                font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
+                                font.family: controlCenter._nerdFontFamily
+                                font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
                                 color: Maui.Theme.textColor
                             }
 
@@ -830,7 +836,8 @@ Window
                             Label
                             {
                                 text: "\uf05e"
-                                font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
+                                font.family: controlCenter._nerdFontFamily
+                                font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
                                 color: Maui.Theme.textColor
                             }
 
@@ -873,7 +880,8 @@ Window
                             Label
                             {
                                 text: controlCenter._powerProfileIconName === "power-profile-performance" ? "\uf0e7" : (controlCenter._powerProfileIconName === "power-profile-power-saver" ? "\uf06c" : "\ueeb2")
-                                font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
+                                font.family: controlCenter._nerdFontFamily
+                                font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
                                 color: Maui.Theme.textColor
                             }
 
@@ -1003,13 +1011,31 @@ Window
                             Label
                             {
                                 text: "\uf026"
-                                font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
-                                color: Maui.Theme.textColor
+                                font.family: controlCenter._nerdFontFamily
+                                font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
+                                color: controlCenter._volumeIndicatorColor
                             }
                             Slider
                             {
                                 id: _volumeSlider
                                 Layout.fillWidth: true
+                                background: Rectangle
+                                {
+                                    x: _volumeSlider.leftPadding
+                                    y: _volumeSlider.topPadding + (_volumeSlider.availableHeight - height) / 2
+                                    width: _volumeSlider.availableWidth
+                                    height: 8
+                                    radius: height / 2
+                                    color: Maui.Theme.backgroundColor
+
+                                    Rectangle
+                                    {
+                                        width: _volumeSlider.position * parent.width
+                                        height: parent.height
+                                        radius: height / 2
+                                        color: controlCenter._volumeBarColor
+                                    }
+                                }
                                 from: 0
                                 to: 100
                                 value: controlCenter._volumePercentage
@@ -1046,8 +1072,9 @@ Window
                             Label
                             {
                                 text: "\uf028"
-                                font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
-                                color: Maui.Theme.textColor
+                                font.family: controlCenter._nerdFontFamily
+                                font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
+                                color: controlCenter._volumeIndicatorColor
                             }
                         }
                     }
@@ -1071,7 +1098,8 @@ Window
                             Label
                             {
                                 text: "\uf042"
-                                font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
+                                font.family: controlCenter._nerdFontFamily
+                                font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
                                 color: Maui.Theme.textColor
                             }
                             Slider
@@ -1116,7 +1144,8 @@ Window
                             Label
                             {
                                 text: "\uf185"
-                                font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize })
+                                font.family: controlCenter._nerdFontFamily
+                                font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
                                 color: Maui.Theme.textColor
                             }
                         }
@@ -1141,7 +1170,13 @@ Window
                             {
                                 Layout.fillWidth: true
                                 spacing: Maui.Style.space.small
-                                Label { text: "\uf2db"; font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize }); color: Maui.Theme.textColor }
+                                Label
+                                {
+                                    text: "\uf2db"
+                                    font.family: controlCenter._nerdFontFamily
+                                    font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
+                                    color: Maui.Theme.textColor
+                                }
                                 Label { text: i18n("CPU"); color: Maui.Theme.textColor; font.weight: Font.DemiBold }
                                 Label { text: controlCenter._controlCenterCpuPercentage() + "%"; color: Maui.Theme.disabledTextColor }
                             }
@@ -1157,7 +1192,13 @@ Window
                             {
                                 Layout.fillWidth: true
                                 spacing: Maui.Style.space.small
-                                Label { text: "\uefc5"; font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize }); color: Maui.Theme.textColor }
+                                Label
+                                {
+                                    text: "\uefc5"
+                                    font.family: controlCenter._nerdFontFamily
+                                    font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
+                                    color: Maui.Theme.textColor
+                                }
                                 Label { text: i18n("RAM"); color: Maui.Theme.textColor; font.weight: Font.DemiBold }
                                 Label { text: controlCenter._controlCenterRamPercentage() + "%"; color: Maui.Theme.disabledTextColor }
                             }
@@ -1173,7 +1214,13 @@ Window
                             {
                                 Layout.fillWidth: true
                                 spacing: Maui.Style.space.small
-                                Label { text: "\uf0a0"; font: Qt.font({ family: controlCenter._nerdFontFamily, pixelSize: controlCenter._glyphSize }); color: Maui.Theme.textColor }
+                                Label
+                                {
+                                    text: "\uf0a0"
+                                    font.family: controlCenter._nerdFontFamily
+                                    font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
+                                    color: Maui.Theme.textColor
+                                }
                                 Label { text: i18n("Disk"); color: Maui.Theme.textColor; font.weight: Font.DemiBold }
                                 Label { text: controlCenter._controlCenterDiskUsageText(); color: Maui.Theme.disabledTextColor }
                             }

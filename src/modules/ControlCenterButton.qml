@@ -96,7 +96,9 @@ ToolButton
                 visible: !controlCenterButton.useSystemThemeIcons || !_networkIcon.valid
                 text: controlCenterButton.glyphForIcon ? controlCenterButton.glyphForIcon(controlCenterButton.networkIconName) : ""
                 color: controlCenterButton.activeContentColor
-                font: Qt.font({ family: "Symbols Nerd Font", weight: Font.Normal, pixelSize: Math.max(10, Math.round(parent.height * 0.65)) })
+                font.family: "Symbols Nerd Font"
+                font.weight: Font.Normal
+                font.pointSize: Math.max(7, Math.round(parent.height * 0.65 * 0.75))
                 textFormat: Text.PlainText
                 renderType: Text.QtRendering
             }
@@ -127,7 +129,9 @@ ToolButton
                 visible: !controlCenterButton.useSystemThemeIcons || !_bluetoothIcon.valid
                 text: controlCenterButton.glyphForIcon ? controlCenterButton.glyphForIcon(controlCenterButton.bluetoothIconName) : ""
                 color: controlCenterButton.activeContentColor
-                font: Qt.font({ family: "Symbols Nerd Font", weight: Font.Normal, pixelSize: Math.max(10, Math.round(parent.height * 0.65)) })
+                font.family: "Symbols Nerd Font"
+                font.weight: Font.Normal
+                font.pointSize: Math.max(7, Math.round(parent.height * 0.65 * 0.75))
                 textFormat: Text.PlainText
                 renderType: Text.QtRendering
             }
@@ -164,7 +168,9 @@ ToolButton
                 visible: !controlCenterButton.useSystemThemeIcons || !(_powerProfileIcon.valid && controlCenterButton.useSystemThemeIcons)
                 text: controlCenterButton.glyphForIcon ? controlCenterButton.glyphForIcon(controlCenterButton.powerProfileIconName) : ""
                 color: controlCenterButton.activeContentColor
-                font: Qt.font({ family: "Symbols Nerd Font", weight: Font.Normal, pixelSize: Math.max(10, Math.round(parent.height * 0.65)) })
+                font.family: "Symbols Nerd Font"
+                font.weight: Font.Normal
+                font.pointSize: Math.max(7, Math.round(parent.height * 0.65 * 0.75))
                 textFormat: Text.PlainText
                 renderType: Text.QtRendering
             }
@@ -208,7 +214,9 @@ ToolButton
                         visible: !controlCenterButton.useSystemThemeIcons || !_volumeIcon.valid
                         text: controlCenterButton.glyphForIcon ? controlCenterButton.glyphForIcon(controlCenterButton.volumeIconName) : ""
                         color: controlCenterButton.activeContentColor
-                        font: Qt.font({ family: "Symbols Nerd Font", weight: Font.Normal, pixelSize: Math.max(10, Math.round(parent.height * 0.65)) })
+                        font.family: "Symbols Nerd Font"
+                        font.weight: Font.Normal
+                        font.pointSize: Math.max(7, Math.round(parent.height * 0.65 * 0.75))
                         textFormat: Text.PlainText
                         renderType: Text.QtRendering
                     }
@@ -263,7 +271,9 @@ ToolButton
                         visible: !controlCenterButton.useSystemThemeIcons || !_brightnessIcon.valid
                         text: controlCenterButton.glyphForIcon ? controlCenterButton.glyphForIcon(controlCenterButton.brightnessIconName) : ""
                         color: controlCenterButton.activeContentColor
-                        font: Qt.font({ family: "Symbols Nerd Font", weight: Font.Normal, pixelSize: Math.max(10, Math.round(parent.height * 0.65)) })
+                        font.family: "Symbols Nerd Font"
+                        font.weight: Font.Normal
+                        font.pointSize: Math.max(7, Math.round(parent.height * 0.65 * 0.75))
                         textFormat: Text.PlainText
                         renderType: Text.QtRendering
                     }
@@ -317,7 +327,9 @@ ToolButton
                         visible: !controlCenterButton.useSystemThemeIcons || !_batteryIcon.valid
                         text: controlCenterButton.glyphForIcon ? controlCenterButton.glyphForIcon(controlCenterButton.batteryIconName) : ""
                         color: controlCenterButton.activeContentColor
-                        font: Qt.font({ family: "Symbols Nerd Font", weight: Font.Normal, pixelSize: Math.max(10, Math.round(parent.height * 0.65)) })
+                        font.family: "Symbols Nerd Font"
+                        font.weight: Font.Normal
+                        font.pointSize: Math.max(7, Math.round(parent.height * 0.65 * 0.75))
                         textFormat: Text.PlainText
                         renderType: Text.QtRendering
                     }

@@ -84,7 +84,9 @@ ToolButton
                 visible: !notificationsCenterButton.useSystemThemeIcons || !_notificationIcon.valid
                 text: notificationsCenterButton.glyphForIcon ? notificationsCenterButton.glyphForIcon(notificationsCenterButton.iconName) : ""
                 color: notificationsCenterButton.activeContentColor
-                font: Qt.font({ family: "Symbols Nerd Font", weight: Font.Normal, pixelSize: Math.max(10, Math.round(parent.height * 0.65)) })
+                font.family: "Symbols Nerd Font"
+                font.weight: Font.Normal
+                font.pointSize: Math.max(7, Math.round(parent.height * 0.65 * 0.75))
                 textFormat: Text.PlainText
                 renderType: Text.QtRendering
             }
