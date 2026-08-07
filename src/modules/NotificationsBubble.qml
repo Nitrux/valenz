@@ -567,7 +567,7 @@ Window
             color: Maui.Theme.alternateBackgroundColor
             radius: Maui.Style.radiusV
             border.width: 1
-            border.color: notificationsBubble._urgencyAccentColor(notificationsBubble.urgencyLevel)
+            border.color: notificationsBubble.urgencyLevel >= 0 ? notificationsBubble._urgencyAccentColor(notificationsBubble.urgencyLevel) : Qt.alpha(Maui.Theme.textColor, 0.10)
 
             ColumnLayout
             {

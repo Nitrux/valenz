@@ -452,8 +452,8 @@ Window
                         color: modelData.selected ? Qt.alpha(Maui.Theme.highlightColor, 0.22)
                                                   : hoveredArea.containsMouse ? Qt.alpha(Maui.Theme.hoverColor, 0.7)
                                                                               : Maui.Theme.alternateBackgroundColor
-                        border.width: modelData.selected ? 1 : 0
-                        border.color: modelData.selected ? Qt.alpha(Maui.Theme.highlightColor, 0.65) : "transparent"
+                        border.width: 1
+                        border.color: modelData.selected ? Qt.alpha(Maui.Theme.highlightColor, 0.65) : Qt.alpha(Maui.Theme.textColor, 0.10)
 
                         MouseArea
                         {
@@ -510,7 +510,8 @@ Window
                     visible: !mprisSourcesPopup._hasSources
                     radius: Maui.Style.radiusV
                     color: Maui.Theme.alternateBackgroundColor
-                    border.color: Qt.alpha(Maui.Theme.textColor, 0.08)
+                    border.width: 1
+                    border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
                     opacity: 0.95
                     implicitHeight: 64
 

@@ -561,6 +561,13 @@ Window
 
                 Maui.SectionItem
                 {
+                    background: Rectangle
+                    {
+                        color: Maui.Theme.alternateBackgroundColor
+                        radius: Maui.Style.radiusV
+                        border.width: 1
+                        border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+                    }
                         Layout.fillWidth: true
                         Layout.columnSpan: 2
                         flat: false
@@ -587,7 +594,7 @@ Window
                                     radius: width / 2
                                     color: Maui.Theme.alternateBackgroundColor
                                     border.width: 1
-                                    border.color: Qt.alpha(Maui.Theme.textColor, 0.12)
+                                    border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
                                 }
 
                                 Maui.IconItem
@@ -649,11 +656,13 @@ Window
                                 Layout.minimumHeight: 28
                                 text: i18n("Shutdown")
                                 display: ToolButton.TextBesideIcon
+                                Maui.Theme.textColor: "#cdd6f4"
+                                Maui.Theme.highlightedTextColor: "#cdd6f4"
 
                                 background: Rectangle
                                 {
                                     radius: Math.round(Maui.Style.radiusV * 0.6)
-                                    color: parent.down ? "#cc3b49" : "#e34b5a"
+                                    color: parent.down ? Qt.darker(Maui.Theme.negativeBackgroundColor, 1.12) : Maui.Theme.negativeBackgroundColor
                                 }
 
                                 onClicked:
@@ -667,6 +676,13 @@ Window
 
                     Maui.SectionItem
                     {
+                        background: Rectangle
+                        {
+                            color: Maui.Theme.alternateBackgroundColor
+                            radius: Maui.Style.radiusV
+                            border.width: 1
+                            border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+                        }
                         Layout.fillWidth: true
                         flat: false
                         clip: true
@@ -718,6 +734,13 @@ Window
 
                     Maui.SectionItem
                     {
+                        background: Rectangle
+                        {
+                            color: Maui.Theme.alternateBackgroundColor
+                            radius: Maui.Style.radiusV
+                            border.width: 1
+                            border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+                        }
                         Layout.fillWidth: true
                         flat: false
                         clip: true
@@ -774,6 +797,13 @@ Window
 
                     Maui.SectionItem
                     {
+                        background: Rectangle
+                        {
+                            color: Maui.Theme.alternateBackgroundColor
+                            radius: Maui.Style.radiusV
+                            border.width: 1
+                            border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+                        }
                         Layout.fillWidth: true
                         flat: false
                         clip: true
@@ -821,6 +851,13 @@ Window
 
                     Maui.SectionItem
                     {
+                        background: Rectangle
+                        {
+                            color: Maui.Theme.alternateBackgroundColor
+                            radius: Maui.Style.radiusV
+                            border.width: 1
+                            border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+                        }
                         Layout.fillWidth: true
                         flat: false
                         clip: true
@@ -864,6 +901,13 @@ Window
 
                     Maui.SectionItem
                     {
+                        background: Rectangle
+                        {
+                            color: Maui.Theme.alternateBackgroundColor
+                            radius: Maui.Style.radiusV
+                            border.width: 1
+                            border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+                        }
                         Layout.fillWidth: true
                         Layout.columnSpan: 2
                         flat: false
@@ -996,6 +1040,13 @@ Window
 
                     Maui.SectionItem
                     {
+                        background: Rectangle
+                        {
+                            color: Maui.Theme.alternateBackgroundColor
+                            radius: Maui.Style.radiusV
+                            border.width: 1
+                            border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+                        }
                         Layout.fillWidth: true
                         Layout.columnSpan: 2
                         flat: false
@@ -1081,6 +1132,13 @@ Window
 
                     Maui.SectionItem
                     {
+                        background: Rectangle
+                        {
+                            color: Maui.Theme.alternateBackgroundColor
+                            radius: Maui.Style.radiusV
+                            border.width: 1
+                            border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+                        }
                         Layout.fillWidth: true
                         Layout.columnSpan: 2
                         flat: false
@@ -1153,6 +1211,13 @@ Window
 
                     Maui.SectionItem
                     {
+                        background: Rectangle
+                        {
+                            color: Maui.Theme.alternateBackgroundColor
+                            radius: Maui.Style.radiusV
+                            border.width: 1
+                            border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+                        }
                         Layout.fillWidth: true
                         Layout.columnSpan: 2
                         flat: false

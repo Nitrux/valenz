@@ -20,7 +20,7 @@ Window
     readonly property int barLayerSpacingRight: valenzBridge ? valenzBridge.barLayerSpacingRight : 0
     readonly property bool systemTrayDebugDetails: valenzBridge ? valenzBridge.systemTrayDebugDetails : false
     readonly property real popupSurfaceOpacity: 0.76
-    readonly property color popupSurfaceColor: Qt.lighter(Maui.Theme.backgroundColor, 1.25)
+    readonly property color popupSurfaceColor: Maui.Theme.backgroundColor
     readonly property int popupSurfaceRadius: Maui.Style.radiusV + 3
     visible: !valenzBridge || !valenzBridge.focusedWindowFullscreen
     readonly property bool useDirectionalSpacing: barLayerSpacingTop > 0 || barLayerSpacingBottom > 0 || barLayerSpacingLeft > 0 || barLayerSpacingRight > 0
@@ -377,6 +377,8 @@ Window
         Rectangle
         {
             anchors.fill: parent
+            Maui.Theme.colorSet: Maui.Theme.Window
+            Maui.Theme.inherit: false
             color: Maui.Theme.backgroundColor
             opacity: root.popupSurfaceOpacity
             radius: root.popupSurfaceRadius
@@ -387,9 +389,9 @@ Window
             id: _barInner
             anchors.fill: parent
             anchors.margins: barFrameInset
-            color: Maui.Style.styleType === Maui.Style.Dark
-                   ? Qt.darker(Maui.Theme.backgroundColor, 1.25)
-                   : Maui.Theme.backgroundColor
+            Maui.Theme.colorSet: Maui.Theme.Header
+            Maui.Theme.inherit: false
+            color: Maui.Theme.backgroundColor
             radius: Maui.Style.radiusV
             clip: true
 

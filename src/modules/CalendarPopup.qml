@@ -551,6 +551,13 @@ Window
                     clip: true
                     padding: Maui.Style.space.medium
                     text: ""
+                    background: Rectangle
+                    {
+                        color: Maui.Theme.alternateBackgroundColor
+                        radius: Maui.Style.radiusV
+                        border.width: 1
+                        border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+                    }
                     label2.text: ""
 
                     ColumnLayout
@@ -668,6 +675,13 @@ Window
                     clip: true
                     padding: Maui.Style.space.medium
                     text: ""
+                    background: Rectangle
+                    {
+                        color: Maui.Theme.alternateBackgroundColor
+                        radius: Maui.Style.radiusV
+                        border.width: 1
+                        border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+                    }
                     label2.text: ""
 
                     ColumnLayout

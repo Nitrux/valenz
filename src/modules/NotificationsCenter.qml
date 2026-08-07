@@ -567,6 +567,13 @@ Window
 
             Maui.SectionItem
             {
+                background: Rectangle
+                {
+                    color: Maui.Theme.alternateBackgroundColor
+                    radius: Maui.Style.radiusV
+                    border.width: 1
+                    border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+                }
                 Layout.fillWidth: true
                 flat: false
                 clip: true
@@ -750,8 +757,8 @@ Window
                                     {
                                         color: Maui.Theme.alternateBackgroundColor
                                         radius: Maui.Style.radiusV
-                                        border.width: latestUrgencyLevel >= 0 ? 1 : 0
-                                        border.color: notificationsCenter._urgencyAccentColor(latestUrgencyLevel)
+                                        border.width: 1
+                                        border.color: latestUrgencyLevel >= 0 ? notificationsCenter._urgencyAccentColor(latestUrgencyLevel) : Qt.alpha(Maui.Theme.textColor, 0.10)
                                     }
                                     SequentialAnimation
                                     {
@@ -1216,8 +1223,8 @@ Window
                             {
                                 color: Maui.Theme.alternateBackgroundColor
                                 radius: Maui.Style.radiusV
-                                border.width: urgencyLevel >= 0 ? 1 : 0
-                                border.color: notificationsCenter._urgencyAccentColor(urgencyLevel)
+                                border.width: 1
+                                border.color: urgencyLevel >= 0 ? notificationsCenter._urgencyAccentColor(urgencyLevel) : Qt.alpha(Maui.Theme.textColor, 0.10)
                             }
                             SequentialAnimation
                             {
