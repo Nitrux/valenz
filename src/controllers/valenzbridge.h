@@ -33,6 +33,7 @@ class ValenzBridge : public QObject
     Q_PROPERTY(QVariantList mprisSources READ mprisSources NOTIFY mprisSourcesChanged FINAL)
     Q_PROPERTY(QString focusedWindowTitle READ focusedWindowTitle WRITE setFocusedWindowTitle NOTIFY focusedWindowTitleChanged FINAL)
     Q_PROPERTY(QString focusedWindowIconName READ focusedWindowIconName WRITE setFocusedWindowIconName NOTIFY focusedWindowIconNameChanged FINAL)
+    Q_PROPERTY(QVariantList windowList READ windowList NOTIFY windowListChanged FINAL)
     Q_PROPERTY(int focusedWindowFullscreenInternal READ focusedWindowFullscreenInternal NOTIFY focusedWindowFullscreenInternalChanged FINAL)
     Q_PROPERTY(int focusedWindowFullscreenClient READ focusedWindowFullscreenClient NOTIFY focusedWindowFullscreenClientChanged FINAL)
     Q_PROPERTY(bool focusedWindowFullscreen READ focusedWindowFullscreen NOTIFY focusedWindowFullscreenChanged FINAL)
@@ -115,6 +116,7 @@ public:
     QString focusedWindowTitle() const;
     void setFocusedWindowTitle(const QString &title);
     QString focusedWindowIconName() const;
+    QVariantList windowList() const;
     void setFocusedWindowIconName(const QString &iconName);
     int focusedWindowFullscreenInternal() const;
     void setFocusedWindowFullscreenInternal(int fullscreen);
@@ -219,6 +221,7 @@ public:
     Q_INVOKABLE void goToPreviousWorkspace();
     Q_INVOKABLE void goToNextWorkspace();
     Q_INVOKABLE bool refreshWorkspaceState();
+    Q_INVOKABLE void focusWindow(const QString &address);
     Q_INVOKABLE void mediaPreviousTrack();
     Q_INVOKABLE void mediaTogglePlayPause();
     Q_INVOKABLE void mediaNextTrack();
@@ -244,6 +247,7 @@ Q_SIGNALS:
     void mprisSourcesChanged();
     void focusedWindowTitleChanged(const QString &title);
     void focusedWindowIconNameChanged(const QString &iconName);
+    void windowListChanged();
     void focusedWindowFullscreenInternalChanged(int fullscreen);
     void focusedWindowFullscreenClientChanged(int fullscreen);
     void focusedWindowFullscreenChanged(bool fullscreen);
@@ -315,6 +319,7 @@ private:
     void scheduleWorkspaceStateRefresh(int delayMs = 0);
     void scheduleFocusedWindowStateRefresh(int delayMs = 0);
     bool refreshFocusedWindowState();
+    bool refreshWindowList();
     QStringList mprisServiceNames() const;
     QString preferredMprisService() const;
     QVariantMap mprisPlayerProperties(const QString &serviceName) const;
@@ -370,6 +375,7 @@ private:
     QVariantList m_mprisSources;
     QString m_focusedWindowTitle;
     QString m_focusedWindowIconName;
+    QVariantList m_windowList;
     int m_focusedWindowFullscreenInternal = 0;
     int m_focusedWindowFullscreenClient = 0;
     QString m_userRealName;

@@ -369,6 +369,11 @@ void ValenzBridge::setFocusedWindowIconName(const QString &iconName)
     Q_EMIT focusedWindowIconNameChanged(m_focusedWindowIconName);
 }
 
+QVariantList ValenzBridge::windowList() const
+{
+    return m_windowList;
+}
+
 int ValenzBridge::focusedWindowFullscreenInternal() const
 {
     return m_focusedWindowFullscreenInternal;

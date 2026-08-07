@@ -92,7 +92,105 @@ bool ValenzBridge::refreshWorkspaceState()
 
     setWorkspaceCount(workspaceCount);
     setCurrentWorkspace(currentWorkspace);
+    refreshWindowList();
     return true;
+}
+
+bool ValenzBridge::refreshWindowList()
+{
+    QJsonValue clients;
+    if (!runHyprctlJson(QStringList { QStringLiteral("-j"), QStringLiteral("clients") }, &clients))
+        return false;
+
+    QJsonValue activeWindow;
+    const bool hasActiveWindow = runHyprctlJson(QStringList { QStringLiteral("-j"), QStringLiteral("activewindow") }, &activeWindow);
+    const QString activeAddress = hasActiveWindow && activeWindow.isObject()
+                                      ? activeWindow.toObject().value(QStringLiteral("address")).toString()
+                                      : QString();
+
+    QVariantList windows;
+    if (clients.isArray())
+    {
+        for (const QJsonValue &clientValue : clients.toArray())
+        {
+            if (!clientValue.isObject())
+                continue;
+
+            const QJsonObject client = clientValue.toObject();
+            const int workspace = client.value(QStringLiteral("workspace")).toObject().value(QStringLiteral("id")).toInt(-1);
+            if (workspace != m_currentWorkspace)
+                continue;
+
+            const QString address = client.value(QStringLiteral("address")).toString().trimmed();
+            if (address.isEmpty())
+                continue;
+
+            QString title = client.value(QStringLiteral("title")).toString().trimmed();
+            if (title.isEmpty())
+                title = client.value(QStringLiteral("initialTitle")).toString().trimmed();
+
+            QString resolvedIconName = QStringLiteral("application-x-executable");
+            QStringList iconCandidates;
+            addWindowIconCandidates(&iconCandidates, client.value(QStringLiteral("class")).toString());
+            addWindowIconCandidates(&iconCandidates, client.value(QStringLiteral("initialClass")).toString());
+            const qint64 pid = client.value(QStringLiteral("pid")).toVariant().toLongLong();
+            addWindowIconCandidates(&iconCandidates, processNameFromPid(pid));
+
+            for (const QString &candidate : std::as_const(iconCandidates))
+            {
+                if (isUsableIconSource(candidate))
+                {
+                    resolvedIconName = candidate;
+                    break;
+                }
+            }
+
+            if (resolvedIconName == QLatin1String("application-x-executable"))
+            {
+                for (const QString &candidate : std::as_const(iconCandidates))
+                {
+                    const QString mappedIcon = lookupIconFromDesktopEntries(candidate);
+                    if (mappedIcon.isEmpty())
+                        continue;
+
+                    if (isUsableIconSource(mappedIcon))
+                    {
+                        resolvedIconName = mappedIcon;
+                        break;
+                    }
+
+                    if (resolvedIconName == QLatin1String("application-x-executable"))
+                        resolvedIconName = mappedIcon;
+                }
+            }
+
+            QVariantMap window;
+            window.insert(QStringLiteral("address"), address);
+            window.insert(QStringLiteral("title"), title);
+            window.insert(QStringLiteral("iconName"), resolvedIconName);
+            window.insert(QStringLiteral("focused"), address == activeAddress);
+            windows.append(window);
+        }
+    }
+
+    if (m_windowList != windows)
+    {
+        m_windowList = windows;
+        Q_EMIT windowListChanged();
+    }
+
+    return true;
+}
+
+void ValenzBridge::focusWindow(const QString &address)
+{
+    const QString normalizedAddress = address.trimmed();
+    if (normalizedAddress.isEmpty())
+        return;
+
+    runHyprctlDispatch(QStringList { QStringLiteral("dispatch"),
+                                     QStringLiteral("focuswindow"),
+                                     QStringLiteral("address:") + normalizedAddress });
 }
 
 bool ValenzBridge::refreshFocusedWindowState()
@@ -105,6 +203,7 @@ bool ValenzBridge::refreshFocusedWindowState()
         setFocusedWindowIconName(QStringLiteral("application-x-executable"));
         setFocusedWindowFullscreenInternal(kFullscreenModeNone);
         setFocusedWindowFullscreenClient(kFullscreenModeNone);
+        refreshWindowList();
         return false;
     }
 
@@ -114,6 +213,7 @@ bool ValenzBridge::refreshFocusedWindowState()
         setFocusedWindowIconName(QStringLiteral("application-x-executable"));
         setFocusedWindowFullscreenInternal(kFullscreenModeNone);
         setFocusedWindowFullscreenClient(kFullscreenModeNone);
+        refreshWindowList();
         return false;
     }
 
@@ -175,6 +275,7 @@ bool ValenzBridge::refreshFocusedWindowState()
     setFocusedWindowIconName(resolvedIconName);
     setFocusedWindowFullscreenInternal(fullscreenInternal);
     setFocusedWindowFullscreenClient(fullscreenClient);
+    refreshWindowList();
     return true;
 }
 

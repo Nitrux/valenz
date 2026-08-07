@@ -529,8 +529,8 @@ Window
                         anchors.verticalCenter: parent.verticalCenter
                         width:
                         {
-                            const available = _weatherBlock.x - (Maui.Style.space.small * 2) - x
-                            return Math.max(0, Math.min(implicitWidth, available))
+                            const available = _weatherBlock.x + Maui.Style.space.medium - x
+                            return Math.max(0, available)
                         }
                     }
 
