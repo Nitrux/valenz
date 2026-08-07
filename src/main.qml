@@ -20,7 +20,7 @@ Window
     readonly property int barLayerSpacingRight: valenzBridge ? valenzBridge.barLayerSpacingRight : 0
     readonly property bool systemTrayDebugDetails: valenzBridge ? valenzBridge.systemTrayDebugDetails : false
     readonly property real popupSurfaceOpacity: 0.76
-    readonly property color popupSurfaceColor: Maui.Theme.backgroundColor
+    readonly property color popupSurfaceColor: Qt.alpha(Maui.Theme.backgroundColor, root.popupSurfaceOpacity)
     readonly property int popupSurfaceRadius: Maui.Style.radiusV + 3
     visible: !valenzBridge || !valenzBridge.focusedWindowFullscreen
     readonly property bool useDirectionalSpacing: barLayerSpacingTop > 0 || barLayerSpacingBottom > 0 || barLayerSpacingLeft > 0 || barLayerSpacingRight > 0
@@ -616,6 +616,14 @@ Window
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: Maui.Style.space.medium
 
+                        ToolButton
+                        {
+                            id: _blurTestButton
+                            text: i18n("Blur Test")
+                            display: ToolButton.TextOnly
+                            onClicked: _blurTestPopup.visible = !_blurTestPopup.visible
+                        }
+
                         Maui.Separator
                         {
                             Layout.preferredHeight: 8
@@ -688,6 +696,61 @@ Window
                             glyphColorForKind: root.controlCenterButtonGlyphColor
                         }
                     }
+                }
+            }
+        }
+    }
+    Window
+    {
+        id: _blurTestPopup
+        width: 360
+        height: 220
+        x: Math.max(0, Screen.width - width - Maui.Style.space.big)
+        y: root.height + Maui.Style.space.big
+        flags: Qt.FramelessWindowHint | Qt.Popup
+        transientParent: root
+        color: "transparent"
+        visible: false
+
+        Maui.Theme.colorSet: Maui.Theme.View
+
+        Rectangle
+        {
+            anchors.fill: parent
+            radius: Maui.Style.radiusV + 3
+            color: Qt.rgba(Maui.Theme.backgroundColor.r, Maui.Theme.backgroundColor.g, Maui.Theme.backgroundColor.b, 0.45)
+            border.width: 1
+            border.color: Qt.alpha(Maui.Theme.textColor, 0.35)
+
+            ColumnLayout
+            {
+                anchors.fill: parent
+                anchors.margins: Maui.Style.contentMargins
+                spacing: Maui.Style.space.medium
+
+                Label
+                {
+                    Layout.fillWidth: true
+                    text: i18n("Blur test popup")
+                    color: Maui.Theme.textColor
+                    font.weight: Font.DemiBold
+                }
+
+                Label
+                {
+                    Layout.fillWidth: true
+                    wrapMode: Text.WordWrap
+                    text: i18n("This surface is translucent and requests compositor blur.")
+                    color: Maui.Theme.textColor
+                }
+
+                Item { Layout.fillHeight: true }
+
+                ToolButton
+                {
+                    Layout.alignment: Qt.AlignRight
+                    text: i18n("Close")
+                    onClicked: _blurTestPopup.visible = false
                 }
             }
         }
