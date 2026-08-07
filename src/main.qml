@@ -387,7 +387,9 @@ Window
             id: _barInner
             anchors.fill: parent
             anchors.margins: barFrameInset
-            color: Qt.darker(Maui.Theme.backgroundColor, 1.25)
+            color: Maui.Style.styleType === Maui.Style.Dark
+                   ? Qt.darker(Maui.Theme.backgroundColor, 1.25)
+                   : Maui.Theme.backgroundColor
             radius: Maui.Style.radiusV
             clip: true
 
