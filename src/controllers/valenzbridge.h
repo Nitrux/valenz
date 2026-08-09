@@ -33,6 +33,11 @@ class ValenzBridge : public QObject
     Q_PROPERTY(QVariantList mprisSources READ mprisSources NOTIFY mprisSourcesChanged FINAL)
     Q_PROPERTY(QString focusedWindowTitle READ focusedWindowTitle WRITE setFocusedWindowTitle NOTIFY focusedWindowTitleChanged FINAL)
     Q_PROPERTY(QString focusedWindowIconName READ focusedWindowIconName WRITE setFocusedWindowIconName NOTIFY focusedWindowIconNameChanged FINAL)
+    Q_PROPERTY(bool darkMode READ darkMode WRITE setDarkMode NOTIFY darkModeChanged FINAL)
+    Q_PROPERTY(bool darkModeAvailable READ darkModeAvailable NOTIFY darkModeChanged FINAL)
+    Q_PROPERTY(QString colorScheme READ colorScheme NOTIFY colorSchemeChanged FINAL)
+    Q_PROPERTY(bool cameraAvailable READ cameraAvailable NOTIFY cameraStateChanged FINAL)
+    Q_PROPERTY(bool cameraEnabled READ cameraEnabled WRITE setCameraEnabled NOTIFY cameraStateChanged FINAL)
     Q_PROPERTY(QVariantList windowList READ windowList NOTIFY windowListChanged FINAL)
     Q_PROPERTY(int focusedWindowFullscreenInternal READ focusedWindowFullscreenInternal NOTIFY focusedWindowFullscreenInternalChanged FINAL)
     Q_PROPERTY(int focusedWindowFullscreenClient READ focusedWindowFullscreenClient NOTIFY focusedWindowFullscreenClientChanged FINAL)
@@ -63,6 +68,8 @@ class ValenzBridge : public QObject
     Q_PROPERTY(bool controlCenterWiredConnected READ controlCenterWiredConnected NOTIFY controlCenterWiredConnectedChanged FINAL)
     Q_PROPERTY(int controlCenterBluetoothConnectedDeviceCount READ controlCenterBluetoothConnectedDeviceCount WRITE setControlCenterBluetoothConnectedDeviceCount NOTIFY controlCenterBluetoothConnectedDeviceCountChanged FINAL)
     Q_PROPERTY(bool controlCenterVolumeMuted READ controlCenterVolumeMuted WRITE setControlCenterVolumeMuted NOTIFY controlCenterVolumeMutedChanged FINAL)
+    Q_PROPERTY(QString controlCenterMicrophoneVolumePercentage READ controlCenterMicrophoneVolumePercentage WRITE setControlCenterMicrophoneVolumePercentage NOTIFY controlCenterMicrophoneVolumePercentageChanged FINAL)
+    Q_PROPERTY(bool controlCenterMicrophoneAvailable READ controlCenterMicrophoneAvailable WRITE setControlCenterMicrophoneAvailable NOTIFY controlCenterMicrophoneAvailableChanged FINAL)
     Q_PROPERTY(bool controlCenterBatteryAvailable READ controlCenterBatteryAvailable WRITE setControlCenterBatteryAvailable NOTIFY controlCenterBatteryAvailableChanged FINAL)
     Q_PROPERTY(bool controlCenterBatteryOnAcPower READ controlCenterBatteryOnAcPower WRITE setControlCenterBatteryOnAcPower NOTIFY controlCenterBatteryOnAcPowerChanged FINAL)
     Q_PROPERTY(bool controlCenterNightLightEnabled READ controlCenterNightLightEnabled WRITE setControlCenterNightLightEnabled NOTIFY controlCenterNightLightEnabledChanged FINAL)
@@ -116,6 +123,13 @@ public:
     QString focusedWindowTitle() const;
     void setFocusedWindowTitle(const QString &title);
     QString focusedWindowIconName() const;
+    bool darkMode() const;
+    void setDarkMode(bool enabled);
+    bool darkModeAvailable() const;
+    QString colorScheme() const;
+    bool cameraAvailable() const;
+    bool cameraEnabled() const;
+    void setCameraEnabled(bool enabled);
     QVariantList windowList() const;
     void setFocusedWindowIconName(const QString &iconName);
     int focusedWindowFullscreenInternal() const;
@@ -171,6 +185,10 @@ public:
     void setControlCenterBluetoothConnectedDeviceCount(int count);
     bool controlCenterVolumeMuted() const;
     void setControlCenterVolumeMuted(bool muted);
+    QString controlCenterMicrophoneVolumePercentage() const;
+    void setControlCenterMicrophoneVolumePercentage(const QString &value);
+    bool controlCenterMicrophoneAvailable() const;
+    void setControlCenterMicrophoneAvailable(bool available);
     bool controlCenterBatteryAvailable() const;
     void setControlCenterBatteryAvailable(bool available);
     bool controlCenterBatteryOnAcPower() const;
@@ -216,12 +234,14 @@ public:
     Q_INVOKABLE void executeControlCenterSettingsCommand();
     Q_INVOKABLE void toggleVicinae();
     Q_INVOKABLE void setControlCenterVolumePercentageFromSlider(int percent);
+    Q_INVOKABLE void setControlCenterMicrophoneVolumePercentageFromSlider(int percent);
     Q_INVOKABLE void setControlCenterBrightnessPercentageFromSlider(int percent);
     Q_INVOKABLE void setControlCenterRuntimeActive(bool active);
     Q_INVOKABLE void goToPreviousWorkspace();
     Q_INVOKABLE void goToNextWorkspace();
     Q_INVOKABLE bool refreshWorkspaceState();
     Q_INVOKABLE void focusWindow(const QString &address);
+    Q_INVOKABLE void refreshSharedSettings();
     Q_INVOKABLE void mediaPreviousTrack();
     Q_INVOKABLE void mediaTogglePlayPause();
     Q_INVOKABLE void mediaNextTrack();
@@ -247,6 +267,9 @@ Q_SIGNALS:
     void mprisSourcesChanged();
     void focusedWindowTitleChanged(const QString &title);
     void focusedWindowIconNameChanged(const QString &iconName);
+    void darkModeChanged();
+    void colorSchemeChanged();
+    void cameraStateChanged();
     void windowListChanged();
     void focusedWindowFullscreenInternalChanged(int fullscreen);
     void focusedWindowFullscreenClientChanged(int fullscreen);
@@ -286,6 +309,8 @@ Q_SIGNALS:
     void controlCenterWiredConnectedChanged(bool connected);
     void controlCenterBluetoothConnectedDeviceCountChanged(int count);
     void controlCenterVolumeMutedChanged(bool muted);
+    void controlCenterMicrophoneVolumePercentageChanged(const QString &value);
+    void controlCenterMicrophoneAvailableChanged(bool available);
     void controlCenterBatteryAvailableChanged(bool available);
     void controlCenterBatteryOnAcPowerChanged(bool onAcPower);
     void controlCenterNightLightEnabledChanged(bool enabled);
@@ -320,6 +345,10 @@ private:
     void scheduleFocusedWindowStateRefresh(int delayMs = 0);
     bool refreshFocusedWindowState();
     bool refreshWindowList();
+    void initializeSharedSettingsWatcher();
+    void refreshSharedSettingsFromFile();
+    bool applyColorScheme(const QString &scheme);
+    QString pairedColorScheme(const QString &scheme) const;
     QStringList mprisServiceNames() const;
     QString preferredMprisService() const;
     QVariantMap mprisPlayerProperties(const QString &serviceName) const;
@@ -376,6 +405,11 @@ private:
     QString m_focusedWindowTitle;
     QString m_focusedWindowIconName;
     QVariantList m_windowList;
+    bool m_darkMode = false;
+    bool m_darkModeAvailable = false;
+    QString m_colorScheme;
+    bool m_cameraAvailable = false;
+    bool m_cameraEnabled = false;
     int m_focusedWindowFullscreenInternal = 0;
     int m_focusedWindowFullscreenClient = 0;
     QString m_userRealName;
@@ -388,6 +422,8 @@ private:
     QString m_controlCenterPowerProfileCurrent;
     QString m_controlCenterVolumePercentage;
     bool m_controlCenterVolumeMuted = false;
+    QString m_controlCenterMicrophoneVolumePercentage = QStringLiteral("0%");
+    bool m_controlCenterMicrophoneAvailable = false;
     bool m_controlCenterBatteryCharging = false;
     QString m_controlCenterBatteryPercentage;
     int m_controlCenterCpuPercentage = 0;
@@ -436,6 +472,8 @@ private:
     QString m_userConfigPath;
     QString m_userConfigDirPath;
     QFileSystemWatcher *m_configWatcher = nullptr;
+    QFileSystemWatcher *m_kdeGlobalsWatcher = nullptr;
+    QTimer *m_kdeGlobalsReloadTimer = nullptr;
     QTimer *m_configReloadTimer = nullptr;
     QLocalSocket *m_hyprlandEventSocket = nullptr;
     QByteArray m_hyprlandEventBuffer;

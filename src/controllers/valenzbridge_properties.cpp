@@ -557,6 +557,35 @@ void ValenzBridge::setControlCenterVolumePercentage(const QString &value)
     Q_EMIT controlCenterVolumePercentageChanged(m_controlCenterVolumePercentage);
 }
 
+QString ValenzBridge::controlCenterMicrophoneVolumePercentage() const
+{
+    return m_controlCenterMicrophoneVolumePercentage;
+}
+
+void ValenzBridge::setControlCenterMicrophoneVolumePercentage(const QString &value)
+{
+    const QString normalized = MauiKitSystem::normalizeBatteryPercentage(value);
+    if (m_controlCenterMicrophoneVolumePercentage == normalized)
+        return;
+
+    m_controlCenterMicrophoneVolumePercentage = normalized;
+    Q_EMIT controlCenterMicrophoneVolumePercentageChanged(m_controlCenterMicrophoneVolumePercentage);
+}
+
+bool ValenzBridge::controlCenterMicrophoneAvailable() const
+{
+    return m_controlCenterMicrophoneAvailable;
+}
+
+void ValenzBridge::setControlCenterMicrophoneAvailable(bool available)
+{
+    if (m_controlCenterMicrophoneAvailable == available)
+        return;
+
+    m_controlCenterMicrophoneAvailable = available;
+    Q_EMIT controlCenterMicrophoneAvailableChanged(m_controlCenterMicrophoneAvailable);
+}
+
 bool ValenzBridge::controlCenterBatteryCharging() const
 {
     return m_controlCenterBatteryCharging;

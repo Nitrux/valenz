@@ -68,12 +68,18 @@ Window
     readonly property int _cardPadding: Maui.Style.space.small
     readonly property color _volumeBarColor: (controlCenter.bridge ? controlCenter.bridge.controlCenterVolumeMuted : false) ? Maui.Theme.disabledTextColor : Maui.Theme.highlightColor
     readonly property color _volumeIndicatorColor: (controlCenter.bridge ? controlCenter.bridge.controlCenterVolumeMuted : false) ? Maui.Theme.disabledTextColor : Maui.Theme.textColor
+    readonly property string _microphoneVolumePercentage: controlCenter.bridge ? controlCenter.bridge.controlCenterMicrophoneVolumePercentage : "0%"
+    readonly property bool _microphoneAvailable: controlCenter.bridge ? controlCenter.bridge.controlCenterMicrophoneAvailable : false
     readonly property int _toolActionMinSize: Math.max(28, Maui.Style.toolBarHeightAlt)
     readonly property int _minPanelWidth: Maui.Handy.isMobile ? _baseUnit * 16 : _baseUnit * 20
     property bool _cellularEnabled: false
     readonly property bool _dndEnabled: controlCenter.notificationsControllerRef ? controlCenter.notificationsControllerRef.dndEnabled : false
     readonly property bool _nightLightEnabled: controlCenter.bridge ? controlCenter.bridge.controlCenterNightLightEnabled : false
     readonly property bool _nightLightAvailable: controlCenter.bridge ? controlCenter.bridge.controlCenterNightLightAvailable : false
+    readonly property bool _darkMode: controlCenter.bridge ? controlCenter.bridge.darkMode : false
+    readonly property bool _darkModeAvailable: controlCenter.bridge ? controlCenter.bridge.darkModeAvailable : false
+    readonly property bool _cameraEnabled: controlCenter.bridge ? controlCenter.bridge.cameraEnabled : false
+    readonly property bool _cameraAvailable: controlCenter.bridge ? controlCenter.bridge.cameraAvailable : false
     readonly property int _volumePercentage:
     {
         const text = controlCenter.bridge ? controlCenter.bridge.controlCenterVolumePercentage : "0%"
@@ -215,6 +221,12 @@ Window
     {
         if (controlCenter.bridge)
             controlCenter.bridge.setControlCenterVolumePercentageFromSlider(Math.round(_volumeSlider.value))
+    }
+
+    function _commitMicrophoneVolumeFromSlider()
+    {
+        if (controlCenter.bridge && controlCenter._microphoneAvailable)
+            controlCenter.bridge.setControlCenterMicrophoneVolumePercentageFromSlider(Math.round(_microphoneSlider.value))
     }
 
     function _commitBrightnessFromSlider()
@@ -524,7 +536,7 @@ Window
                 easing.type: Easing.InOutCubic
             }
         }
-        layer.enabled: visible && GraphicsInfo.api !== GraphicsInfo.Software
+        layer.enabled: controlCenter._cameraAvailable && GraphicsInfo.api !== GraphicsInfo.Software
         layer.effect: MultiEffect
         {
             autoPaddingEnabled: true
@@ -575,6 +587,7 @@ Window
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
+                        template.visible: false
 
                         RowLayout
                         {
@@ -689,6 +702,7 @@ Window
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
+                        template.visible: false
                         visible: true
                         enabled: controlCenter.bridge ? controlCenter.bridge.controlCenterWirelessAvailable : false
                         opacity: enabled ? 1.0 : 0.55
@@ -747,6 +761,7 @@ Window
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
+                        template.visible: false
                         visible: true
                         enabled: controlCenter.bridge ? controlCenter.bridge.controlCenterBluetoothAvailable : false
                         opacity: enabled ? 1.0 : 0.55
@@ -810,6 +825,117 @@ Window
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
+                        template.visible: false
+                        visible: true
+                        enabled: controlCenter._darkModeAvailable
+                        opacity: enabled ? 1.0 : 0.55
+
+                        RowLayout
+                        {
+                            Layout.fillWidth: true
+                            spacing: Maui.Style.space.small
+
+                            Label
+                            {
+                                text: "\uf186"
+                                font.family: controlCenter._nerdFontFamily
+                                font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
+                                color: Maui.Theme.textColor
+                            }
+
+                            ColumnLayout
+                            {
+                                spacing: 0
+                                Label { text: i18n("Dark mode"); color: Maui.Theme.textColor; font.weight: Font.DemiBold }
+                                Label { text: controlCenter._darkMode ? i18n("On") : i18n("Off"); color: Maui.Theme.disabledTextColor }
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            Switch
+                            {
+                                checked: controlCenter._darkMode
+                                enabled: controlCenter._darkModeAvailable
+                                onToggled:
+                                {
+                                    if (controlCenter.bridge)
+                                        controlCenter.bridge.darkMode = checked
+                                }
+                            }
+                        }
+                    }
+
+                    Maui.SectionItem
+                    {
+                        background: Rectangle
+                        {
+                            color: Maui.Theme.alternateBackgroundColor
+                            radius: Maui.Style.radiusV
+                            border.width: 1
+                            border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+                        }
+                        Layout.fillWidth: true
+                        flat: false
+                        clip: true
+                        padding: controlCenter._cardPadding
+                        text: ""
+                        label2.text: ""
+                        template.visible: false
+                        visible: true
+                        enabled: controlCenter._cameraAvailable
+                        opacity: enabled ? 1.0 : 0.55
+
+                        RowLayout
+                        {
+                            Layout.fillWidth: true
+                            spacing: Maui.Style.space.small
+
+                            Label
+                            {
+                                text: "\uf030"
+                                font.family: controlCenter._nerdFontFamily
+                                font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
+                                color: Maui.Theme.textColor
+                            }
+
+                            ColumnLayout
+                            {
+                                spacing: 0
+                                Label { text: i18n("Camera"); color: Maui.Theme.textColor; font.weight: Font.DemiBold }
+                                Label { text: controlCenter._cameraAvailable ? (controlCenter._cameraEnabled ? i18n("On") : i18n("Off")) : i18n("Unavailable"); color: Maui.Theme.disabledTextColor }
+                            }
+
+                            Item { Layout.fillWidth: true }
+
+                            Switch
+                            {
+                                checked: controlCenter._cameraEnabled
+                                enabled: controlCenter._cameraAvailable
+                                onToggled:
+                                {
+                                    if (controlCenter.bridge)
+                                        controlCenter.bridge.cameraEnabled = checked
+                                }
+                            }
+                        }
+                    }
+
+                    Maui.SectionItem
+                    {
+                        background: Rectangle
+                        {
+                            color: Maui.Theme.alternateBackgroundColor
+                            radius: Maui.Style.radiusV
+                            border.width: 1
+                            border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+                        }
+                        Layout.fillWidth: true
+                        flat: false
+                        clip: true
+                        padding: controlCenter._cardPadding
+                        text: ""
+                        label2.text: ""
+                        template.visible: false
                         visible: true
                         enabled: controlCenter._nightLightAvailable
                         opacity: enabled ? 1.0 : 0.55
@@ -864,6 +990,7 @@ Window
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
+                        template.visible: false
 
                         RowLayout
                         {
@@ -915,6 +1042,7 @@ Window
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
+                        template.visible: false
 
                         RowLayout
                         {
@@ -1054,6 +1182,7 @@ Window
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
+                        template.visible: false
 
                         RowLayout
                         {
@@ -1146,6 +1275,80 @@ Window
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
+                        template.visible: false
+                        enabled: controlCenter._microphoneAvailable
+                        opacity: enabled ? 1.0 : 0.55
+
+                        RowLayout
+                        {
+                            Layout.fillWidth: true
+                            spacing: Maui.Style.space.small
+
+                            Label
+                            {
+                                text: "\uf130"
+                                font.family: controlCenter._nerdFontFamily
+                                font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
+                                color: Maui.Theme.textColor
+                            }
+
+                            Slider
+                            {
+                                id: _microphoneSlider
+                                Layout.fillWidth: true
+                                enabled: controlCenter._microphoneAvailable
+                                from: 0
+                                to: 100
+                                value: controlCenter._microphoneVolumePercentage
+                                onPressedChanged:
+                                {
+                                    if (!pressed)
+                                        controlCenter._commitMicrophoneVolumeFromSlider()
+                                }
+                                Connections
+                                {
+                                    target: controlCenter.bridge
+                                    enabled: !!controlCenter.bridge
+                                    function onControlCenterMicrophoneVolumePercentageChanged()
+                                    {
+                                        if (!_microphoneSlider.pressed)
+                                            _microphoneSlider.value = controlCenter._microphoneVolumePercentage
+                                    }
+                                    function onControlCenterMicrophoneAvailableChanged()
+                                    {
+                                        if (!_microphoneSlider.pressed)
+                                            _microphoneSlider.value = controlCenter._microphoneVolumePercentage
+                                    }
+                                }
+                            }
+
+                            Label
+                            {
+                                text: "\uf130"
+                                font.family: controlCenter._nerdFontFamily
+                                font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
+                                color: Maui.Theme.textColor
+                            }
+                        }
+                    }
+
+                    Maui.SectionItem
+                    {
+                        background: Rectangle
+                        {
+                            color: Maui.Theme.alternateBackgroundColor
+                            radius: Maui.Style.radiusV
+                            border.width: 1
+                            border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+                        }
+                        Layout.fillWidth: true
+                        Layout.columnSpan: 2
+                        flat: false
+                        clip: true
+                        padding: controlCenter._cardPadding
+                        text: ""
+                        label2.text: ""
+                        template.visible: false
                         enabled: controlCenter._brightnessAvailable
                         opacity: enabled ? 1.0 : 0.55
 
@@ -1225,6 +1428,7 @@ Window
                         padding: controlCenter._cardPadding
                         text: ""
                         label2.text: ""
+                        template.visible: false
 
                         ColumnLayout
                         {

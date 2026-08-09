@@ -559,6 +559,7 @@ Window
                         border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
                     }
                     label2.text: ""
+                    template.visible: false
 
                     ColumnLayout
                     {
@@ -683,6 +684,7 @@ Window
                         border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
                     }
                     label2.text: ""
+                    template.visible: false
 
                     ColumnLayout
                     {

@@ -2,16 +2,343 @@
 #include "valenzbridge_p.h"
 #include "mauikit_system_control.h"
 
+#include <QCryptographicHash>
+#include <KConfig>
+#include <KConfigGroup>
+#include <KSharedConfig>
+#include <QDBusConnection>
+#include <QDBusMessage>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QFileSystemWatcher>
 #include <QSettings>
+#include <QStandardPaths>
 #include <QTimer>
+#include <QProcess>
 #include <QUrl>
+
+namespace
+{
+QString kdeGlobalsPath()
+{
+    return QDir::home().filePath(QStringLiteral(".config/kdeglobals"));
+}
+
+QString colorSchemeFilePath(const QString &scheme)
+{
+    const QString normalized = scheme.trimmed();
+    if (normalized.isEmpty())
+        return {};
+
+    const QString fileName = normalized.endsWith(QStringLiteral(".colors")) ? normalized : normalized + QStringLiteral(".colors");
+    for (const QString &basePath : QStandardPaths::standardLocations(QStandardPaths::GenericDataLocation))
+    {
+        const QString candidate = QDir(basePath).filePath(QStringLiteral("color-schemes/") + fileName);
+        if (QFileInfo::exists(candidate))
+            return candidate;
+    }
+
+    return {};
+}
+
+void notifyKdePaletteChanged()
+{
+    QDBusMessage message = QDBusMessage::createSignal(QStringLiteral("/KGlobalSettings"),
+                                                       QStringLiteral("org.kde.KGlobalSettings"),
+                                                       QStringLiteral("notifyChange"));
+    message.setArguments({0, 0});
+    QDBusConnection::sessionBus().send(message);
+}
+
+QStringList cameraPrivacyDevices()
+{
+    const QString executable = QStandardPaths::findExecutable(QStringLiteral("v4l2-ctl"));
+    if (executable.isEmpty())
+        return {};
+
+    QStringList devices;
+    const QDir devDirectory(QStringLiteral("/dev"));
+    for (const QString &name : devDirectory.entryList(QStringList {QStringLiteral("video*")}, QDir::System | QDir::Readable, QDir::Name))
+    {
+        const QString device = devDirectory.filePath(name);
+        QProcess process;
+        process.start(executable, {QStringLiteral("--device"), device, QStringLiteral("--list-ctrls")});
+        if (!process.waitForFinished(1000))
+            continue;
+
+        const QString output = QString::fromLocal8Bit(process.readAllStandardOutput());
+        if (process.exitStatus() == QProcess::NormalExit && process.exitCode() == 0
+            && output.contains(QStringLiteral("privacy"), Qt::CaseInsensitive))
+            devices.append(device);
+    }
+
+    return devices;
+}
+
+int cameraPrivacyValue(const QString &device)
+{
+    QProcess process;
+    process.start(QStringLiteral("v4l2-ctl"), {QStringLiteral("--device"), device, QStringLiteral("--get-ctrl=privacy")});
+    if (!process.waitForFinished(1000) || process.exitCode() != 0)
+        return -1;
+
+    const QString output = QString::fromLocal8Bit(process.readAllStandardOutput());
+    const int separator = output.indexOf(QLatin1Char(':'));
+    if (separator < 0)
+        return -1;
+
+    bool ok = false;
+    const int value = output.mid(separator + 1).trimmed().toInt(&ok);
+    return ok ? value : -1;
+}
+
+bool setCameraPrivacy(const QString &device, bool enabled)
+{
+    QProcess process;
+    process.start(QStringLiteral("v4l2-ctl"), {QStringLiteral("--device"), device, QStringLiteral("--set-ctrl=privacy=") + (enabled ? QStringLiteral("0") : QStringLiteral("1"))});
+    return process.waitForFinished(1000)
+        && process.exitStatus() == QProcess::NormalExit
+        && process.exitCode() == 0;
+}
+
+bool schemeIsDark(const QString &scheme)
+{
+    const QString normalized = scheme.toLower();
+    return normalized.contains(QStringLiteral("dark"))
+        || normalized.contains(QStringLiteral("mocha"))
+        || normalized.contains(QStringLiteral("night"));
+}
+
+} // namespace
 
 QString ValenzBridge::configFilePath() const
 {
     return m_userConfigPath;
+}
+
+bool ValenzBridge::darkMode() const
+{
+    return m_darkMode;
+}
+
+void ValenzBridge::setDarkMode(bool enabled)
+{
+    if (!m_darkModeAvailable)
+        return;
+
+    const QString targetScheme = pairedColorScheme(m_colorScheme);
+    if (targetScheme.isEmpty() || schemeIsDark(targetScheme) != enabled)
+        return;
+
+    if (applyColorScheme(targetScheme))
+        refreshSharedSettingsFromFile();
+}
+
+bool ValenzBridge::darkModeAvailable() const
+{
+    return m_darkModeAvailable;
+}
+
+QString ValenzBridge::colorScheme() const
+{
+    return m_colorScheme;
+}
+
+bool ValenzBridge::cameraAvailable() const
+{
+    return m_cameraAvailable;
+}
+
+bool ValenzBridge::cameraEnabled() const
+{
+    return m_cameraEnabled;
+}
+
+void ValenzBridge::setCameraEnabled(bool enabled)
+{
+    const QStringList devices = cameraPrivacyDevices();
+    if (devices.isEmpty())
+        return;
+
+    bool changed = true;
+    for (const QString &device : devices)
+        changed = setCameraPrivacy(device, enabled) && changed;
+
+    if (changed)
+        refreshSharedSettingsFromFile();
+}
+
+void ValenzBridge::refreshSharedSettings()
+{
+    refreshSharedSettingsFromFile();
+}
+
+QString ValenzBridge::pairedColorScheme(const QString &scheme) const
+{
+    const QString normalized = scheme.trimmed();
+    if (normalized.isEmpty())
+        return {};
+
+    QStringList candidates;
+    const QString lower = normalized.toLower();
+    if (lower.contains(QStringLiteral("latte")))
+    {
+        QString candidate = normalized;
+        candidate.replace(QStringLiteral("Latte"), QStringLiteral("Mocha"));
+        candidate.replace(QStringLiteral("latte"), QStringLiteral("mocha"));
+        candidates.append(candidate);
+    }
+    else if (lower.contains(QStringLiteral("mocha")))
+    {
+        QString candidate = normalized;
+        candidate.replace(QStringLiteral("Mocha"), QStringLiteral("Latte"));
+        candidate.replace(QStringLiteral("mocha"), QStringLiteral("latte"));
+        candidates.append(candidate);
+    }
+    else if (lower.contains(QStringLiteral("dark")))
+    {
+        QString candidate = normalized;
+        candidate.replace(QStringLiteral("Dark"), QStringLiteral("Light"));
+        candidate.replace(QStringLiteral("dark"), QStringLiteral("light"));
+        candidates.append(candidate);
+    }
+    else if (lower.contains(QStringLiteral("light")))
+    {
+        QString candidate = normalized;
+        candidate.replace(QStringLiteral("Light"), QStringLiteral("Dark"));
+        candidate.replace(QStringLiteral("light"), QStringLiteral("dark"));
+        candidates.append(candidate);
+    }
+    else if (lower == QStringLiteral("nitrux"))
+    {
+        candidates.append(QStringLiteral("Nitrux Dark"));
+    }
+    else if (lower == QStringLiteral("nitrux dark"))
+    {
+        candidates.append(QStringLiteral("Nitrux"));
+    }
+
+    for (const QString &candidate : std::as_const(candidates))
+    {
+        if (!colorSchemeFilePath(candidate).isEmpty())
+            return candidate;
+    }
+
+    return {};
+}
+
+bool ValenzBridge::applyColorScheme(const QString &scheme)
+{
+    const QString sourcePath = colorSchemeFilePath(scheme);
+    if (sourcePath.isEmpty())
+        return false;
+
+    const KSharedConfigPtr target = KSharedConfig::openConfig(kdeGlobalsPath(), KConfig::SimpleConfig);
+    const KSharedConfigPtr source = KSharedConfig::openConfig(sourcePath, KConfig::SimpleConfig);
+    const QStringList colorGroups {
+        QStringLiteral("Colors:View"), QStringLiteral("Colors:Window"), QStringLiteral("Colors:Button"),
+        QStringLiteral("Colors:Selection"), QStringLiteral("Colors:Tooltip"), QStringLiteral("Colors:Complementary"),
+        QStringLiteral("Colors:Header"), QStringLiteral("ColorEffects:Inactive"), QStringLiteral("ColorEffects:Disabled")
+    };
+
+    for (const QString &group : colorGroups)
+    {
+        KConfigGroup targetGroup(target, group);
+        targetGroup.deleteGroup();
+        KConfigGroup sourceGroup(source, group);
+        if (sourceGroup.exists())
+            sourceGroup.copyTo(&targetGroup);
+    }
+
+    KConfigGroup sourceWindowManager(source, QStringLiteral("WM"));
+    KConfigGroup targetWindowManager(target, QStringLiteral("WM"));
+    for (const QString &key : {QStringLiteral("activeBackground"), QStringLiteral("activeForeground"), QStringLiteral("inactiveBackground"), QStringLiteral("inactiveForeground"), QStringLiteral("activeBlend"), QStringLiteral("inactiveBlend")})
+    {
+        if (sourceWindowManager.hasKey(key))
+            targetWindowManager.writeEntry(key, sourceWindowManager.readEntry(key, QString()));
+    }
+
+    KConfigGroup sourceKde(source, QStringLiteral("KDE"));
+    KConfigGroup targetKde(target, QStringLiteral("KDE"));
+    for (const QString &key : {QStringLiteral("frameContrast"), QStringLiteral("contrast")})
+    {
+        if (sourceKde.hasKey(key))
+            targetKde.writeEntry(key, sourceKde.readEntry(key, QString()));
+    }
+
+    QFile schemeFile(sourcePath);
+    if (schemeFile.open(QIODevice::ReadOnly))
+    {
+        QCryptographicHash hash(QCryptographicHash::Sha1);
+        hash.addData(&schemeFile);
+        KConfigGroup(target, QStringLiteral("General")).writeEntry(QStringLiteral("ColorSchemeHash"), QString::fromLatin1(hash.result().toHex()));
+    }
+    KConfigGroup(target, QStringLiteral("General")).writeEntry(QStringLiteral("ColorScheme"), scheme);
+    target->sync();
+
+    notifyKdePaletteChanged();
+    return true;
+}
+
+void ValenzBridge::refreshSharedSettingsFromFile()
+{
+    const QString path = kdeGlobalsPath();
+    const KSharedConfigPtr settings = KSharedConfig::openConfig(path, KConfig::SimpleConfig);
+    const KConfigGroup generalGroup(settings, QStringLiteral("General"));
+    QString scheme = generalGroup.readEntry(QStringLiteral("ColorScheme"), QString());
+    if (scheme.isEmpty())
+        scheme = settings->group(QStringLiteral("KDE")).readEntry(QStringLiteral("ColorScheme"), QString());
+    scheme = scheme.trimmed();
+    const bool dark = schemeIsDark(scheme);
+    const bool available = !pairedColorScheme(scheme).isEmpty();
+
+    const bool colorChanged = m_colorScheme != scheme;
+    const bool darkChanged = m_darkMode != dark || m_darkModeAvailable != available;
+    m_colorScheme = scheme;
+    m_darkMode = dark;
+    m_darkModeAvailable = available;
+    if (colorChanged)
+        Q_EMIT colorSchemeChanged();
+    if (darkChanged)
+        Q_EMIT darkModeChanged();
+
+    const QStringList devices = cameraPrivacyDevices();
+    bool cameraEnabled = !devices.isEmpty();
+    for (const QString &device : devices)
+    {
+        const int privacy = cameraPrivacyValue(device);
+        if (privacy < 0 || privacy != 0)
+            cameraEnabled = false;
+    }
+    const bool cameraChanged = m_cameraAvailable != !devices.isEmpty() || m_cameraEnabled != cameraEnabled;
+    m_cameraAvailable = !devices.isEmpty();
+    m_cameraEnabled = cameraEnabled;
+    if (cameraChanged)
+        Q_EMIT cameraStateChanged();
+
+    initializeSharedSettingsWatcher();
+}
+
+void ValenzBridge::initializeSharedSettingsWatcher()
+{
+    const QString configDirectory = QDir::home().filePath(QStringLiteral(".config"));
+    const QString configPath = kdeGlobalsPath();
+    if (!m_kdeGlobalsWatcher)
+    {
+        m_kdeGlobalsWatcher = new QFileSystemWatcher(this);
+        m_kdeGlobalsReloadTimer = new QTimer(this);
+        m_kdeGlobalsReloadTimer->setSingleShot(true);
+        m_kdeGlobalsReloadTimer->setInterval(150);
+        const auto schedule = [this]() { if (m_kdeGlobalsReloadTimer) m_kdeGlobalsReloadTimer->start(); };
+        connect(m_kdeGlobalsWatcher, &QFileSystemWatcher::fileChanged, this, schedule);
+        connect(m_kdeGlobalsWatcher, &QFileSystemWatcher::directoryChanged, this, schedule);
+        connect(m_kdeGlobalsReloadTimer, &QTimer::timeout, this, &ValenzBridge::refreshSharedSettingsFromFile);
+    }
+    if (!m_kdeGlobalsWatcher->directories().contains(configDirectory))
+        m_kdeGlobalsWatcher->addPath(configDirectory);
+    if (QFileInfo::exists(configPath) && !m_kdeGlobalsWatcher->files().contains(configPath))
+        m_kdeGlobalsWatcher->addPath(configPath);
 }
 
 int ValenzBridge::barHeight() const

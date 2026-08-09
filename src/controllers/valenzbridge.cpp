@@ -11,6 +11,7 @@ ValenzBridge::ValenzBridge(QObject *parent)
     : QObject(parent)
 {
     initializeConfig();
+    refreshSharedSettingsFromFile();
     setAgendaInstalled(isAgendaInstalled());
 
     m_weatherNetwork = new QNetworkAccessManager(this);

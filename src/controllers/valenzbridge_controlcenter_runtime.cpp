@@ -2,6 +2,7 @@
 #include "valenzbridge_p.h"
 #include "mauikit_system_control.h"
 
+#include <QElapsedTimer>
 #include <QMetaObject>
 #include <QPointer>
 #include <QProcess>
@@ -35,6 +36,8 @@ struct ControlCenterRuntimeSnapshot
     bool bluetoothEnabled = false;
     QString volumePercentage = QStringLiteral("0%");
     bool volumeMuted = false;
+    QString microphoneVolumePercentage = QStringLiteral("0%");
+    bool microphoneAvailable = false;
     bool brightnessAvailable = false;
     QString brightnessPercentage = QStringLiteral("0%");
     bool batteryAvailable = false;
@@ -47,6 +50,77 @@ struct ControlCenterRuntimeSnapshot
     QString powerProfileCurrent;
     QStringList powerProfiles;
 };
+
+struct MicrophoneSnapshot
+{
+    QString volumePercentage = QStringLiteral("0%");
+    bool available = false;
+};
+
+MicrophoneSnapshot collectMicrophoneSnapshot()
+{
+    MicrophoneSnapshot snapshot;
+    QString inspect;
+    if (!MauiKitSystem::runCommandText(QStringLiteral("wpctl"), QStringList {QStringLiteral("inspect"), QStringLiteral("@DEFAULT_AUDIO_SOURCE@")}, &inspect, 1000))
+        return snapshot;
+
+    QString volumeOutput;
+    if (!MauiKitSystem::runCommandText(QStringLiteral("wpctl"), QStringList {QStringLiteral("get-volume"), QStringLiteral("@DEFAULT_AUDIO_SOURCE@")}, &volumeOutput, 1000))
+        return snapshot;
+    const QStringList volumeFields = volumeOutput.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+    if (volumeFields.size() < 2)
+        return snapshot;
+    bool volumeOk = false;
+    const double currentVolume = volumeFields.at(1).toDouble(&volumeOk);
+    if (!volumeOk)
+        return snapshot;
+    snapshot.volumePercentage = QStringLiteral("%1%").arg(qBound(0, qRound(currentVolume * 100.0), 150));
+
+    bool availabilityKnown = false;
+    for (const QString &line : inspect.split(QLatin1Char('\n'), Qt::SkipEmptyParts))
+    {
+        if (!line.contains(QStringLiteral("port.availability"), Qt::CaseInsensitive))
+            continue;
+        QString availability = line.section(QLatin1Char('='), 1).trimmed();
+        availability.remove(QLatin1Char('"'));
+        availability = availability.toLower();
+        if (availability == QLatin1String("available"))
+        {
+            availabilityKnown = true;
+            snapshot.available = true;
+        }
+        else if (availability == QLatin1String("not available") || availability == QLatin1String("unavailable"))
+        {
+            availabilityKnown = true;
+            snapshot.available = false;
+        }
+        if (availabilityKnown)
+            break;
+    }
+    if (availabilityKnown)
+        return snapshot;
+
+    static QElapsedTimer probeTimer;
+    static bool probeAvailable = false;
+    if (probeTimer.isValid() && probeTimer.elapsed() < 5000)
+    {
+        snapshot.available = probeAvailable;
+        return snapshot;
+    }
+    probeTimer.restart();
+
+    const double testVolume = currentVolume >= 1.49 ? 1.48 : currentVolume + 0.01;
+    const bool changed = MauiKitSystem::runCommandText(QStringLiteral("wpctl"), QStringList {QStringLiteral("set-volume"), QStringLiteral("@DEFAULT_AUDIO_SOURCE@"), QString::number(testVolume, 'f', 2)}, nullptr, 1000);
+    QString afterOutput;
+    const bool readBack = changed && MauiKitSystem::runCommandText(QStringLiteral("wpctl"), QStringList {QStringLiteral("get-volume"), QStringLiteral("@DEFAULT_AUDIO_SOURCE@")}, &afterOutput, 1000);
+    MauiKitSystem::runCommandText(QStringLiteral("wpctl"), QStringList {QStringLiteral("set-volume"), QStringLiteral("@DEFAULT_AUDIO_SOURCE@"), QString::number(currentVolume, 'f', 2)}, nullptr, 1000);
+    const QStringList afterFields = afterOutput.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+    bool afterOk = false;
+    const double afterVolume = afterFields.size() > 1 ? afterFields.at(1).toDouble(&afterOk) : 0.0;
+    snapshot.available = readBack && afterOk && qAbs(afterVolume - testVolume) >= 0.005;
+    probeAvailable = snapshot.available;
+    return snapshot;
+}
 
 struct ControlCenterSystemResourcesSnapshot
 {
@@ -143,6 +217,10 @@ ControlCenterRuntimeSnapshot collectControlCenterRuntimeSnapshot(bool debugSimul
         snapshot.volumePercentage = QStringLiteral("0%");
         snapshot.volumeMuted = false;
     }
+
+    const MicrophoneSnapshot microphone = collectMicrophoneSnapshot();
+    snapshot.microphoneVolumePercentage = microphone.volumePercentage;
+    snapshot.microphoneAvailable = microphone.available;
 
     if (debugSimulatedBrightnessAvailable)
     {
@@ -316,6 +394,8 @@ void ValenzBridge::refreshControlCenterRuntimeState()
             bridge->setControlCenterBluetoothState(snapshot.bluetoothEnabled ? QStringLiteral("on") : QStringLiteral("off"));
             bridge->setControlCenterVolumeMuted(snapshot.volumeMuted);
             bridge->setControlCenterVolumePercentage(snapshot.volumePercentage);
+            bridge->setControlCenterMicrophoneVolumePercentage(snapshot.microphoneVolumePercentage);
+            bridge->setControlCenterMicrophoneAvailable(snapshot.microphoneAvailable);
             bridge->setControlCenterBrightnessAvailable(snapshot.brightnessAvailable);
             bridge->setControlCenterBrightnessPercentage(snapshot.brightnessPercentage);
             bridge->setControlCenterBatteryAvailable(snapshot.batteryAvailable);
@@ -401,6 +481,26 @@ void ValenzBridge::setControlCenterVolumePercentageFromSlider(int percent)
 {
     if (MauiKitSystem::setControlCenterVolumePercent(percent))
         refreshControlCenterVolumeState();
+}
+
+void ValenzBridge::setControlCenterMicrophoneVolumePercentageFromSlider(int percent)
+{
+    if (!m_controlCenterMicrophoneAvailable)
+        return;
+
+    const bool changed = MauiKitSystem::runCommandText(QStringLiteral("wpctl"),
+                                                       QStringList { QStringLiteral("set-volume"), QStringLiteral("@DEFAULT_AUDIO_SOURCE@"), QStringLiteral("%1%").arg(qBound(0, percent, 100)) },
+                                                       nullptr, 1000);
+    if (changed)
+    {
+        QString output;
+        if (MauiKitSystem::runCommandText(QStringLiteral("wpctl"), QStringList { QStringLiteral("get-volume"), QStringLiteral("@DEFAULT_AUDIO_SOURCE@") }, &output, 1000))
+        {
+            const QStringList fields = output.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+            if (fields.size() > 1)
+                setControlCenterMicrophoneVolumePercentage(QStringLiteral("%1%").arg(qBound(0, qRound(fields.at(1).toDouble()), 100)));
+        }
+    }
 }
 
 void ValenzBridge::setControlCenterBrightnessPercentageFromSlider(int percent)

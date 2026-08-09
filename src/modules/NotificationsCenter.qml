@@ -580,6 +580,7 @@ Window
                 padding: notificationsCenter._cardPadding
                 text: ""
                 label2.text: ""
+                template.visible: false
 
                 RowLayout
                 {
@@ -617,46 +618,10 @@ Window
                         enabled: notificationsCenter.notificationCount > 0 && !notificationsCenter._clearingAll
                         onClicked: notificationsCenter.clearNotifications()
 
-                        contentItem: RowLayout
+                        contentItem: Label
                         {
-                            spacing: Maui.Style.space.tiny
-
-                            Item
-                            {
-                                Layout.alignment: Qt.AlignVCenter
-                                width: 18
-                                height: 18
-
-                                Maui.Icon
-                                {
-                                    anchors.centerIn: parent
-                                    width: 16
-                                    height: 16
-                                    source: "edit-clear-all"
-                                    color: _clearAllButton.enabled ? Maui.Theme.textColor : Maui.Theme.disabledTextColor
-                                    visible: notificationsCenter.useSystemThemeIcons
-                                }
-
-                                Label
-                                {
-                                    anchors.centerIn: parent
-                                    visible: !notificationsCenter.useSystemThemeIcons
-                                    text: "\uee23"
-                                    color: _clearAllButton.enabled ? Maui.Theme.textColor : Maui.Theme.disabledTextColor
-                                    font.family: "Symbols Nerd Font"
-                                    font.weight: Font.Normal
-                                    font.pointSize: 9
-                                    textFormat: Text.PlainText
-                                    renderType: Text.QtRendering
-                                }
-                            }
-
-                            Label
-                            {
-                                Layout.alignment: Qt.AlignVCenter
-                                text: i18n("Clear All")
-                                color: _clearAllButton.enabled ? Maui.Theme.textColor : Maui.Theme.disabledTextColor
-                            }
+                            text: i18n("Clear All")
+                            color: _clearAllButton.enabled ? Maui.Theme.textColor : Maui.Theme.disabledTextColor
                         }
                     }
                 }
@@ -753,6 +718,7 @@ Window
                                     padding: notificationsCenter._cardPadding
                                     text: ""
                                     label2.text: ""
+                                    template.visible: false
                                     background: Rectangle
                                     {
                                         color: Maui.Theme.alternateBackgroundColor
@@ -929,6 +895,7 @@ Window
                                                     padding: notificationsCenter._cardPadding
                                                     text: ""
                                                     label2.text: ""
+                                                    template.visible: false
                                                     background: Rectangle
                                                     {
                                                         color: Qt.alpha(Maui.Theme.backgroundColor, 0.42)
@@ -1219,6 +1186,7 @@ Window
                             padding: notificationsCenter._cardPadding
                             text: ""
                             label2.text: ""
+                            template.visible: false
                             background: Rectangle
                             {
                                 color: Maui.Theme.alternateBackgroundColor
