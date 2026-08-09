@@ -66,6 +66,7 @@ Window
     readonly property string _nerdFontFamily: "Symbols Nerd Font Mono"
     readonly property int _glyphSize: Math.max(15, Math.round(Maui.Style.iconSizes.medium * 0.9))
     readonly property int _cardPadding: Maui.Style.space.small
+    readonly property int _sliderBadgeWidth: 48
     readonly property color _volumeBarColor: (controlCenter.bridge ? controlCenter.bridge.controlCenterVolumeMuted : false) ? Maui.Theme.disabledTextColor : Maui.Theme.highlightColor
     readonly property color _volumeIndicatorColor: (controlCenter.bridge ? controlCenter.bridge.controlCenterVolumeMuted : false) ? Maui.Theme.disabledTextColor : Maui.Theme.textColor
     readonly property string _microphoneVolumePercentage: controlCenter.bridge ? controlCenter.bridge.controlCenterMicrophoneVolumePercentage : "0%"
@@ -859,7 +860,7 @@ Window
 
                             Label
                             {
-                                text: "\ueb5c"
+                                text: "\uf042"
                                 font.family: controlCenter._nerdFontFamily
                                 font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
                                 color: Maui.Theme.textColor
@@ -1212,7 +1213,7 @@ Window
                             spacing: Maui.Style.space.small
                             Label
                             {
-                                text: "\uf026"
+                                text: "\uf028"
                                 font.family: controlCenter._nerdFontFamily
                                 font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
                                 color: controlCenter._volumeIndicatorColor
@@ -1256,16 +1257,12 @@ Window
                                     }
                                 }
                             }
-                            Label
-                            {
-                                text: "\uf028"
-                                font.family: controlCenter._nerdFontFamily
-                                font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
-                                color: controlCenter._volumeIndicatorColor
-                            }
                             WorkspaceBadge
                             {
                                 Layout.alignment: Qt.AlignVCenter
+                                Layout.minimumWidth: controlCenter._sliderBadgeWidth
+                                Layout.preferredWidth: controlCenter._sliderBadgeWidth
+                                Layout.maximumWidth: controlCenter._sliderBadgeWidth
                                 badgeText: controlCenter.bridge ? String(controlCenter._volumePercentage) + "%" : "N/A"
                                 bridge: null
                             }
@@ -1355,17 +1352,12 @@ Window
                                 }
                             }
 
-                            Label
-                            {
-                                text: "\uf130"
-                                font.family: controlCenter._nerdFontFamily
-                                font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
-                                color: Maui.Theme.textColor
-                            }
-
                             WorkspaceBadge
                             {
                                 Layout.alignment: Qt.AlignVCenter
+                                Layout.minimumWidth: controlCenter._sliderBadgeWidth
+                                Layout.preferredWidth: controlCenter._sliderBadgeWidth
+                                Layout.maximumWidth: controlCenter._sliderBadgeWidth
                                 badgeText: controlCenter._microphoneAvailable ? String(controlCenter._microphonePendingPercentage >= 0 ? controlCenter._microphonePendingPercentage : controlCenter._microphonePercentage) + "%" : "N/A"
                                 visible: true
                                 bridge: null
@@ -1399,7 +1391,7 @@ Window
                             spacing: Maui.Style.space.small
                             Label
                             {
-                                text: "\uf042"
+                                text: "\uf185"
                                 font.family: controlCenter._nerdFontFamily
                                 font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
                                 color: Maui.Theme.textColor
@@ -1443,16 +1435,12 @@ Window
                                     }
                                 }
                             }
-                            Label
-                            {
-                                text: "\uf185"
-                                font.family: controlCenter._nerdFontFamily
-                                font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
-                                color: Maui.Theme.textColor
-                            }
                             WorkspaceBadge
                             {
                                 Layout.alignment: Qt.AlignVCenter
+                                Layout.minimumWidth: controlCenter._sliderBadgeWidth
+                                Layout.preferredWidth: controlCenter._sliderBadgeWidth
+                                Layout.maximumWidth: controlCenter._sliderBadgeWidth
                                 badgeText: controlCenter._brightnessAvailable ? String(controlCenter._brightnessPercentage) + "%" : "N/A"
                                 visible: true
                                 bridge: null
