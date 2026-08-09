@@ -58,7 +58,26 @@ ValenzBridge::~ValenzBridge()
     delete m_artworkCacheDir;
 }
 
+namespace
+{
+bool startDetachedVicinaeCommand(const QString &command)
+{
+    QStringList parts = QProcess::splitCommand(command.trimmed());
+    if (parts.isEmpty())
+        return false;
+    const QString program = parts.takeFirst();
+    return !program.isEmpty() && QProcess::startDetached(program, parts);
+}
+}
+
 void ValenzBridge::toggleVicinae()
 {
-    QProcess::startDetached(QStringLiteral("vicinae"), {QStringLiteral("toggle")});
+    if (!startDetachedVicinaeCommand(m_launcherCommand))
+        startDetachedVicinaeCommand(QStringLiteral("vicinae toggle"));
+}
+
+void ValenzBridge::openVicinaeClipboard()
+{
+    if (!startDetachedVicinaeCommand(m_clipboardCommand))
+        startDetachedVicinaeCommand(QStringLiteral("vicinae vicinae://launch/clipboard/history"));
 }

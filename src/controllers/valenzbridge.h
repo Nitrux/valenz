@@ -76,6 +76,8 @@ class ValenzBridge : public QObject
     Q_PROPERTY(bool controlCenterNightLightAvailable READ controlCenterNightLightAvailable WRITE setControlCenterNightLightAvailable NOTIFY controlCenterNightLightAvailableChanged FINAL)
     Q_PROPERTY(QString controlCenterPowerCommand READ controlCenterPowerCommand WRITE setControlCenterPowerCommand NOTIFY controlCenterPowerCommandChanged FINAL)
     Q_PROPERTY(QString controlCenterSettingsCommand READ controlCenterSettingsCommand WRITE setControlCenterSettingsCommand NOTIFY controlCenterSettingsCommandChanged FINAL)
+    Q_PROPERTY(QString launcherCommand READ launcherCommand WRITE setLauncherCommand NOTIFY launcherCommandChanged FINAL)
+    Q_PROPERTY(QString clipboardCommand READ clipboardCommand WRITE setClipboardCommand NOTIFY clipboardCommandChanged FINAL)
     Q_PROPERTY(QString controlCenterDiskUsagePath READ controlCenterDiskUsagePath WRITE setControlCenterDiskUsagePath NOTIFY controlCenterDiskUsagePathChanged FINAL)
     Q_PROPERTY(int barHeight READ barHeight NOTIFY barHeightChanged FINAL)
     Q_PROPERTY(int barLayerSpacing READ barLayerSpacing NOTIFY barLayerSpacingChanged FINAL)
@@ -201,6 +203,10 @@ public:
     void setControlCenterPowerCommand(const QString &command);
     QString controlCenterSettingsCommand() const;
     void setControlCenterSettingsCommand(const QString &command);
+    QString launcherCommand() const;
+    void setLauncherCommand(const QString &command);
+    QString clipboardCommand() const;
+    void setClipboardCommand(const QString &command);
     QString controlCenterDiskUsagePath() const;
     void setControlCenterDiskUsagePath(const QString &path);
     int barHeight() const;
@@ -233,6 +239,7 @@ public:
     Q_INVOKABLE void executeControlCenterPowerCommand();
     Q_INVOKABLE void executeControlCenterSettingsCommand();
     Q_INVOKABLE void toggleVicinae();
+    Q_INVOKABLE void openVicinaeClipboard();
     Q_INVOKABLE void setControlCenterVolumePercentageFromSlider(int percent);
     Q_INVOKABLE void setControlCenterMicrophoneVolumePercentageFromSlider(int percent);
     Q_INVOKABLE void setControlCenterBrightnessPercentageFromSlider(int percent);
@@ -276,6 +283,8 @@ Q_SIGNALS:
     void focusedWindowFullscreenChanged(bool fullscreen);
     void controlCenterPowerCommandChanged(const QString &command);
     void controlCenterSettingsCommandChanged(const QString &command);
+    void launcherCommandChanged(const QString &command);
+    void clipboardCommandChanged(const QString &command);
     void controlCenterDiskUsagePathChanged(const QString &path);
     void barHeightChanged(int height);
     void barLayerSpacingChanged(int spacing);
@@ -423,6 +432,7 @@ private:
     QString m_controlCenterVolumePercentage;
     bool m_controlCenterVolumeMuted = false;
     QString m_controlCenterMicrophoneVolumePercentage = QStringLiteral("0%");
+    QString m_controlCenterMicrophoneSource;
     bool m_controlCenterMicrophoneAvailable = false;
     bool m_controlCenterBatteryCharging = false;
     QString m_controlCenterBatteryPercentage;
@@ -452,6 +462,8 @@ private:
     bool m_controlCenterNightLightAvailable = false;
     QString m_controlCenterPowerCommand = QStringLiteral("wlogout");
     QString m_controlCenterSettingsCommand = QStringLiteral("systemsettings");
+    QString m_launcherCommand = QStringLiteral("vicinae toggle");
+    QString m_clipboardCommand = QStringLiteral("vicinae vicinae://launch/clipboard/history");
     QString m_controlCenterDiskUsagePath = QStringLiteral("/");
     QString m_screenPlacement = QStringLiteral("active");
     int m_barHeight = 56;

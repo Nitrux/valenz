@@ -9,7 +9,6 @@ ToolButton
     id: vicinaeButton
 
     property bool useSystemThemeIcons: true
-    property string iconName: "system-search"
     property var glyphForIcon
     readonly property color activeContentColor: vicinaeButton.down ? Maui.Theme.highlightedTextColor : Maui.Theme.textColor
 
@@ -24,33 +23,89 @@ ToolButton
             valenzBridge.toggleVicinae()
     }
 
-    contentItem: Item
-    {
-        implicitWidth: 20
-        implicitHeight: 20
 
-        Maui.Icon
+    contentItem: RowLayout
+    {
+        spacing: 16
+
+        Item
         {
-            id: _vicinaeIcon
-            anchors.centerIn: parent
+            Layout.alignment: Qt.AlignVCenter
             width: 16
             height: 16
-            source: vicinaeButton.iconName
-            color: vicinaeButton.activeContentColor
-            visible: vicinaeButton.useSystemThemeIcons && valid
+
+            Maui.Icon
+            {
+                id: _launcherIcon
+                anchors.centerIn: parent
+                width: 16
+                height: 16
+                source: "system-search"
+                color: vicinaeButton.activeContentColor
+                visible: vicinaeButton.useSystemThemeIcons && valid
+            }
+
+            Label
+            {
+                anchors.centerIn: parent
+                visible: !vicinaeButton.useSystemThemeIcons || !_launcherIcon.valid
+                text: vicinaeButton.glyphForIcon ? vicinaeButton.glyphForIcon("system-search") : ""
+                color: vicinaeButton.activeContentColor
+                font.family: "Symbols Nerd Font"
+                font.weight: Font.Normal
+                font.pointSize: Math.max(7, Math.round(parent.height * 0.65 * 0.75))
+                textFormat: Text.PlainText
+                renderType: Text.QtRendering
+            }
+
+            TapHandler
+            {
+                onTapped:
+                {
+                    if (valenzBridge)
+                        valenzBridge.toggleVicinae()
+                }
+            }
         }
 
-        Label
+        Item
         {
-            anchors.centerIn: parent
-            visible: !vicinaeButton.useSystemThemeIcons || !_vicinaeIcon.valid
-            text: vicinaeButton.glyphForIcon ? vicinaeButton.glyphForIcon(vicinaeButton.iconName) : ""
-            color: vicinaeButton.activeContentColor
-            font.family: "Symbols Nerd Font"
-            font.weight: Font.Normal
-            font.pointSize: Math.max(7, Math.round(parent.height * 0.65 * 0.75))
-            textFormat: Text.PlainText
-            renderType: Text.QtRendering
+            Layout.alignment: Qt.AlignVCenter
+            width: 16
+            height: 16
+
+            Maui.Icon
+            {
+                id: _clipboardIcon
+                anchors.centerIn: parent
+                width: 16
+                height: 16
+                source: "edit-paste"
+                color: vicinaeButton.activeContentColor
+                visible: vicinaeButton.useSystemThemeIcons && valid
+            }
+
+            Label
+            {
+                anchors.centerIn: parent
+                visible: !vicinaeButton.useSystemThemeIcons || !_clipboardIcon.valid
+                text: vicinaeButton.glyphForIcon ? vicinaeButton.glyphForIcon("edit-paste") : ""
+                color: vicinaeButton.activeContentColor
+                font.family: "Symbols Nerd Font"
+                font.weight: Font.Normal
+                font.pointSize: Math.max(7, Math.round(parent.height * 0.65 * 0.75))
+                textFormat: Text.PlainText
+                renderType: Text.QtRendering
+            }
+
+            TapHandler
+            {
+                onTapped:
+                {
+                    if (valenzBridge)
+                        valenzBridge.openVicinaeClipboard()
+                }
+            }
         }
     }
 }

@@ -15,9 +15,7 @@ ToolButton
     property bool bluetoothAvailable: false
     property int bluetoothConnectedDeviceCount: 0
     property string volumeIconName
-    property string volumePercentageText
     property string brightnessIconName
-    property string brightnessPercentageText
     property bool brightnessAvailable: false
     property string batteryIconName
     property string batteryPercentageText
@@ -71,13 +69,13 @@ ToolButton
 
     contentItem: RowLayout
     {
-        spacing: Maui.Style.space.medium
+        spacing: 16
 
         Item
         {
             Layout.alignment: Qt.AlignVCenter
-            width: 20
-            height: 20
+            width: 16
+            height: 16
 
             Maui.Icon
             {
@@ -104,13 +102,17 @@ ToolButton
             }
         }
 
+        RowLayout
+        {
+            Layout.alignment: Qt.AlignVCenter
+            spacing: 3
+
         Item
         {
             Layout.alignment: Qt.AlignVCenter
-            Layout.leftMargin: Math.max(2, Maui.Style.space.tiny)
             visible: controlCenterButton.bluetoothAvailable
-            width: 20
-            height: 20
+            width: 16
+            height: 16
 
             Maui.Icon
             {
@@ -140,16 +142,17 @@ ToolButton
         WorkspaceBadge
         {
             Layout.alignment: Qt.AlignVCenter
-            visible: controlCenterButton.bluetoothAvailable && controlCenterButton.bluetoothConnectedDeviceCount > 0
+            visible: controlCenterButton.bluetoothConnectedDeviceCount > 0
             badgeText: String(controlCenterButton.bluetoothConnectedDeviceCount)
             bridge: null
+        }
         }
 
         Item
         {
             Layout.alignment: Qt.AlignVCenter
-            width: 20
-            height: 20
+            width: 16
+            height: 16
 
             Maui.Icon
             {
@@ -182,7 +185,6 @@ ToolButton
             implicitWidth: _volumeRow.implicitWidth
             Layout.minimumWidth: implicitWidth
             Layout.preferredWidth: implicitWidth
-            Layout.rightMargin: (controlCenterButton.brightnessAvailable || controlCenterButton.batteryAvailable) ? Maui.Style.space.small : 0
             height: 20
 
             RowLayout
@@ -194,8 +196,8 @@ ToolButton
                 Item
                 {
                     Layout.alignment: Qt.AlignVCenter
-                    width: 20
-                    height: 20
+                    width: 16
+                    height: 16
 
                     Maui.Icon
                     {
@@ -222,13 +224,6 @@ ToolButton
                     }
                 }
 
-                WorkspaceBadge
-                {
-                    Layout.alignment: Qt.AlignVCenter
-                    visible: controlCenterButton.volumePercentageText.length > 0
-                    badgeText: controlCenterButton.volumePercentageText
-                    bridge: null
-                }
             }
         }
 
@@ -239,7 +234,6 @@ ToolButton
             implicitWidth: _brightnessRow.implicitWidth
             Layout.minimumWidth: visible ? implicitWidth : 0
             Layout.preferredWidth: visible ? implicitWidth : 0
-            Layout.rightMargin: controlCenterButton.batteryAvailable ? Maui.Style.space.small : 0
             height: 20
 
             RowLayout
@@ -251,8 +245,8 @@ ToolButton
                 Item
                 {
                     Layout.alignment: Qt.AlignVCenter
-                    width: 20
-                    height: 20
+                    width: 16
+                    height: 16
 
                     Maui.Icon
                     {
@@ -279,13 +273,6 @@ ToolButton
                     }
                 }
 
-                WorkspaceBadge
-                {
-                    Layout.alignment: Qt.AlignVCenter
-                    visible: controlCenterButton.brightnessPercentageText.length > 0
-                    badgeText: controlCenterButton.brightnessPercentageText
-                    bridge: null
-                }
             }
         }
 
@@ -302,13 +289,13 @@ ToolButton
             {
                 id: _batteryRow
                 anchors.centerIn: parent
-                spacing: 1
+                spacing: 3
 
                 Item
                 {
                     Layout.alignment: Qt.AlignVCenter
-                    width: 20
-                    height: 20
+                    width: 16
+                    height: 16
 
                     Maui.Icon
                     {

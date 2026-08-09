@@ -405,6 +405,8 @@ void ValenzBridge::initializeConfig()
     ensureKey(QString::fromLatin1(kDebugSimulatedBatteryChargingKey), QString(), false);
     ensureKey(QString::fromLatin1(kDebugSimulatedBatteryOnAcPowerKey), QString(), false);
     ensureKey(QString::fromLatin1(kControlCenterSettingsCommandKey), QString(), QStringLiteral("systemsettings"));
+    ensureKey(QString::fromLatin1(kLauncherCommandKey), QString(), QStringLiteral("vicinae toggle"));
+    ensureKey(QString::fromLatin1(kClipboardCommandKey), QString(), QStringLiteral("vicinae vicinae://launch/clipboard/history"));
     userSettings.remove("ControlCenter/batteryIconName");
     userSettings.remove("controlCenter/batteryIconName");
     userSettings.remove("ControlCenter/powerProfileIconName");
@@ -438,8 +440,14 @@ void ValenzBridge::initializeConfig()
     m_controlCenterBatteryPercentage = QStringLiteral("0%");
     m_controlCenterPowerCommand = normalizePowerCommand(userSettings.value(kControlCenterPowerCommandKey, "wlogout").toString());
     m_controlCenterSettingsCommand = userSettings.value(kControlCenterSettingsCommandKey, QStringLiteral("systemsettings")).toString().trimmed();
+    m_launcherCommand = userSettings.value(kLauncherCommandKey, QStringLiteral("vicinae toggle")).toString().trimmed();
+    m_clipboardCommand = userSettings.value(kClipboardCommandKey, QStringLiteral("vicinae vicinae://launch/clipboard/history")).toString().trimmed();
     if (m_controlCenterSettingsCommand.isEmpty())
         m_controlCenterSettingsCommand = QStringLiteral("systemsettings");
+    if (m_launcherCommand.isEmpty())
+        m_launcherCommand = QStringLiteral("vicinae toggle");
+    if (m_clipboardCommand.isEmpty())
+        m_clipboardCommand = QStringLiteral("vicinae vicinae://launch/clipboard/history");
     m_controlCenterDiskUsagePath = userSettings.value(kControlCenterDiskUsagePathKey, "/").toString().trimmed();
     if (m_controlCenterDiskUsagePath.isEmpty())
         m_controlCenterDiskUsagePath = QStringLiteral("/");
@@ -535,6 +543,18 @@ void ValenzBridge::reloadConfig()
     update(m_controlCenterSettingsCommand, settingsCommand,
            [this] { Q_EMIT controlCenterSettingsCommandChanged(m_controlCenterSettingsCommand); });
 
+    QString launcherCommand = settings.value(kLauncherCommandKey, QStringLiteral("vicinae toggle")).toString().trimmed();
+    if (launcherCommand.isEmpty())
+        launcherCommand = QStringLiteral("vicinae toggle");
+    update(m_launcherCommand, launcherCommand,
+           [this] { Q_EMIT launcherCommandChanged(m_launcherCommand); });
+
+    QString clipboardCommand = settings.value(kClipboardCommandKey, QStringLiteral("vicinae vicinae://launch/clipboard/history")).toString().trimmed();
+    if (clipboardCommand.isEmpty())
+        clipboardCommand = QStringLiteral("vicinae vicinae://launch/clipboard/history");
+    update(m_clipboardCommand, clipboardCommand,
+           [this] { Q_EMIT clipboardCommandChanged(m_clipboardCommand); });
+
     QString diskUsagePath = settings.value(kControlCenterDiskUsagePathKey, QStringLiteral("/")).toString().trimmed();
     if (diskUsagePath.isEmpty())
         diskUsagePath = QStringLiteral("/");
@@ -612,6 +632,8 @@ void ValenzBridge::persistControlCenterState() const
     userSettings.setValue(kControlCenterIconModeKey, m_controlCenterIconMode);
     userSettings.setValue(kControlCenterPowerCommandKey, m_controlCenterPowerCommand);
     userSettings.setValue(kControlCenterSettingsCommandKey, m_controlCenterSettingsCommand);
+    userSettings.setValue(kLauncherCommandKey, m_launcherCommand);
+    userSettings.setValue(kClipboardCommandKey, m_clipboardCommand);
     userSettings.setValue(kControlCenterDiskUsagePathKey, m_controlCenterDiskUsagePath);
     userSettings.setValue(kWindowScreenPlacementKey, m_screenPlacement);
     userSettings.sync();

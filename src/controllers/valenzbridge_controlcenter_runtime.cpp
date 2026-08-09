@@ -36,6 +36,7 @@ struct ControlCenterRuntimeSnapshot
     bool bluetoothEnabled = false;
     QString volumePercentage = QStringLiteral("0%");
     bool volumeMuted = false;
+    QString microphoneSource;
     QString microphoneVolumePercentage = QStringLiteral("0%");
     bool microphoneAvailable = false;
     bool brightnessAvailable = false;
@@ -53,20 +54,148 @@ struct ControlCenterRuntimeSnapshot
 
 struct MicrophoneSnapshot
 {
+    QString source;
     QString volumePercentage = QStringLiteral("0%");
     bool available = false;
 };
 
-MicrophoneSnapshot collectMicrophoneSnapshot()
+bool sourceCanChangeVolume(const QString &source)
+{
+    QString output;
+    if (!MauiKitSystem::runCommandText(QStringLiteral("wpctl"), {QStringLiteral("get-volume"), source}, &output, 1000))
+    {
+        return false;
+    }
+
+    const QStringList fields = output.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+    if (fields.size() < 2)
+        return false;
+
+    bool volumeOk = false;
+    const double currentVolume = fields.at(1).toDouble(&volumeOk);
+    if (!volumeOk)
+    {
+        return false;
+    }
+
+    const double testVolume = qAbs(currentVolume - 0.50) < 0.005 ? 0.51 : 0.50;
+    const QString testValue = QStringLiteral("%1").arg(testVolume, 0, 'f', 2);
+    if (!MauiKitSystem::runCommandText(QStringLiteral("wpctl"), {QStringLiteral("set-volume"), source, testValue}, nullptr, 1000))
+        return false;
+
+    QString afterOutput;
+    const bool readBack = MauiKitSystem::runCommandText(QStringLiteral("wpctl"), {QStringLiteral("get-volume"), source}, &afterOutput, 1000);
+    MauiKitSystem::runCommandText(QStringLiteral("wpctl"), {QStringLiteral("set-volume"), source, QString::number(currentVolume)}, nullptr, 1000);
+    if (!readBack)
+        return false;
+
+    const QStringList afterFields = afterOutput.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+    bool afterOk = false;
+    const double afterVolume = afterFields.size() > 1 ? afterFields.at(1).toDouble(&afterOk) : 0.0;
+    const bool writable = afterOk && qAbs(afterVolume - testVolume) < 0.005;
+    return writable;
+}
+
+QString microphoneSourceTarget()
+{
+    const QString defaultSource = QStringLiteral("@DEFAULT_AUDIO_SOURCE@");
+    QString status;
+    if (!MauiKitSystem::runCommandText(QStringLiteral("wpctl"), {QStringLiteral("status"), QStringLiteral("-n")}, &status, 1000))
+    {
+        return sourceCanChangeVolume(defaultSource) ? defaultSource : QString();
+    }
+
+    QStringList targets;
+    bool inSources = false;
+    for (const QString &line : status.split(QLatin1Char('\n'), Qt::SkipEmptyParts))
+    {
+        const QString trimmed = line.trimmed();
+        if (trimmed.endsWith(QStringLiteral("Sources:")))
+        {
+            inSources = true;
+            continue;
+        }
+        if (inSources && (trimmed.endsWith(QStringLiteral("Sinks:"))
+                          || trimmed.endsWith(QStringLiteral("Filters:"))
+                          || trimmed.endsWith(QStringLiteral("Streams:"))))
+        {
+            inSources = false;
+        }
+        if (!inSources)
+            continue;
+
+        const int dot = line.indexOf(QLatin1Char('.'));
+        if (dot <= 0)
+            continue;
+        QString target = line.left(dot).trimmed();
+        const int lastSpace = target.lastIndexOf(QLatin1Char(' '));
+        if (lastSpace >= 0)
+            target = target.mid(lastSpace + 1);
+        if (target.startsWith(QLatin1Char('*')))
+            target.remove(0, 1);
+        target = target.trimmed();
+        bool targetOk = false;
+        target.toInt(&targetOk);
+        if (targetOk && !targets.contains(target))
+        {
+            targets.append(target);
+        }
+    }
+
+    for (const QString &target : targets)
+    {
+        QString inspect;
+        if (!MauiKitSystem::runCommandText(QStringLiteral("wpctl"), {QStringLiteral("inspect"), target}, &inspect, 1000))
+        {
+            continue;
+        }
+
+        bool availabilityKnown = false;
+        bool available = false;
+        for (const QString &line : inspect.split(QLatin1Char('\n'), Qt::SkipEmptyParts))
+        {
+            if (!line.contains(QStringLiteral("port.availability"), Qt::CaseInsensitive))
+                continue;
+            QString value = line.section(QLatin1Char('='), 1).trimmed();
+            value.remove(QLatin1Char('"'));
+            value = value.toLower();
+            availabilityKnown = true;
+            available = value == QLatin1String("available");
+            break;
+        }
+
+        const bool usable = availabilityKnown ? available : sourceCanChangeVolume(target);
+        if (usable)
+            return target;
+    }
+
+    return QString();
+}
+
+MicrophoneSnapshot collectMicrophoneSnapshot(const QString &preferredSource)
 {
     MicrophoneSnapshot snapshot;
-    QString inspect;
-    if (!MauiKitSystem::runCommandText(QStringLiteral("wpctl"), QStringList {QStringLiteral("inspect"), QStringLiteral("@DEFAULT_AUDIO_SOURCE@")}, &inspect, 1000))
+    QString source = preferredSource;
+    if (source.isEmpty())
+        source = microphoneSourceTarget();
+    if (source.isEmpty())
+    {
         return snapshot;
+    }
 
     QString volumeOutput;
-    if (!MauiKitSystem::runCommandText(QStringLiteral("wpctl"), QStringList {QStringLiteral("get-volume"), QStringLiteral("@DEFAULT_AUDIO_SOURCE@")}, &volumeOutput, 1000))
-        return snapshot;
+    if (!MauiKitSystem::runCommandText(QStringLiteral("wpctl"), {QStringLiteral("get-volume"), source}, &volumeOutput, 1000))
+    {
+        if (!preferredSource.isEmpty())
+        {
+            source = microphoneSourceTarget();
+            if (source.isEmpty() || !MauiKitSystem::runCommandText(QStringLiteral("wpctl"), {QStringLiteral("get-volume"), source}, &volumeOutput, 1000))
+                return snapshot;
+        }
+        else
+            return snapshot;
+    }
+
     const QStringList volumeFields = volumeOutput.split(QLatin1Char(' '), Qt::SkipEmptyParts);
     if (volumeFields.size() < 2)
         return snapshot;
@@ -74,53 +203,13 @@ MicrophoneSnapshot collectMicrophoneSnapshot()
     const double currentVolume = volumeFields.at(1).toDouble(&volumeOk);
     if (!volumeOk)
         return snapshot;
+
     snapshot.volumePercentage = QStringLiteral("%1%").arg(qBound(0, qRound(currentVolume * 100.0), 150));
-
-    bool availabilityKnown = false;
-    for (const QString &line : inspect.split(QLatin1Char('\n'), Qt::SkipEmptyParts))
-    {
-        if (!line.contains(QStringLiteral("port.availability"), Qt::CaseInsensitive))
-            continue;
-        QString availability = line.section(QLatin1Char('='), 1).trimmed();
-        availability.remove(QLatin1Char('"'));
-        availability = availability.toLower();
-        if (availability == QLatin1String("available"))
-        {
-            availabilityKnown = true;
-            snapshot.available = true;
-        }
-        else if (availability == QLatin1String("not available") || availability == QLatin1String("unavailable"))
-        {
-            availabilityKnown = true;
-            snapshot.available = false;
-        }
-        if (availabilityKnown)
-            break;
-    }
-    if (availabilityKnown)
-        return snapshot;
-
-    static QElapsedTimer probeTimer;
-    static bool probeAvailable = false;
-    if (probeTimer.isValid() && probeTimer.elapsed() < 5000)
-    {
-        snapshot.available = probeAvailable;
-        return snapshot;
-    }
-    probeTimer.restart();
-
-    const double testVolume = currentVolume >= 1.49 ? 1.48 : currentVolume + 0.01;
-    const bool changed = MauiKitSystem::runCommandText(QStringLiteral("wpctl"), QStringList {QStringLiteral("set-volume"), QStringLiteral("@DEFAULT_AUDIO_SOURCE@"), QString::number(testVolume, 'f', 2)}, nullptr, 1000);
-    QString afterOutput;
-    const bool readBack = changed && MauiKitSystem::runCommandText(QStringLiteral("wpctl"), QStringList {QStringLiteral("get-volume"), QStringLiteral("@DEFAULT_AUDIO_SOURCE@")}, &afterOutput, 1000);
-    MauiKitSystem::runCommandText(QStringLiteral("wpctl"), QStringList {QStringLiteral("set-volume"), QStringLiteral("@DEFAULT_AUDIO_SOURCE@"), QString::number(currentVolume, 'f', 2)}, nullptr, 1000);
-    const QStringList afterFields = afterOutput.split(QLatin1Char(' '), Qt::SkipEmptyParts);
-    bool afterOk = false;
-    const double afterVolume = afterFields.size() > 1 ? afterFields.at(1).toDouble(&afterOk) : 0.0;
-    snapshot.available = readBack && afterOk && qAbs(afterVolume - testVolume) >= 0.005;
-    probeAvailable = snapshot.available;
+    snapshot.source = source;
+    snapshot.available = true;
     return snapshot;
 }
+
 
 struct ControlCenterSystemResourcesSnapshot
 {
@@ -197,7 +286,8 @@ void collectControlCenterNetworkState(ControlCenterRuntimeSnapshot *snapshot)
     }
 }
 
-ControlCenterRuntimeSnapshot collectControlCenterRuntimeSnapshot(bool debugSimulatedBrightnessAvailable,
+ControlCenterRuntimeSnapshot collectControlCenterRuntimeSnapshot(const QString &preferredMicrophoneSource,
+                                                                bool debugSimulatedBrightnessAvailable,
                                                                 int debugSimulatedBrightnessPercentage,
                                                                 bool debugSimulatedBatteryAvailable,
                                                                 int debugSimulatedBatteryPercentage,
@@ -218,7 +308,8 @@ ControlCenterRuntimeSnapshot collectControlCenterRuntimeSnapshot(bool debugSimul
         snapshot.volumeMuted = false;
     }
 
-    const MicrophoneSnapshot microphone = collectMicrophoneSnapshot();
+    const MicrophoneSnapshot microphone = collectMicrophoneSnapshot(preferredMicrophoneSource);
+    snapshot.microphoneSource = microphone.source;
     snapshot.microphoneVolumePercentage = microphone.volumePercentage;
     snapshot.microphoneAvailable = microphone.available;
 
@@ -338,6 +429,7 @@ void ValenzBridge::refreshControlCenterRuntimeState()
 
     m_controlCenterRuntimeRefreshInFlight = true;
 
+    const QString preferredMicrophoneSource = m_controlCenterMicrophoneSource;
     const bool debugSimulatedBrightnessAvailable = m_debugSimulatedBrightnessAvailable;
     const int debugSimulatedBrightnessPercentage = m_debugSimulatedBrightnessPercentage;
     const bool debugSimulatedBatteryAvailable = m_debugSimulatedBatteryAvailable;
@@ -347,13 +439,15 @@ void ValenzBridge::refreshControlCenterRuntimeState()
     QPointer<ValenzBridge> bridge(this);
 
     QThreadPool::globalInstance()->start([bridge,
+                       preferredMicrophoneSource,
                        debugSimulatedBrightnessAvailable,
                        debugSimulatedBrightnessPercentage,
                        debugSimulatedBatteryAvailable,
                        debugSimulatedBatteryPercentage,
                        debugSimulatedBatteryCharging,
                        debugSimulatedBatteryOnAcPower]() {
-        const ControlCenterRuntimeSnapshot snapshot = collectControlCenterRuntimeSnapshot(debugSimulatedBrightnessAvailable,
+        const ControlCenterRuntimeSnapshot snapshot = collectControlCenterRuntimeSnapshot(preferredMicrophoneSource,
+                                                                                          debugSimulatedBrightnessAvailable,
                                                                                           debugSimulatedBrightnessPercentage,
                                                                                           debugSimulatedBatteryAvailable,
                                                                                           debugSimulatedBatteryPercentage,
@@ -394,6 +488,8 @@ void ValenzBridge::refreshControlCenterRuntimeState()
             bridge->setControlCenterBluetoothState(snapshot.bluetoothEnabled ? QStringLiteral("on") : QStringLiteral("off"));
             bridge->setControlCenterVolumeMuted(snapshot.volumeMuted);
             bridge->setControlCenterVolumePercentage(snapshot.volumePercentage);
+            if (!snapshot.microphoneSource.isEmpty())
+                bridge->m_controlCenterMicrophoneSource = snapshot.microphoneSource;
             bridge->setControlCenterMicrophoneVolumePercentage(snapshot.microphoneVolumePercentage);
             bridge->setControlCenterMicrophoneAvailable(snapshot.microphoneAvailable);
             bridge->setControlCenterBrightnessAvailable(snapshot.brightnessAvailable);
@@ -488,17 +584,27 @@ void ValenzBridge::setControlCenterMicrophoneVolumePercentageFromSlider(int perc
     if (!m_controlCenterMicrophoneAvailable)
         return;
 
+    const QString source = !m_controlCenterMicrophoneSource.isEmpty()
+            ? m_controlCenterMicrophoneSource
+            : microphoneSourceTarget();
+    if (source.isEmpty())
+    {
+        return;
+    }
+
     const bool changed = MauiKitSystem::runCommandText(QStringLiteral("wpctl"),
-                                                       QStringList { QStringLiteral("set-volume"), QStringLiteral("@DEFAULT_AUDIO_SOURCE@"), QStringLiteral("%1%").arg(qBound(0, percent, 100)) },
+                                                       QStringList { QStringLiteral("set-volume"), source, QStringLiteral("%1%").arg(qBound(0, percent, 100)) },
                                                        nullptr, 1000);
     if (changed)
     {
         QString output;
-        if (MauiKitSystem::runCommandText(QStringLiteral("wpctl"), QStringList { QStringLiteral("get-volume"), QStringLiteral("@DEFAULT_AUDIO_SOURCE@") }, &output, 1000))
+        if (MauiKitSystem::runCommandText(QStringLiteral("wpctl"), QStringList { QStringLiteral("get-volume"), source }, &output, 1000))
         {
             const QStringList fields = output.split(QLatin1Char(' '), Qt::SkipEmptyParts);
             if (fields.size() > 1)
+            {
                 setControlCenterMicrophoneVolumePercentage(QStringLiteral("%1%").arg(qBound(0, qRound(fields.at(1).toDouble()), 100)));
+            }
         }
     }
 }

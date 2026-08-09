@@ -913,6 +913,36 @@ void ValenzBridge::setControlCenterPowerCommand(const QString &command)
     Q_EMIT controlCenterPowerCommandChanged(m_controlCenterPowerCommand);
 }
 
+QString ValenzBridge::launcherCommand() const
+{
+    return m_launcherCommand;
+}
+
+void ValenzBridge::setLauncherCommand(const QString &command)
+{
+    const QString normalized = command.trimmed().isEmpty() ? QStringLiteral("vicinae toggle") : command.trimmed();
+    if (m_launcherCommand == normalized)
+        return;
+    m_launcherCommand = normalized;
+    persistControlCenterState();
+    Q_EMIT launcherCommandChanged(m_launcherCommand);
+}
+
+QString ValenzBridge::clipboardCommand() const
+{
+    return m_clipboardCommand;
+}
+
+void ValenzBridge::setClipboardCommand(const QString &command)
+{
+    const QString normalized = command.trimmed().isEmpty() ? QStringLiteral("vicinae vicinae://launch/clipboard/history") : command.trimmed();
+    if (m_clipboardCommand == normalized)
+        return;
+    m_clipboardCommand = normalized;
+    persistControlCenterState();
+    Q_EMIT clipboardCommandChanged(m_clipboardCommand);
+}
+
 QString ValenzBridge::controlCenterSettingsCommand() const
 {
     return m_controlCenterSettingsCommand;

@@ -59,13 +59,13 @@ ToolButton
 
     contentItem: RowLayout
     {
-        spacing: Maui.Style.space.tiny
+        spacing: 3
 
         Item
         {
             Layout.alignment: Qt.AlignVCenter
-            width: 20
-            height: 20
+            width: 16
+            height: 16
 
             Maui.Icon
             {

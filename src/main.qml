@@ -181,6 +181,7 @@ Window
             case "notifications": return "\uF0F3"
             case "notifications-disabled": return "\uF0A2"
             case "system-search": return "\uF002"
+            case "edit-paste": return "\uF0EA"
             default: return "\uF128"
         }
     }
@@ -211,7 +212,6 @@ Window
     readonly property string controlCenterVolumePercentageText: root.cleanText(valenzBridge ? valenzBridge.controlCenterVolumePercentage : "")
     readonly property bool controlCenterBatteryCharging: valenzBridge ? valenzBridge.controlCenterBatteryCharging : false
     readonly property string controlCenterBatteryPercentageText: root.cleanText(valenzBridge ? valenzBridge.controlCenterBatteryPercentage : "")
-    readonly property string controlCenterBrightnessPercentageText: root.cleanText(valenzBridge ? valenzBridge.controlCenterBrightnessPercentage : "")
     readonly property bool controlCenterBrightnessAvailable: valenzBridge ? valenzBridge.controlCenterBrightnessAvailable : false
     readonly property string controlCenterNetworkState:
     {
@@ -676,9 +676,7 @@ Window
                             bluetoothAvailable: root.controlCenterBluetoothAvailable
                             bluetoothConnectedDeviceCount: root.controlCenterBluetoothConnectedDeviceCount
                             volumeIconName: root.controlCenterVolumeIconName
-                            volumePercentageText: root.controlCenterVolumePercentageText
                             brightnessIconName: root.controlCenterBrightnessIconName
-                            brightnessPercentageText: root.controlCenterBrightnessPercentageText
                             brightnessAvailable: root.controlCenterBrightnessAvailable
                             batteryIconName: root.controlCenterBatteryIconName
                             batteryPercentageText: root.controlCenterBatteryPercentageText

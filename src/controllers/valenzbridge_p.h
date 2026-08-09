@@ -1,6 +1,8 @@
 #pragma once
 
 constexpr auto kControlCenterPowerCommandKey = "ControlCenter/powerCommand";
+constexpr auto kLauncherCommandKey = "Actions/launcherCommand";
+constexpr auto kClipboardCommandKey = "Actions/clipboardCommand";
 constexpr auto kControlCenterSettingsCommandKey = "ControlCenter/settingsCommand";
 constexpr auto kControlCenterDiskUsagePathKey = "ControlCenter/diskUsagePath";
 constexpr auto kWindowBarHeightKey = "Window/barHeight";

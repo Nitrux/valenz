@@ -69,6 +69,12 @@ Window
     readonly property color _volumeBarColor: (controlCenter.bridge ? controlCenter.bridge.controlCenterVolumeMuted : false) ? Maui.Theme.disabledTextColor : Maui.Theme.highlightColor
     readonly property color _volumeIndicatorColor: (controlCenter.bridge ? controlCenter.bridge.controlCenterVolumeMuted : false) ? Maui.Theme.disabledTextColor : Maui.Theme.textColor
     readonly property string _microphoneVolumePercentage: controlCenter.bridge ? controlCenter.bridge.controlCenterMicrophoneVolumePercentage : "0%"
+    readonly property int _microphonePercentage:
+    {
+        const text = controlCenter._microphoneVolumePercentage
+        const parsed = parseInt(String(text || "").trim(), 10)
+        return isNaN(parsed) ? 0 : Math.max(0, Math.min(100, parsed))
+    }
     readonly property bool _microphoneAvailable: controlCenter.bridge ? controlCenter.bridge.controlCenterMicrophoneAvailable : false
     readonly property int _toolActionMinSize: Math.max(28, Maui.Style.toolBarHeightAlt)
     readonly property int _minPanelWidth: Maui.Handy.isMobile ? _baseUnit * 16 : _baseUnit * 20
@@ -108,6 +114,7 @@ Window
     property bool _systemResourcesRefreshActive: false
     property bool _fadeOutPending: false
     property bool _panelOpen: false
+    property int _microphonePendingPercentage: -1
 
     readonly property int _fadeInDurationMs: 25
     readonly property int _fadeOutDurationMs: 100
@@ -282,6 +289,21 @@ Window
         interval: 150
         repeat: false
         onTriggered: controlCenter._commitBrightnessFromSlider()
+    }
+
+    Timer
+    {
+        id: _microphoneApplyTimer
+        interval: 150
+        repeat: false
+        onTriggered:
+        {
+            if (_microphoneSlider._applyPending)
+            {
+                _microphoneSlider._applyPending = false
+                controlCenter._commitMicrophoneVolumeFromSlider()
+            }
+        }
     }
 
     Timer
@@ -1199,6 +1221,7 @@ Window
                             {
                                 id: _volumeSlider
                                 Layout.fillWidth: true
+                                enabled: !!controlCenter.bridge
                                 Maui.Theme.highlightColor: controlCenter._volumeBarColor
                                 from: 0
                                 to: 100
@@ -1240,6 +1263,12 @@ Window
                                 font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
                                 color: controlCenter._volumeIndicatorColor
                             }
+                            WorkspaceBadge
+                            {
+                                Layout.alignment: Qt.AlignVCenter
+                                badgeText: controlCenter.bridge ? String(controlCenter._volumePercentage) + "%" : "N/A"
+                                bridge: null
+                            }
                         }
                     }
 
@@ -1279,15 +1308,26 @@ Window
                             Slider
                             {
                                 id: _microphoneSlider
+                                property bool _applyPending: false
                                 Layout.fillWidth: true
                                 enabled: controlCenter._microphoneAvailable
                                 from: 0
                                 to: 100
-                                value: controlCenter._microphoneVolumePercentage
+                                value: controlCenter._microphonePercentage
+                                onMoved:
+                                {
+                                    controlCenter._microphonePendingPercentage = Math.round(value)
+                                    _applyPending = true
+                                    _microphoneApplyTimer.restart()
+                                }
                                 onPressedChanged:
                                 {
-                                    if (!pressed)
+                                    if (!pressed && _applyPending)
+                                    {
+                                        _microphoneApplyTimer.stop()
+                                        _applyPending = false
                                         controlCenter._commitMicrophoneVolumeFromSlider()
+                                    }
                                 }
                                 Connections
                                 {
@@ -1295,13 +1335,22 @@ Window
                                     enabled: !!controlCenter.bridge
                                     function onControlCenterMicrophoneVolumePercentageChanged()
                                     {
-                                        if (!_microphoneSlider.pressed)
-                                            _microphoneSlider.value = controlCenter._microphoneVolumePercentage
+                                        if (_microphoneSlider.pressed)
+                                            return
+
+                                        if (controlCenter._microphonePendingPercentage >= 0)
+                                        {
+                                            if (controlCenter._microphonePercentage !== controlCenter._microphonePendingPercentage)
+                                                return
+                                            controlCenter._microphonePendingPercentage = -1
+                                        }
+
+                                        _microphoneSlider.value = controlCenter._microphonePercentage
                                     }
                                     function onControlCenterMicrophoneAvailableChanged()
                                     {
                                         if (!_microphoneSlider.pressed)
-                                            _microphoneSlider.value = controlCenter._microphoneVolumePercentage
+                                            _microphoneSlider.value = controlCenter._microphonePercentage
                                     }
                                 }
                             }
@@ -1312,6 +1361,14 @@ Window
                                 font.family: controlCenter._nerdFontFamily
                                 font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
                                 color: Maui.Theme.textColor
+                            }
+
+                            WorkspaceBadge
+                            {
+                                Layout.alignment: Qt.AlignVCenter
+                                badgeText: controlCenter._microphoneAvailable ? String(controlCenter._microphonePendingPercentage >= 0 ? controlCenter._microphonePendingPercentage : controlCenter._microphonePercentage) + "%" : "N/A"
+                                visible: true
+                                bridge: null
                             }
                         }
                     }
@@ -1392,6 +1449,13 @@ Window
                                 font.family: controlCenter._nerdFontFamily
                                 font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
                                 color: Maui.Theme.textColor
+                            }
+                            WorkspaceBadge
+                            {
+                                Layout.alignment: Qt.AlignVCenter
+                                badgeText: controlCenter._brightnessAvailable ? String(controlCenter._brightnessPercentage) + "%" : "N/A"
+                                visible: true
+                                bridge: null
                             }
                         }
                     }
