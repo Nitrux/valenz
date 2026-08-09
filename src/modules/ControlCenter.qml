@@ -837,7 +837,7 @@ Window
 
                             Label
                             {
-                                text: "\uf186"
+                                text: "\ueb5c"
                                 font.family: controlCenter._nerdFontFamily
                                 font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
                                 color: Maui.Theme.textColor
@@ -1199,23 +1199,7 @@ Window
                             {
                                 id: _volumeSlider
                                 Layout.fillWidth: true
-                                background: Rectangle
-                                {
-                                    x: _volumeSlider.leftPadding
-                                    y: _volumeSlider.topPadding + (_volumeSlider.availableHeight - height) / 2
-                                    width: _volumeSlider.availableWidth
-                                    height: 8
-                                    radius: height / 2
-                                    color: Maui.Theme.backgroundColor
-
-                                    Rectangle
-                                    {
-                                        width: _volumeSlider.position * parent.width
-                                        height: parent.height
-                                        radius: height / 2
-                                        color: controlCenter._volumeBarColor
-                                    }
-                                }
+                                Maui.Theme.highlightColor: controlCenter._volumeBarColor
                                 from: 0
                                 to: 100
                                 value: controlCenter._volumePercentage
