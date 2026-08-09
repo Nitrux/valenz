@@ -598,7 +598,8 @@ void ValenzBridge::refreshControlCenterRuntimeState()
             bridge->setControlCenterBatteryCharging(snapshot.batteryCharging);
             bridge->setControlCenterBatteryPercentage(snapshot.batteryPercentage);
             bridge->setControlCenterNightLightAvailable(snapshot.nightLightAvailable);
-            if (bridge->m_controlCenterNightLightEnabled != snapshot.nightLightEnabled)
+            if (!bridge->m_controlCenterNightLightCommandPending
+                && bridge->m_controlCenterNightLightEnabled != snapshot.nightLightEnabled)
             {
                 bridge->m_controlCenterNightLightEnabled = snapshot.nightLightEnabled;
                 Q_EMIT bridge->controlCenterNightLightEnabledChanged(bridge->m_controlCenterNightLightEnabled);
@@ -723,6 +724,7 @@ void ValenzBridge::setControlCenterNightLightEnabled(bool enabled)
     if (!available)
     {
         const bool changed = m_controlCenterNightLightEnabled;
+        m_controlCenterNightLightCommandPending = false;
         m_controlCenterNightLightEnabled = false;
         if (changed || enabled)
             Q_EMIT controlCenterNightLightEnabledChanged(m_controlCenterNightLightEnabled);
@@ -740,12 +742,9 @@ void ValenzBridge::setControlCenterNightLightEnabled(bool enabled)
             return;
         }
     }
-
-    if (m_controlCenterNightLightEnabled != enabled)
-    {
-        m_controlCenterNightLightEnabled = enabled;
-        Q_EMIT controlCenterNightLightEnabledChanged(m_controlCenterNightLightEnabled);
-    }
+    m_controlCenterNightLightCommandPending = actualEnabled != enabled;
+    m_controlCenterNightLightCommandTarget = enabled;
+    m_controlCenterNightLightPendingChecks = 0;
 
     QTimer::singleShot(250, this, &ValenzBridge::refreshControlCenterNightLightState);
 }
@@ -777,6 +776,18 @@ void ValenzBridge::refreshControlCenterNightLightState()
     bool enabled = false;
     const bool available = MauiKitSystem::controlCenterNightLightState(&enabled);
     setControlCenterNightLightAvailable(available);
+    if (m_controlCenterNightLightCommandPending && available && enabled != m_controlCenterNightLightCommandTarget)
+    {
+        if (++m_controlCenterNightLightPendingChecks < 20)
+        {
+            QTimer::singleShot(100, this, &ValenzBridge::refreshControlCenterNightLightState);
+            return;
+        }
+        m_controlCenterNightLightCommandPending = false;
+    }
+    if (m_controlCenterNightLightCommandPending && available && enabled == m_controlCenterNightLightCommandTarget)
+        m_controlCenterNightLightCommandPending = false;
+
     if (!available)
     {
         if (m_controlCenterNightLightEnabled)

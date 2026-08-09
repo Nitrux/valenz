@@ -467,6 +467,9 @@ private:
     bool m_debugSimulatedBatteryCharging = false;
     bool m_debugSimulatedBatteryOnAcPower = false;
     bool m_controlCenterNightLightEnabled = false;
+    bool m_controlCenterNightLightCommandPending = false;
+    bool m_controlCenterNightLightCommandTarget = false;
+    int m_controlCenterNightLightPendingChecks = 0;
     bool m_controlCenterNightLightAvailable = false;
     QString m_controlCenterPowerCommand = QStringLiteral("wlogout");
     QString m_controlCenterSettingsCommand = QStringLiteral("systemsettings");

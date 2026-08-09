@@ -225,28 +225,24 @@ Item
 
             Action
             {
-                text: i18n("Media sources")
                 icon.name: "open-menu-symbolic"
                 onTriggered: mprisControl.toggleSourcesPopup()
             }
 
             Action
             {
-                text: i18n("Previous track")
                 icon.name: "media-skip-backward"
                 onTriggered: mprisControl.bridge.mediaPreviousTrack()
             }
 
             Action
             {
-                text: i18n("Play and pause")
                 icon.name: mprisControl.bridge && mprisControl.bridge.mediaPlaying ? "media-playback-pause" : "media-playback-start"
                 onTriggered: mprisControl.bridge.mediaTogglePlayPause()
             }
 
             Action
             {
-                text: i18n("Next track")
                 icon.name: "media-skip-forward"
                 onTriggered: mprisControl.bridge.mediaNextTrack()
             }

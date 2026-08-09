@@ -67,6 +67,7 @@ Window
     readonly property color _panelColor: controlCenter.rootWindow ? controlCenter.rootWindow.popupSurfaceColor : Maui.Theme.backgroundColor
     readonly property string _nerdFontFamily: "Symbols Nerd Font Mono"
     readonly property int _glyphSize: Math.max(15, Math.round(Maui.Style.iconSizes.medium * 0.9))
+    readonly property int _iconSize: 16
     readonly property int _cardPadding: Maui.Style.space.small
     readonly property int _sliderBadgeWidth: 48
     readonly property color _volumeBarColor: (controlCenter.bridge ? controlCenter.bridge.controlCenterVolumeMuted : false) ? Maui.Theme.disabledTextColor : Maui.Theme.highlightColor
@@ -676,10 +677,11 @@ Window
                                     fillMode: Image.PreserveAspectCrop
                                 }
 
-                                Label
+                                Maui.IconLabel
                                 {
                                     anchors.centerIn: parent
                                     visible: !(controlCenter.bridge && controlCenter.bridge.userAvatarUrl.length > 0)
+                                    icon: ({name: controlCenter.useSystemThemeIcons ? "user-identity" : "", width: controlCenter._iconSize, height: controlCenter._iconSize, color: Maui.Theme.textColor})
                                     text: "\uf007"
                                     font.family: controlCenter._nerdFontFamily
                                     font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
@@ -766,8 +768,9 @@ Window
                             Layout.fillWidth: true
                             spacing: Maui.Style.space.small
 
-                            Label
+                            Maui.IconLabel
                             {
+                                icon: ({name: controlCenter.useSystemThemeIcons ? "network-wireless" : "", width: controlCenter._iconSize, height: controlCenter._iconSize, color: Maui.Theme.textColor})
                                 text: "\uf1eb"
                                 font.family: controlCenter._nerdFontFamily
                                 font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
@@ -825,8 +828,9 @@ Window
                             Layout.fillWidth: true
                             spacing: Maui.Style.space.small
 
-                            Label
+                            Maui.IconLabel
                             {
+                                icon: ({name: controlCenter.useSystemThemeIcons ? "bluetooth-active" : "", width: controlCenter._iconSize, height: controlCenter._iconSize, color: Maui.Theme.textColor})
                                 text: "\uf294"
                                 font.family: controlCenter._nerdFontFamily
                                 font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
@@ -889,8 +893,9 @@ Window
                             Layout.fillWidth: true
                             spacing: Maui.Style.space.small
 
-                            Label
+                            Maui.IconLabel
                             {
+                                icon: ({name: controlCenter.useSystemThemeIcons ? "dark-theme-mode" : "", width: controlCenter._iconSize, height: controlCenter._iconSize, color: Maui.Theme.textColor})
                                 text: "\uf042"
                                 font.family: controlCenter._nerdFontFamily
                                 font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
@@ -944,8 +949,9 @@ Window
                             Layout.fillWidth: true
                             spacing: Maui.Style.space.small
 
-                            Label
+                            Maui.IconLabel
                             {
+                                icon: ({name: controlCenter.useSystemThemeIcons ? "camera-web" : "", width: controlCenter._iconSize, height: controlCenter._iconSize, color: Maui.Theme.textColor})
                                 text: "\uf030"
                                 font.family: controlCenter._nerdFontFamily
                                 font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
@@ -999,8 +1005,9 @@ Window
                             Layout.fillWidth: true
                             spacing: Maui.Style.space.small
 
-                            Label
+                            Maui.IconLabel
                             {
+                                icon: ({name: controlCenter.useSystemThemeIcons ? "night-light" : "", width: controlCenter._iconSize, height: controlCenter._iconSize, color: Maui.Theme.textColor})
                                 text: "\uf186"
                                 font.family: controlCenter._nerdFontFamily
                                 font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
@@ -1051,8 +1058,9 @@ Window
                             Layout.fillWidth: true
                             spacing: Maui.Style.space.small
 
-                            Label
+                            Maui.IconLabel
                             {
+                                icon: ({name: controlCenter.useSystemThemeIcons ? "notifications-disabled" : "", width: controlCenter._iconSize, height: controlCenter._iconSize, color: Maui.Theme.textColor})
                                 text: "\uf05e"
                                 font.family: controlCenter._nerdFontFamily
                                 font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
@@ -1103,8 +1111,9 @@ Window
                             Layout.fillWidth: true
                             spacing: Maui.Style.space.small
 
-                            Label
+                            Maui.IconLabel
                             {
+                                icon: ({name: controlCenter.useSystemThemeIcons ? controlCenter._powerProfileIconName : "", width: controlCenter._iconSize, height: controlCenter._iconSize, color: Maui.Theme.textColor})
                                 text: controlCenter._powerProfileIconName === "power-profile-performance" ? "\uf0e7" : (controlCenter._powerProfileIconName === "power-profile-power-saver" ? "\uf06c" : "\ueeb2")
                                 font.family: controlCenter._nerdFontFamily
                                 font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
@@ -1242,8 +1251,9 @@ Window
                         {
                             Layout.fillWidth: true
                             spacing: Maui.Style.space.small
-                            Label
+                            Maui.IconLabel
                             {
+                                icon: ({name: controlCenter.useSystemThemeIcons ? "audio-volume-high" : "", width: controlCenter._iconSize, height: controlCenter._iconSize, color: controlCenter._volumeIndicatorColor})
                                 text: "\uf028"
                                 font.family: controlCenter._nerdFontFamily
                                 font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
@@ -1325,8 +1335,9 @@ Window
                             Layout.fillWidth: true
                             spacing: Maui.Style.space.small
 
-                            Label
+                            Maui.IconLabel
                             {
+                                icon: ({name: controlCenter.useSystemThemeIcons ? "audio-input-microphone" : "", width: controlCenter._iconSize, height: controlCenter._iconSize, color: Maui.Theme.textColor})
                                 text: "\uf130"
                                 font.family: controlCenter._nerdFontFamily
                                 font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
@@ -1420,8 +1431,9 @@ Window
                         {
                             Layout.fillWidth: true
                             spacing: Maui.Style.space.small
-                            Label
+                            Maui.IconLabel
                             {
+                                icon: ({name: controlCenter.useSystemThemeIcons ? "display-brightness" : "", width: controlCenter._iconSize, height: controlCenter._iconSize, color: Maui.Theme.textColor})
                                 text: "\uf185"
                                 font.family: controlCenter._nerdFontFamily
                                 font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
@@ -1506,8 +1518,9 @@ Window
                             {
                                 Layout.fillWidth: true
                                 spacing: Maui.Style.space.small
-                                Label
+                                Maui.IconLabel
                                 {
+                                    icon: ({name: controlCenter.useSystemThemeIcons ? "cpu" : "", width: controlCenter._iconSize, height: controlCenter._iconSize, color: Maui.Theme.textColor})
                                     text: "\uf2db"
                                     font.family: controlCenter._nerdFontFamily
                                     font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
@@ -1528,8 +1541,9 @@ Window
                             {
                                 Layout.fillWidth: true
                                 spacing: Maui.Style.space.small
-                                Label
+                                Maui.IconLabel
                                 {
+                                    icon: ({name: controlCenter.useSystemThemeIcons ? "memory" : "", width: controlCenter._iconSize, height: controlCenter._iconSize, color: Maui.Theme.textColor})
                                     text: "\uefc5"
                                     font.family: controlCenter._nerdFontFamily
                                     font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
@@ -1550,8 +1564,9 @@ Window
                             {
                                 Layout.fillWidth: true
                                 spacing: Maui.Style.space.small
-                                Label
+                                Maui.IconLabel
                                 {
+                                    icon: ({name: controlCenter.useSystemThemeIcons ? "drive-harddisk" : "", width: controlCenter._iconSize, height: controlCenter._iconSize, color: Maui.Theme.textColor})
                                     text: "\uf0a0"
                                     font.family: controlCenter._nerdFontFamily
                                     font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
@@ -1575,9 +1590,9 @@ Window
                                 Item
                                 {
                                     Layout.alignment: Qt.AlignVCenter
-                                    Layout.minimumWidth: 20
-                                    Layout.preferredWidth: 20
-                                    Layout.maximumWidth: 20
+                                    Layout.minimumWidth: controlCenter._iconSize
+                                    Layout.preferredWidth: controlCenter._iconSize
+                                    Layout.maximumWidth: controlCenter._iconSize
                                     height: 20
                                     Maui.Icon
                                     {

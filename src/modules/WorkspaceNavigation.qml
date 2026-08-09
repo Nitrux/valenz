@@ -15,7 +15,6 @@ Maui.ToolActions
 
     Action
     {
-        text: i18n("Previous workspace")
         icon.name: "go-previous"
         enabled: !!workspaceNavigation.bridge
         onTriggered:
@@ -26,7 +25,6 @@ Maui.ToolActions
 
     Action
     {
-        text: i18n("Next workspace")
         icon.name: "go-next"
         enabled: !!workspaceNavigation.bridge
         onTriggered:
