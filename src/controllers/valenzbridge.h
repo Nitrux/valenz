@@ -60,6 +60,8 @@ class ValenzBridge : public QObject
     Q_PROPERTY(QString controlCenterBrightnessPercentage READ controlCenterBrightnessPercentage WRITE setControlCenterBrightnessPercentage NOTIFY controlCenterBrightnessPercentageChanged FINAL)
     Q_PROPERTY(bool controlCenterBrightnessAvailable READ controlCenterBrightnessAvailable WRITE setControlCenterBrightnessAvailable NOTIFY controlCenterBrightnessAvailableChanged FINAL)
     Q_PROPERTY(QString controlCenterNetworkState READ controlCenterNetworkState WRITE setControlCenterNetworkState NOTIFY controlCenterNetworkStateChanged FINAL)
+    Q_PROPERTY(double controlCenterNetworkUploadRate READ controlCenterNetworkUploadRate NOTIFY controlCenterNetworkUploadRateChanged FINAL)
+    Q_PROPERTY(double controlCenterNetworkDownloadRate READ controlCenterNetworkDownloadRate NOTIFY controlCenterNetworkDownloadRateChanged FINAL)
     Q_PROPERTY(bool controlCenterBluetoothEnabled READ controlCenterBluetoothEnabled WRITE setControlCenterBluetoothEnabled NOTIFY controlCenterBluetoothEnabledChanged FINAL)
     Q_PROPERTY(bool controlCenterBluetoothAvailable READ controlCenterBluetoothAvailable WRITE setControlCenterBluetoothAvailable NOTIFY controlCenterBluetoothAvailableChanged FINAL)
     Q_PROPERTY(bool controlCenterWirelessAvailable READ controlCenterWirelessAvailable WRITE setControlCenterWirelessAvailable NOTIFY controlCenterWirelessAvailableChanged FINAL)
@@ -173,6 +175,8 @@ public:
     void setControlCenterBrightnessAvailable(bool available);
     QString controlCenterNetworkState() const;
     void setControlCenterNetworkState(const QString &state);
+    double controlCenterNetworkUploadRate() const;
+    double controlCenterNetworkDownloadRate() const;
     bool controlCenterBluetoothEnabled() const;
     void setControlCenterBluetoothEnabled(bool enabled);
     bool controlCenterBluetoothAvailable() const;
@@ -310,6 +314,8 @@ Q_SIGNALS:
     void controlCenterBrightnessPercentageChanged(const QString &value);
     void controlCenterBrightnessAvailableChanged(bool available);
     void controlCenterNetworkStateChanged(const QString &state);
+    void controlCenterNetworkUploadRateChanged(double rate);
+    void controlCenterNetworkDownloadRateChanged(double rate);
     void controlCenterBluetoothEnabledChanged(bool enabled);
     void controlCenterBluetoothAvailableChanged(bool available);
     void controlCenterWirelessAvailableChanged(bool available);
@@ -445,6 +451,8 @@ private:
     bool m_debugSimulatedBrightnessAvailable = false;
     int m_debugSimulatedBrightnessPercentage = 65;
     QString m_controlCenterNetworkState = QStringLiteral("offline");
+    double m_controlCenterNetworkUploadRate = 0.0;
+    double m_controlCenterNetworkDownloadRate = 0.0;
     bool m_controlCenterBluetoothEnabled = false;
     bool m_controlCenterBluetoothAvailable = false;
     bool m_controlCenterWirelessAvailable = false;

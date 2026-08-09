@@ -51,6 +51,15 @@ void notifyKdePaletteChanged()
     QDBusConnection::sessionBus().send(message);
 }
 
+QStringList cameraDeviceNodes()
+{
+    const QDir devDirectory(QStringLiteral("/dev"));
+    QStringList devices;
+    for (const QString &name : devDirectory.entryList(QStringList {QStringLiteral("video*")}, QDir::System | QDir::Readable, QDir::Name))
+        devices.append(devDirectory.filePath(name));
+    return devices;
+}
+
 QStringList cameraPrivacyDevices()
 {
     const QString executable = QStandardPaths::findExecutable(QStringLiteral("v4l2-ctl"));
@@ -58,10 +67,8 @@ QStringList cameraPrivacyDevices()
         return {};
 
     QStringList devices;
-    const QDir devDirectory(QStringLiteral("/dev"));
-    for (const QString &name : devDirectory.entryList(QStringList {QStringLiteral("video*")}, QDir::System | QDir::Readable, QDir::Name))
+    for (const QString &device : cameraDeviceNodes())
     {
-        const QString device = devDirectory.filePath(name);
         QProcess process;
         process.start(executable, {QStringLiteral("--device"), device, QStringLiteral("--list-ctrls")});
         if (!process.waitForFinished(1000))
@@ -261,16 +268,17 @@ void ValenzBridge::refreshSharedSettingsFromFile()
     if (darkChanged)
         Q_EMIT darkModeChanged();
 
-    const QStringList devices = cameraPrivacyDevices();
-    bool cameraEnabled = !devices.isEmpty();
-    for (const QString &device : devices)
+    const QStringList cameraDevices = cameraDeviceNodes();
+    const QStringList privacyDevices = cameraPrivacyDevices();
+    bool cameraEnabled = !cameraDevices.isEmpty();
+    for (const QString &device : privacyDevices)
     {
         const int privacy = cameraPrivacyValue(device);
         if (privacy < 0 || privacy != 0)
             cameraEnabled = false;
     }
-    const bool cameraChanged = m_cameraAvailable != !devices.isEmpty() || m_cameraEnabled != cameraEnabled;
-    m_cameraAvailable = !devices.isEmpty();
+    const bool cameraChanged = m_cameraAvailable != !cameraDevices.isEmpty() || m_cameraEnabled != cameraEnabled;
+    m_cameraAvailable = !cameraDevices.isEmpty();
     m_cameraEnabled = cameraEnabled;
     if (cameraChanged)
         Q_EMIT cameraStateChanged();

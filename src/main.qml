@@ -307,6 +307,8 @@ Window
         rootWindow: root
         overlayItem: root.contentItem
         bridge: valenzBridge
+        useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
+        glyphForIcon: root.controlCenterButtonGlyph
         notificationsControllerRef: notificationsController
     }
 

@@ -3,6 +3,9 @@
 #include "mauikit_system_control.h"
 
 #include <QElapsedTimer>
+#include <QDir>
+#include <QFile>
+#include <QTextStream>
 #include <QMetaObject>
 #include <QPointer>
 #include <QProcess>
@@ -31,6 +34,8 @@ struct ControlCenterRuntimeSnapshot
     bool wirelessConnected = false;
     bool wiredConnected = false;
     QString networkState = QStringLiteral("offline");
+    double networkUploadRate = 0.0;
+    double networkDownloadRate = 0.0;
     bool bluetoothAvailable = false;
     int bluetoothConnectedDeviceCount = 0;
     bool bluetoothEnabled = false;
@@ -51,6 +56,86 @@ struct ControlCenterRuntimeSnapshot
     QString powerProfileCurrent;
     QStringList powerProfiles;
 };
+
+struct NetworkTrafficSnapshot
+{
+    double uploadRate = 0.0;
+    double downloadRate = 0.0;
+};
+
+NetworkTrafficSnapshot collectNetworkTrafficSnapshot()
+{
+    NetworkTrafficSnapshot snapshot;
+    QFile file(QStringLiteral("/proc/net/dev"));
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        return snapshot;
+
+    QString selectedInterface;
+    quint64 selectedReceive = 0;
+    quint64 selectedTransmit = 0;
+    quint64 largestTraffic = 0;
+
+    QTextStream input(&file);
+    input.readLine();
+    input.readLine();
+    while (!input.atEnd())
+    {
+        const QString line = input.readLine().trimmed();
+        const qsizetype separator = line.indexOf(QLatin1Char(':'));
+        if (separator < 0)
+            continue;
+
+        const QString interfaceName = line.left(separator).trimmed();
+        if (interfaceName == QStringLiteral("lo"))
+            continue;
+
+        QFile stateFile(QStringLiteral("/sys/class/net/") + interfaceName + QStringLiteral("/operstate"));
+        if (stateFile.open(QIODevice::ReadOnly))
+        {
+            const QByteArray state = stateFile.readAll().trimmed();
+            if (state != "up" && state != "unknown")
+                continue;
+        }
+
+        const QStringList fields = line.mid(separator + 1).simplified().split(QLatin1Char(' '), Qt::SkipEmptyParts);
+        if (fields.size() < 16)
+            continue;
+
+        bool receiveOk = false;
+        bool transmitOk = false;
+        const quint64 receive = fields.at(0).toULongLong(&receiveOk);
+        const quint64 transmit = fields.at(8).toULongLong(&transmitOk);
+        if (!receiveOk || !transmitOk)
+            continue;
+
+        if (receive + transmit >= largestTraffic)
+        {
+            largestTraffic = receive + transmit;
+            selectedInterface = interfaceName;
+            selectedReceive = receive;
+            selectedTransmit = transmit;
+        }
+    }
+
+    static QString previousInterface;
+    static quint64 previousReceive = 0;
+    static quint64 previousTransmit = 0;
+    static QElapsedTimer timer;
+    if (!timer.isValid())
+        timer.start();
+
+    const qint64 elapsed = timer.restart();
+    if (selectedInterface == previousInterface && elapsed > 0)
+    {
+        snapshot.downloadRate = static_cast<double>(selectedReceive >= previousReceive ? selectedReceive - previousReceive : 0) * 1000.0 / elapsed;
+        snapshot.uploadRate = static_cast<double>(selectedTransmit >= previousTransmit ? selectedTransmit - previousTransmit : 0) * 1000.0 / elapsed;
+    }
+
+    previousInterface = selectedInterface;
+    previousReceive = selectedReceive;
+    previousTransmit = selectedTransmit;
+    return snapshot;
+}
 
 struct MicrophoneSnapshot
 {
@@ -308,6 +393,10 @@ ControlCenterRuntimeSnapshot collectControlCenterRuntimeSnapshot(const QString &
         snapshot.volumeMuted = false;
     }
 
+    const NetworkTrafficSnapshot networkTraffic = collectNetworkTrafficSnapshot();
+    snapshot.networkUploadRate = networkTraffic.uploadRate;
+    snapshot.networkDownloadRate = networkTraffic.downloadRate;
+
     const MicrophoneSnapshot microphone = collectMicrophoneSnapshot(preferredMicrophoneSource);
     snapshot.microphoneSource = microphone.source;
     snapshot.microphoneVolumePercentage = microphone.volumePercentage;
@@ -478,6 +567,16 @@ void ValenzBridge::refreshControlCenterRuntimeState()
                 Q_EMIT bridge->controlCenterWiredConnectedChanged(bridge->m_controlCenterWiredConnected);
             }
             bridge->setControlCenterNetworkState(snapshot.networkState);
+            if (!qFuzzyCompare(bridge->m_controlCenterNetworkUploadRate, snapshot.networkUploadRate))
+            {
+                bridge->m_controlCenterNetworkUploadRate = snapshot.networkUploadRate;
+                Q_EMIT bridge->controlCenterNetworkUploadRateChanged(bridge->m_controlCenterNetworkUploadRate);
+            }
+            if (!qFuzzyCompare(bridge->m_controlCenterNetworkDownloadRate, snapshot.networkDownloadRate))
+            {
+                bridge->m_controlCenterNetworkDownloadRate = snapshot.networkDownloadRate;
+                Q_EMIT bridge->controlCenterNetworkDownloadRateChanged(bridge->m_controlCenterNetworkDownloadRate);
+            }
             bridge->setControlCenterBluetoothAvailable(snapshot.bluetoothAvailable);
             bridge->setControlCenterBluetoothConnectedDeviceCount(snapshot.bluetoothConnectedDeviceCount);
             if (bridge->m_controlCenterBluetoothEnabled != snapshot.bluetoothEnabled)

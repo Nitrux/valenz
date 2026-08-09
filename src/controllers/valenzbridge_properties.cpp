@@ -719,6 +719,16 @@ void ValenzBridge::setControlCenterNetworkState(const QString &state)
     Q_EMIT controlCenterNetworkStateChanged(m_controlCenterNetworkState);
 }
 
+double ValenzBridge::controlCenterNetworkUploadRate() const
+{
+    return m_controlCenterNetworkUploadRate;
+}
+
+double ValenzBridge::controlCenterNetworkDownloadRate() const
+{
+    return m_controlCenterNetworkDownloadRate;
+}
+
 bool ValenzBridge::controlCenterBluetoothEnabled() const
 {
     return m_controlCenterBluetoothEnabled;

@@ -13,6 +13,8 @@ Window
     id: controlCenter
 
     property Item anchorButton
+    property bool useSystemThemeIcons: true
+    property var glyphForIcon
     property var rootWindow
     property QtObject bridge
     property QtObject notificationsControllerRef
@@ -69,6 +71,7 @@ Window
     readonly property int _sliderBadgeWidth: 48
     readonly property color _volumeBarColor: (controlCenter.bridge ? controlCenter.bridge.controlCenterVolumeMuted : false) ? Maui.Theme.disabledTextColor : Maui.Theme.highlightColor
     readonly property color _volumeIndicatorColor: (controlCenter.bridge ? controlCenter.bridge.controlCenterVolumeMuted : false) ? Maui.Theme.disabledTextColor : Maui.Theme.textColor
+    readonly property color _networkDownloadColor: Maui.Theme.positiveBackgroundColor
     readonly property string _microphoneVolumePercentage: controlCenter.bridge ? controlCenter.bridge.controlCenterMicrophoneVolumePercentage : "0%"
     readonly property int _microphonePercentage:
     {
@@ -100,6 +103,15 @@ Window
         return isNaN(parsed) ? 0 : Math.max(0, Math.min(100, parsed))
     }
     readonly property bool _brightnessAvailable: controlCenter.bridge ? controlCenter.bridge.controlCenterBrightnessAvailable : false
+    readonly property string _networkIconName:
+    {
+        const state = controlCenter.bridge ? String(controlCenter.bridge.controlCenterNetworkState || "offline").toLowerCase() : "offline"
+        if (state === "wired")
+            return "network-wired"
+        if (state === "wireless")
+            return "network-wireless"
+        return "network-disconnect"
+    }
     readonly property string _powerProfileIconName:
     {
         const profile = controlCenter.bridge ? String(controlCenter.bridge.controlCenterPowerProfileCurrent).toLowerCase() : "balanced"
@@ -257,6 +269,25 @@ Window
         if (!bridge)
             return 0
         return Math.max(0, Math.min(100, Number(bridge.controlCenterRamPercentage) || 0))
+    }
+
+    function _networkRateText(bytesPerSecond)
+    {
+        const value = Math.max(0, Number(bytesPerSecond) || 0)
+        if (value < 1000)
+            return Math.round(value) + " B/s"
+        if (value < 1000000)
+            return (value / 1000).toFixed(1) + " kB/s"
+        if (value < 1000000000)
+            return (value / 1000000).toFixed(1) + " MB/s"
+        return (value / 1000000000).toFixed(1) + " GB/s"
+    }
+
+    function _networkRateMaximum()
+    {
+        const upload = controlCenter.bridge ? Number(controlCenter.bridge.controlCenterNetworkUploadRate) || 0 : 0
+        const download = controlCenter.bridge ? Number(controlCenter.bridge.controlCenterNetworkDownloadRate) || 0 : 0
+        return Math.max(1, upload, download)
     }
 
     function _controlCenterDiskUsageText()
@@ -1469,7 +1500,7 @@ Window
                         ColumnLayout
                         {
                             Layout.fillWidth: true
-                            spacing: Maui.Style.space.small
+                            spacing: Maui.Style.space.medium
 
                             RowLayout
                             {
@@ -1535,6 +1566,65 @@ Window
                                 from: 0
                                 to: 100
                                 value: controlCenter._controlCenterDiskUsagePercentage()
+                            }
+
+                            RowLayout
+                            {
+                                Layout.fillWidth: true
+                                spacing: Maui.Style.space.small
+                                Item
+                                {
+                                    Layout.alignment: Qt.AlignVCenter
+                                    Layout.minimumWidth: 20
+                                    Layout.preferredWidth: 20
+                                    Layout.maximumWidth: 20
+                                    height: 20
+                                    Maui.Icon
+                                    {
+                                        id: _networkResourceIcon
+                                        anchors.centerIn: parent
+                                        width: 16
+                                        height: 16
+                                        source: controlCenter._networkIconName
+                                        color: Maui.Theme.textColor
+                                        visible: controlCenter.useSystemThemeIcons && valid
+                                    }
+                                    Label
+                                    {
+                                        anchors.centerIn: parent
+                                        visible: !controlCenter.useSystemThemeIcons || !_networkResourceIcon.valid
+                                        text: controlCenter.glyphForIcon ? controlCenter.glyphForIcon(controlCenter._networkIconName) : (controlCenter._networkIconName === "network-wired" ? "\uf0e8" : (controlCenter._networkIconName === "network-wireless" ? "\uf1eb" : "\uf127"))
+                                        font.family: controlCenter._nerdFontFamily
+                                        font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
+                                        color: Maui.Theme.textColor
+                                    }
+                                }
+                                Label { text: i18n("Network"); color: Maui.Theme.textColor; font.weight: Font.DemiBold }
+                                Label
+                                {
+                                    text: "↑ " + controlCenter._networkRateText(controlCenter.bridge ? controlCenter.bridge.controlCenterNetworkUploadRate : 0) + "  ↓ " + controlCenter._networkRateText(controlCenter.bridge ? controlCenter.bridge.controlCenterNetworkDownloadRate : 0)
+                                    color: Maui.Theme.disabledTextColor
+                                }
+                            }
+                            ColumnLayout
+                            {
+                                Layout.fillWidth: true
+                                spacing: Maui.Style.space.tiny
+                                ProgressBar
+                                {
+                                    Layout.fillWidth: true
+                                    from: 0
+                                    to: controlCenter._networkRateMaximum()
+                                    value: controlCenter.bridge ? Number(controlCenter.bridge.controlCenterNetworkUploadRate) || 0 : 0
+                                }
+                                ProgressBar
+                                {
+                                    Layout.fillWidth: true
+                                    from: 0
+                                    to: controlCenter._networkRateMaximum()
+                                    value: controlCenter.bridge ? Number(controlCenter.bridge.controlCenterNetworkDownloadRate) || 0 : 0
+                                    Maui.Theme.highlightColor: controlCenter._networkDownloadColor
+                                }
                             }
                         }
                 }
