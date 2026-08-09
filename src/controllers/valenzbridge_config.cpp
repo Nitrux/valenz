@@ -176,55 +176,13 @@ void ValenzBridge::refreshSharedSettings()
 
 QString ValenzBridge::pairedColorScheme(const QString &scheme) const
 {
-    const QString normalized = scheme.trimmed();
-    if (normalized.isEmpty())
-        return {};
-
-    QStringList candidates;
-    const QString lower = normalized.toLower();
-    if (lower.contains(QStringLiteral("latte")))
-    {
-        QString candidate = normalized;
-        candidate.replace(QStringLiteral("Latte"), QStringLiteral("Mocha"));
-        candidate.replace(QStringLiteral("latte"), QStringLiteral("mocha"));
-        candidates.append(candidate);
-    }
-    else if (lower.contains(QStringLiteral("mocha")))
-    {
-        QString candidate = normalized;
-        candidate.replace(QStringLiteral("Mocha"), QStringLiteral("Latte"));
-        candidate.replace(QStringLiteral("mocha"), QStringLiteral("latte"));
-        candidates.append(candidate);
-    }
-    else if (lower.contains(QStringLiteral("dark")))
-    {
-        QString candidate = normalized;
-        candidate.replace(QStringLiteral("Dark"), QStringLiteral("Light"));
-        candidate.replace(QStringLiteral("dark"), QStringLiteral("light"));
-        candidates.append(candidate);
-    }
-    else if (lower.contains(QStringLiteral("light")))
-    {
-        QString candidate = normalized;
-        candidate.replace(QStringLiteral("Light"), QStringLiteral("Dark"));
-        candidate.replace(QStringLiteral("light"), QStringLiteral("dark"));
-        candidates.append(candidate);
-    }
-    else if (lower == QStringLiteral("nitrux"))
-    {
-        candidates.append(QStringLiteral("Nitrux Dark"));
-    }
-    else if (lower == QStringLiteral("nitrux dark"))
-    {
-        candidates.append(QStringLiteral("Nitrux"));
-    }
-
-    for (const QString &candidate : std::as_const(candidates))
-    {
-        if (!colorSchemeFilePath(candidate).isEmpty())
-            return candidate;
-    }
-
+    const QSettings settings(m_userConfigPath, QSettings::IniFormat);
+    const QString lightScheme = settings.value(QString::fromLatin1(kLightColorSchemeKey), QStringLiteral("CatppuccinLatteNitrux")).toString().trimmed();
+    const QString darkScheme = settings.value(QString::fromLatin1(kDarkColorSchemeKey), QStringLiteral("CatppuccinMochaNitrux")).toString().trimmed();
+    if (scheme.compare(darkScheme, Qt::CaseInsensitive) == 0)
+        return colorSchemeFilePath(lightScheme).isEmpty() ? QString() : lightScheme;
+    if (scheme.compare(lightScheme, Qt::CaseInsensitive) == 0)
+        return colorSchemeFilePath(darkScheme).isEmpty() ? QString() : darkScheme;
     return {};
 }
 
@@ -420,6 +378,8 @@ void ValenzBridge::initializeConfig()
         userSettings.setValue(newKey, defaultValue);
     };
     ensureKey(QString::fromLatin1(kControlCenterIconModeKey), QString::fromLatin1(kLegacyControlCenterIconModeKey), QStringLiteral("system16"));
+    ensureKey(QString::fromLatin1(kLightColorSchemeKey), QString(), QStringLiteral("CatppuccinLatteNitrux"));
+    ensureKey(QString::fromLatin1(kDarkColorSchemeKey), QString(), QStringLiteral("CatppuccinMochaNitrux"));
 
     ensureKey(QString::fromLatin1(kWeatherLatitudeKey), QString(), 40.7128);
     ensureKey(QString::fromLatin1(kWeatherLongitudeKey), QString(), -74.0060);
@@ -640,6 +600,7 @@ void ValenzBridge::reloadConfig()
         refreshControlCenterSystemResourcesState();
     if (controlCenterRuntimeChanged)
         refreshControlCenterRuntimeState();
+    refreshSharedSettingsFromFile();
 }
 
 void ValenzBridge::persistControlCenterState() const

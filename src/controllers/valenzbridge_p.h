@@ -30,6 +30,8 @@ constexpr auto kWeatherLongitudeKey = "Weather/longitude";
 constexpr auto kWeatherTemperatureUnitKey = "Weather/temperatureUnit";
 constexpr auto kWeatherRefreshMinutesKey = "Weather/refreshMinutes";
 constexpr auto kMprisAlwaysVisibleKey = "Mpris/alwaysVisible";
+constexpr auto kLightColorSchemeKey = "ColorScheme/lighColors";
+constexpr auto kDarkColorSchemeKey = "ColorScheme/darkColors";
 constexpr auto kOpenMeteoUrl = "https://api.open-meteo.com/v1/forecast";
 
 constexpr auto kMprisServicePrefix = "org.mpris.MediaPlayer2.";
