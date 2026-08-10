@@ -312,11 +312,6 @@ int ValenzBridge::barHeight() const
     return m_barHeight;
 }
 
-int ValenzBridge::barLayerSpacing() const
-{
-    return m_barLayerSpacing;
-}
-
 int ValenzBridge::barLayerSpacingTop() const
 {
     return m_barLayerSpacingTop;
@@ -396,7 +391,7 @@ void ValenzBridge::initializeConfig()
     ensureKey(QString::fromLatin1(kMprisAlwaysVisibleKey), QString(), false);
     ensureKey(QString::fromLatin1(kControlCenterDiskUsagePathKey), QString::fromLatin1(kLegacyControlCenterDiskUsagePathKey), "/");
     ensureKey(QString::fromLatin1(kWindowBarHeightKey), QString(), 56);
-    ensureKey(QString::fromLatin1(kWindowBarLayerSpacingKey), QString(), 0);
+    userSettings.remove(QStringLiteral("Window/barLayerSpacing"));
 
     userSettings.remove(QStringLiteral("Window/barWidth"));
     userSettings.remove(QStringLiteral("Window/popupMaxWidth"));
@@ -463,11 +458,10 @@ void ValenzBridge::initializeConfig()
         m_controlCenterDiskUsagePath.prepend(QLatin1Char('/'));
     m_mprisAlwaysVisible = userSettings.value(kMprisAlwaysVisibleKey, false).toBool();
     m_barHeight = qBound(1, userSettings.value(kWindowBarHeightKey, 56).toInt(), kWindowBarHeightMax);
-    m_barLayerSpacing = qBound(0, userSettings.value(kWindowBarLayerSpacingKey, 0).toInt(), 64);
-    m_barLayerSpacingTop = qBound(0, userSettings.value(kWindowBarLayerSpacingTopKey, m_barLayerSpacing).toInt(), 64);
-    m_barLayerSpacingBottom = qBound(0, userSettings.value(kWindowBarLayerSpacingBottomKey, m_barLayerSpacing).toInt(), 64);
-    m_barLayerSpacingLeft = qBound(0, userSettings.value(kWindowBarLayerSpacingLeftKey, m_barLayerSpacing).toInt(), 64);
-    m_barLayerSpacingRight = qBound(0, userSettings.value(kWindowBarLayerSpacingRightKey, m_barLayerSpacing).toInt(), 64);
+    m_barLayerSpacingTop = qBound(0, userSettings.value(kWindowBarLayerSpacingTopKey, 0).toInt(), 64);
+    m_barLayerSpacingBottom = qBound(0, userSettings.value(kWindowBarLayerSpacingBottomKey, 0).toInt(), 64);
+    m_barLayerSpacingLeft = qBound(0, userSettings.value(kWindowBarLayerSpacingLeftKey, 0).toInt(), 64);
+    m_barLayerSpacingRight = qBound(0, userSettings.value(kWindowBarLayerSpacingRightKey, 0).toInt(), 64);
     m_screenPlacement = normalizeScreenPlacement(userSettings.value(kWindowScreenPlacementKey, QStringLiteral("active")).toString());
     userSettings.setValue(kWindowScreenPlacementKey, m_screenPlacement);
     userSettings.sync();
@@ -575,15 +569,13 @@ void ValenzBridge::reloadConfig()
            [this] { Q_EMIT mprisAlwaysVisibleChanged(m_mprisAlwaysVisible); });
     update(m_barHeight, qBound(1, settings.value(kWindowBarHeightKey, 56).toInt(), kWindowBarHeightMax),
            [this] { Q_EMIT barHeightChanged(m_barHeight); });
-    update(m_barLayerSpacing, qBound(0, settings.value(kWindowBarLayerSpacingKey, 0).toInt(), 64),
-           [this] { Q_EMIT barLayerSpacingChanged(m_barLayerSpacing); });
-    update(m_barLayerSpacingTop, qBound(0, settings.value(kWindowBarLayerSpacingTopKey, m_barLayerSpacing).toInt(), 64),
+    update(m_barLayerSpacingTop, qBound(0, settings.value(kWindowBarLayerSpacingTopKey, 0).toInt(), 64),
            [this] { Q_EMIT barLayerSpacingTopChanged(m_barLayerSpacingTop); });
-    update(m_barLayerSpacingBottom, qBound(0, settings.value(kWindowBarLayerSpacingBottomKey, m_barLayerSpacing).toInt(), 64),
+    update(m_barLayerSpacingBottom, qBound(0, settings.value(kWindowBarLayerSpacingBottomKey, 0).toInt(), 64),
            [this] { Q_EMIT barLayerSpacingBottomChanged(m_barLayerSpacingBottom); });
-    update(m_barLayerSpacingLeft, qBound(0, settings.value(kWindowBarLayerSpacingLeftKey, m_barLayerSpacing).toInt(), 64),
+    update(m_barLayerSpacingLeft, qBound(0, settings.value(kWindowBarLayerSpacingLeftKey, 0).toInt(), 64),
            [this] { Q_EMIT barLayerSpacingLeftChanged(m_barLayerSpacingLeft); });
-    update(m_barLayerSpacingRight, qBound(0, settings.value(kWindowBarLayerSpacingRightKey, m_barLayerSpacing).toInt(), 64),
+    update(m_barLayerSpacingRight, qBound(0, settings.value(kWindowBarLayerSpacingRightKey, 0).toInt(), 64),
            [this] { Q_EMIT barLayerSpacingRightChanged(m_barLayerSpacingRight); });
     update(m_screenPlacement,
            normalizeScreenPlacement(settings.value(kWindowScreenPlacementKey, QStringLiteral("active")).toString()),

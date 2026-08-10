@@ -6,7 +6,6 @@ constexpr auto kClipboardCommandKey = "Actions/clipboardCommand";
 constexpr auto kControlCenterSettingsCommandKey = "ControlCenter/settingsCommand";
 constexpr auto kControlCenterDiskUsagePathKey = "ControlCenter/diskUsagePath";
 constexpr auto kWindowBarHeightKey = "Window/barHeight";
-constexpr auto kWindowBarLayerSpacingKey = "Window/barLayerSpacing";
 constexpr auto kWindowBarLayerSpacingTopKey = "Window/barLayerSpacingTop";
 constexpr auto kWindowBarLayerSpacingBottomKey = "Window/barLayerSpacingBottom";
 constexpr auto kWindowBarLayerSpacingLeftKey = "Window/barLayerSpacingLeft";

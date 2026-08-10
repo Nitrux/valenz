@@ -82,7 +82,6 @@ class ValenzBridge : public QObject
     Q_PROPERTY(QString clipboardCommand READ clipboardCommand WRITE setClipboardCommand NOTIFY clipboardCommandChanged FINAL)
     Q_PROPERTY(QString controlCenterDiskUsagePath READ controlCenterDiskUsagePath WRITE setControlCenterDiskUsagePath NOTIFY controlCenterDiskUsagePathChanged FINAL)
     Q_PROPERTY(int barHeight READ barHeight NOTIFY barHeightChanged FINAL)
-    Q_PROPERTY(int barLayerSpacing READ barLayerSpacing NOTIFY barLayerSpacingChanged FINAL)
     Q_PROPERTY(int barLayerSpacingTop READ barLayerSpacingTop NOTIFY barLayerSpacingTopChanged FINAL)
     Q_PROPERTY(int barLayerSpacingBottom READ barLayerSpacingBottom NOTIFY barLayerSpacingBottomChanged FINAL)
     Q_PROPERTY(int barLayerSpacingLeft READ barLayerSpacingLeft NOTIFY barLayerSpacingLeftChanged FINAL)
@@ -214,7 +213,6 @@ public:
     QString controlCenterDiskUsagePath() const;
     void setControlCenterDiskUsagePath(const QString &path);
     int barHeight() const;
-    int barLayerSpacing() const;
     int barLayerSpacingTop() const;
     int barLayerSpacingBottom() const;
     int barLayerSpacingLeft() const;
@@ -291,7 +289,6 @@ Q_SIGNALS:
     void clipboardCommandChanged(const QString &command);
     void controlCenterDiskUsagePathChanged(const QString &path);
     void barHeightChanged(int height);
-    void barLayerSpacingChanged(int spacing);
     void barLayerSpacingTopChanged(int spacing);
     void barLayerSpacingBottomChanged(int spacing);
     void barLayerSpacingLeftChanged(int spacing);
@@ -478,7 +475,6 @@ private:
     QString m_controlCenterDiskUsagePath = QStringLiteral("/");
     QString m_screenPlacement = QStringLiteral("active");
     int m_barHeight = 56;
-    int m_barLayerSpacing = 0;
     int m_barLayerSpacingTop = 0;
     int m_barLayerSpacingBottom = 0;
     int m_barLayerSpacingLeft = 0;

@@ -13,7 +13,6 @@ Window
     readonly property int barHeightClamped: Math.max(1, Math.min(barHeight, Screen.height > 0 ? Screen.height : barHeight))
     readonly property int barFrameInset: 6
     readonly property int barContentHeight: Math.max(0, barHeightClamped - (barFrameInset * 2))
-    readonly property int barLayerSpacing: valenzBridge ? valenzBridge.barLayerSpacing : 0
     readonly property int barLayerSpacingTop: valenzBridge ? valenzBridge.barLayerSpacingTop : 0
     readonly property int barLayerSpacingBottom: valenzBridge ? valenzBridge.barLayerSpacingBottom : 0
     readonly property int barLayerSpacingLeft: valenzBridge ? valenzBridge.barLayerSpacingLeft : 0
