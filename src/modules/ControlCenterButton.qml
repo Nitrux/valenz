@@ -105,6 +105,9 @@ ToolButton
         RowLayout
         {
             Layout.alignment: Qt.AlignVCenter
+            visible: controlCenterButton.bluetoothAvailable
+            Layout.minimumWidth: visible ? implicitWidth : 0
+            Layout.preferredWidth: visible ? implicitWidth : 0
             spacing: 3
 
         Item
