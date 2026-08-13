@@ -851,7 +851,7 @@ Window
                         {
                             Layout.fillWidth: true
                             Layout.leftMargin: Maui.Style.space.medium
-                            Layout.rightMargin: Maui.Style.space.medium
+                            Layout.rightMargin: Maui.Style.space.medium * 1.5
 
                             Label
                             {
@@ -946,7 +946,7 @@ Window
                         RowLayout
                         {
                             Layout.fillWidth: true
-                            Layout.topMargin: Maui.Style.space.small
+                            Layout.topMargin: Maui.Style.space.medium
                             spacing: Maui.Style.space.tiny
 
                             Repeater
