@@ -449,7 +449,6 @@ Window
 
                             Action
                             {
-                                text: i18n("Previous workspace")
                                 icon.name: "go-previous"
                                 enabled: !!valenzBridge
                                 onTriggered: valenzBridge.goToPreviousWorkspace()
@@ -457,7 +456,6 @@ Window
 
                             Action
                             {
-                                text: i18n("Next workspace")
                                 icon.name: "go-next"
                                 enabled: !!valenzBridge
                                 onTriggered: valenzBridge.goToNextWorkspace()
