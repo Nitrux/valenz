@@ -272,6 +272,76 @@ void ValenzBridge::setWeatherLocationName(const QString &locationName)
     Q_EMIT weatherLocationNameChanged(m_weatherLocationName);
 }
 
+QString ValenzBridge::weatherFeelsLike() const
+{
+    return m_weatherFeelsLike;
+}
+
+QString ValenzBridge::weatherHumidity() const
+{
+    return m_weatherHumidity;
+}
+
+QString ValenzBridge::weatherUvIndex() const
+{
+    return m_weatherUvIndex;
+}
+
+QString ValenzBridge::weatherWindSpeed() const
+{
+    return m_weatherWindSpeed;
+}
+
+QVariantList ValenzBridge::weatherForecast() const
+{
+    return m_weatherForecast;
+}
+
+void ValenzBridge::setWeatherFeelsLike(const QString &value)
+{
+    if (m_weatherFeelsLike == value)
+        return;
+
+    m_weatherFeelsLike = value;
+    Q_EMIT weatherFeelsLikeChanged(m_weatherFeelsLike);
+}
+
+void ValenzBridge::setWeatherHumidity(const QString &value)
+{
+    if (m_weatherHumidity == value)
+        return;
+
+    m_weatherHumidity = value;
+    Q_EMIT weatherHumidityChanged(m_weatherHumidity);
+}
+
+void ValenzBridge::setWeatherUvIndex(const QString &value)
+{
+    if (m_weatherUvIndex == value)
+        return;
+
+    m_weatherUvIndex = value;
+    Q_EMIT weatherUvIndexChanged(m_weatherUvIndex);
+}
+
+void ValenzBridge::setWeatherWindSpeed(const QString &value)
+{
+    if (m_weatherWindSpeed == value)
+        return;
+
+    m_weatherWindSpeed = value;
+    Q_EMIT weatherWindSpeedChanged(m_weatherWindSpeed);
+}
+
+void ValenzBridge::setWeatherForecast(const QVariantList &forecast)
+{
+    if (m_weatherForecast == forecast)
+        return;
+
+    m_weatherForecast = forecast;
+    Q_EMIT weatherForecastChanged();
+}
+
 double ValenzBridge::weatherLatitude() const
 {
     return m_weatherLatitude;

@@ -75,8 +75,10 @@ Item
             {
                 id: _weatherIcon
                 Layout.alignment: Qt.AlignVCenter
-                width: Maui.Style.iconSizes.small
-                height: width
+                Layout.preferredWidth: 16
+                Layout.preferredHeight: 16
+                width: 16
+                height: 16
                 source: weatherClock.weatherIconName
                 color: Maui.Theme.textColor
             }

@@ -93,6 +93,11 @@ class ValenzBridge : public QObject
     Q_PROPERTY(QString weatherTemperature READ weatherTemperature WRITE setWeatherTemperature NOTIFY weatherTemperatureChanged FINAL)
     Q_PROPERTY(QString weatherConditionLabel READ weatherConditionLabel WRITE setWeatherConditionLabel NOTIFY weatherConditionLabelChanged FINAL)
     Q_PROPERTY(QString weatherLocationName READ weatherLocationName NOTIFY weatherLocationNameChanged FINAL)
+    Q_PROPERTY(QString weatherFeelsLike READ weatherFeelsLike NOTIFY weatherFeelsLikeChanged FINAL)
+    Q_PROPERTY(QString weatherHumidity READ weatherHumidity NOTIFY weatherHumidityChanged FINAL)
+    Q_PROPERTY(QString weatherUvIndex READ weatherUvIndex NOTIFY weatherUvIndexChanged FINAL)
+    Q_PROPERTY(QString weatherWindSpeed READ weatherWindSpeed NOTIFY weatherWindSpeedChanged FINAL)
+    Q_PROPERTY(QVariantList weatherForecast READ weatherForecast NOTIFY weatherForecastChanged FINAL)
     Q_PROPERTY(double weatherLatitude READ weatherLatitude WRITE setWeatherLatitude NOTIFY weatherLatitudeChanged FINAL)
     Q_PROPERTY(double weatherLongitude READ weatherLongitude WRITE setWeatherLongitude NOTIFY weatherLongitudeChanged FINAL)
     Q_PROPERTY(QString weatherTemperatureUnit READ weatherTemperatureUnit WRITE setWeatherTemperatureUnit NOTIFY weatherTemperatureUnitChanged FINAL)
@@ -228,6 +233,16 @@ public:
     QString weatherConditionLabel() const;
     void setWeatherConditionLabel(const QString &label);
     QString weatherLocationName() const;
+    QString weatherFeelsLike() const;
+    QString weatherHumidity() const;
+    QString weatherUvIndex() const;
+    QString weatherWindSpeed() const;
+    QVariantList weatherForecast() const;
+    void setWeatherFeelsLike(const QString &value);
+    void setWeatherHumidity(const QString &value);
+    void setWeatherUvIndex(const QString &value);
+    void setWeatherWindSpeed(const QString &value);
+    void setWeatherForecast(const QVariantList &forecast);
     double weatherLatitude() const;
     void setWeatherLatitude(double latitude);
     double weatherLongitude() const;
@@ -332,6 +347,11 @@ Q_SIGNALS:
     void weatherTemperatureChanged(const QString &temperature);
     void weatherConditionLabelChanged(const QString &label);
     void weatherLocationNameChanged(const QString &locationName);
+    void weatherFeelsLikeChanged(const QString &value);
+    void weatherHumidityChanged(const QString &value);
+    void weatherUvIndexChanged(const QString &value);
+    void weatherWindSpeedChanged(const QString &value);
+    void weatherForecastChanged();
     void weatherLatitudeChanged(double latitude);
     void weatherLongitudeChanged(double longitude);
     void weatherTemperatureUnitChanged(const QString &unit);
@@ -484,6 +504,11 @@ private:
     QString m_weatherTemperature = QStringLiteral("--°C");
     QString m_weatherConditionLabel;
     QString m_weatherLocationName;
+    QString m_weatherFeelsLike;
+    QString m_weatherHumidity;
+    QString m_weatherUvIndex;
+    QString m_weatherWindSpeed;
+    QVariantList m_weatherForecast;
     double m_weatherLatitude = 40.7128;
     double m_weatherLongitude = -74.0060;
     QString m_weatherTemperatureUnit = QStringLiteral("celsius");

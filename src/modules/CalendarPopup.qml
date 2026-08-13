@@ -40,6 +40,9 @@ Window
     readonly property int _preferredPanelHeight: Maui.Handy.isMobile ? _baseUnit * 23 : _baseUnit * 24
     readonly property int _calendarSpacing: Maui.Style.space.small
     readonly property int _eventsCount: _eventCountForSelectedDate()
+    readonly property var _weatherForecast: calendarPopup.bridge ? calendarPopup.bridge.weatherForecast : []
+    readonly property var _weatherDetailLabels: [i18n("Feels like"), i18n("Humidity"), i18n("UV index"), i18n("Wind")]
+    readonly property var _weatherDetailValues: calendarPopup.bridge ? [calendarPopup.bridge.weatherFeelsLike, calendarPopup.bridge.weatherHumidity, calendarPopup.bridge.weatherUvIndex, calendarPopup.bridge.weatherWindSpeed] : ["--°C", "-- %", "--", "-- km/h"]
     readonly property bool _agendaInstalled: !!calendarPopup.bridge && calendarPopup.bridge.agendaInstalled
     readonly property int _effectiveMinPanelHeight: _minPanelHeight
 
@@ -207,6 +210,15 @@ Window
         return count
     }
 
+    function _weatherDayLabel(dateText)
+    {
+        const dateValue = new Date(String(dateText || "") + "T12:00:00")
+        if (!isFinite(dateValue.getTime()))
+            return ""
+
+        return Qt.formatDate(dateValue, "ddd")
+    }
+
     function toggleFromAnchor()
     {
         if (visible)
@@ -366,7 +378,7 @@ Window
     {
         const calendarHeight = _calendarCard ? (_calendarCard.implicitHeight + (_panelInsetY * 2)) : _preferredPanelHeight
         const contentHeight = _contentColumn ? (_contentColumn.implicitHeight + (_panelInsetY * 2)) : calendarHeight
-        const desiredHeight = _agendaInstalled ? Math.max(calendarHeight, contentHeight) : calendarHeight
+        const desiredHeight = contentHeight
         return Math.min(desiredHeight, _availableHeightFromAnchor)
     }
 
@@ -807,6 +819,179 @@ Window
                                 {
                                     if (calendarPopup.rootWindow && calendarPopup.rootWindow.traceMenu)
                                         calendarPopup.rootWindow.traceMenu("calendar_open_agenda", Qt.formatDate(calendarPopup.selectedDate, "yyyy-MM-dd"))
+                                }
+                            }
+                        }
+                    }
+                }
+                Maui.SectionItem
+                {
+                    id: _weatherCard
+                    width: parent.width
+                    flat: false
+                    clip: true
+                    padding: Maui.Style.space.medium
+                    text: ""
+                    background: Rectangle
+                    {
+                        color: Maui.Theme.alternateBackgroundColor
+                        radius: Maui.Style.radiusV
+                        border.width: 1
+                        border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+                    }
+                    label2.text: ""
+                    template.visible: false
+
+                    ColumnLayout
+                    {
+                        Layout.fillWidth: true
+                        spacing: Maui.Style.space.small
+
+                        RowLayout
+                        {
+                            Layout.fillWidth: true
+                            Layout.leftMargin: Maui.Style.space.medium
+                            Layout.rightMargin: Maui.Style.space.medium
+
+                            Label
+                            {
+                                text: calendarPopup.bridge ? calendarPopup.bridge.weatherTemperature : "--°C"
+                                font.pointSize: Math.max(27, calendarPopup._baseUnit * 1.35)
+                                font.weight: Font.DemiBold
+                            }
+
+                            Item
+                            {
+                                Layout.fillWidth: true
+                            }
+
+                            RowLayout
+                            {
+                                Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
+                                spacing: Maui.Style.space.small
+
+                                Maui.Icon
+                                {
+                                    Layout.alignment: Qt.AlignVCenter
+                                    Layout.preferredWidth: Math.max(48, calendarPopup._baseUnit * 2.4)
+                                    Layout.preferredHeight: Math.max(48, calendarPopup._baseUnit * 2.4)
+                                    source: calendarPopup.bridge ? calendarPopup.bridge.weatherIconName : "weather-severe-alert"
+                                }
+
+                                Label
+                                {
+                                    text: calendarPopup.bridge ? calendarPopup.bridge.weatherConditionLabel : ""
+                                    horizontalAlignment: Text.AlignRight
+                                    color: Qt.alpha(Maui.Theme.textColor, 0.82)
+                                    font.pointSize: Math.max(17, calendarPopup._baseUnit * 0.8)
+                                    elide: Text.ElideRight
+                                }
+                            }
+                        }
+
+                        RowLayout
+                        {
+                            Layout.fillWidth: true
+                            spacing: Maui.Style.space.tiny
+
+                            Repeater
+                            {
+                                model: calendarPopup._weatherForecast.slice(0, 3)
+
+                                delegate: ColumnLayout
+                                {
+                                    required property var modelData
+                                    required property int index
+                                    Layout.fillWidth: true
+                                    spacing: Maui.Style.space.tiny
+
+                                    Label
+                                    {
+                                        Layout.fillWidth: true
+                                        text: calendarPopup._weatherDayLabel(modelData.date)
+                                        horizontalAlignment: Text.AlignHCenter
+                                        color: Qt.alpha(Maui.Theme.textColor, 0.78)
+                                        font.weight: Font.DemiBold
+                                    }
+
+                                    Maui.Icon
+                                    {
+                                        Layout.alignment: Qt.AlignHCenter
+                                        Layout.preferredWidth: Math.max(32, calendarPopup._baseUnit * 2.0)
+                                        Layout.preferredHeight: Math.max(32, calendarPopup._baseUnit * 2.0)
+                                        source: modelData.iconName
+                                    }
+
+                                    RowLayout
+                                    {
+                                        Layout.alignment: Qt.AlignHCenter
+                                        spacing: Maui.Style.space.tiny
+
+                                        Label
+                                        {
+                                            text: modelData.highTemperature
+                                            font.weight: Font.DemiBold
+                                        }
+
+                                        Label
+                                        {
+                                            text: modelData.lowTemperature
+                                            color: Qt.alpha(Maui.Theme.textColor, 0.60)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        RowLayout
+                        {
+                            Layout.fillWidth: true
+                            Layout.topMargin: Maui.Style.space.small
+                            spacing: Maui.Style.space.tiny
+
+                            Repeater
+                            {
+                                model: calendarPopup._weatherDetailLabels.length
+
+                                delegate: RowLayout
+                                {
+                                    required property int index
+                                    Layout.fillWidth: true
+                                    spacing: Maui.Style.space.tiny
+
+                                    Rectangle
+                                    {
+                                        visible: index > 0
+                                        Layout.preferredWidth: 1
+                                        Layout.preferredHeight: calendarPopup._baseUnit * 1.2
+                                        color: Qt.alpha(Maui.Theme.textColor, 0.15)
+                                        Layout.alignment: Qt.AlignVCenter
+                                    }
+
+                                    ColumnLayout
+                                    {
+                                        Layout.fillWidth: true
+                                        spacing: 1
+
+                                        Label
+                                        {
+                                            Layout.fillWidth: true
+                                            text: calendarPopup._weatherDetailLabels[index]
+                                            horizontalAlignment: Text.AlignHCenter
+                                            color: Qt.alpha(Maui.Theme.textColor, 0.62)
+                                            font.pointSize: Maui.Style.fontSizes.tiny
+                                            elide: Text.ElideRight
+                                        }
+
+                                        Label
+                                        {
+                                            Layout.fillWidth: true
+                                            text: calendarPopup._weatherDetailValues[index]
+                                            horizontalAlignment: Text.AlignHCenter
+                                            font.weight: Font.DemiBold
+                                            elide: Text.ElideRight
+                                        }
+                                    }
                                 }
                             }
                         }

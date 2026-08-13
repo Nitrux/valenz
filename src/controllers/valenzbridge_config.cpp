@@ -482,6 +482,11 @@ void ValenzBridge::initializeConfig()
     m_weatherTemperature = m_weatherTemperatureUnit == QLatin1String("fahrenheit") ? QStringLiteral("--°F") : QStringLiteral("--°C");
     m_weatherConditionLabel = QString();
     m_weatherLocationName = QString();
+    m_weatherFeelsLike = m_weatherTemperatureUnit == QLatin1String("fahrenheit") ? QStringLiteral("--°F") : QStringLiteral("--°C");
+    m_weatherHumidity = QStringLiteral("-- %");
+    m_weatherUvIndex = QStringLiteral("--");
+    m_weatherWindSpeed = QStringLiteral("-- km/h");
+    m_weatherForecast.clear();
 }
 
 void ValenzBridge::initializeConfigWatcher()
