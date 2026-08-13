@@ -43,6 +43,9 @@ Window
     readonly property var _weatherForecast: calendarPopup.bridge ? calendarPopup.bridge.weatherForecast : []
     readonly property var _weatherDetailLabels: [i18n("Feels like"), i18n("Humidity"), i18n("UV index"), i18n("Wind")]
     readonly property var _weatherDetailValues: calendarPopup.bridge ? [calendarPopup.bridge.weatherFeelsLike, calendarPopup.bridge.weatherHumidity, calendarPopup.bridge.weatherUvIndex, calendarPopup.bridge.weatherWindSpeed] : ["--°C", "-- %", "--", "-- km/h"]
+    readonly property string _weatherTintKey: _weatherTintKeyForCurrent()
+    readonly property color _weatherTintStart: _weatherTintStartForKey(_weatherTintKey)
+    readonly property color _weatherTintEnd: _weatherTintEndForKey(_weatherTintKey)
     readonly property bool _agendaInstalled: !!calendarPopup.bridge && calendarPopup.bridge.agendaInstalled
     readonly property int _effectiveMinPanelHeight: _minPanelHeight
 
@@ -208,6 +211,56 @@ Window
         }
 
         return count
+    }
+
+    function _weatherTintKeyForCurrent()
+    {
+        const label = String(calendarPopup.bridge ? calendarPopup.bridge.weatherConditionLabel : "").toLowerCase()
+        const icon = String(calendarPopup.bridge ? calendarPopup.bridge.weatherIconName : "").toLowerCase()
+        const value = label + " " + icon
+
+        if (value.indexOf("storm") >= 0 || value.indexOf("thunder") >= 0)
+            return "storm"
+        if (value.indexOf("snow") >= 0 || value.indexOf("hail") >= 0)
+            return "snow"
+        if (value.indexOf("rain") >= 0 || value.indexOf("shower") >= 0 || value.indexOf("drizzle") >= 0)
+            return "rain"
+        if (value.indexOf("fog") >= 0 || value.indexOf("mist") >= 0)
+            return "fog"
+        if (value.indexOf("cloud") >= 0 || value.indexOf("overcast") >= 0)
+            return "cloud"
+        if (value.indexOf("clear") >= 0)
+            return "clear"
+
+        return "neutral"
+    }
+
+    function _weatherTintStartForKey(key)
+    {
+        switch (key)
+        {
+            case "clear": return "#3b78b5"
+            case "cloud": return "#526b80"
+            case "rain": return "#285c85"
+            case "storm": return "#4a3d78"
+            case "snow": return "#6e9bb7"
+            case "fog": return "#707d87"
+            default: return "#49667d"
+        }
+    }
+
+    function _weatherTintEndForKey(key)
+    {
+        switch (key)
+        {
+            case "clear": return "#bd8d42"
+            case "cloud": return "#293b4b"
+            case "rain": return "#1e3f60"
+            case "storm": return "#272746"
+            case "snow": return "#425f77"
+            case "fog": return "#4d5961"
+            default: return "#2b4051"
+        }
     }
 
     function _weatherDayLabel(dateText)
@@ -832,12 +885,39 @@ Window
                     clip: true
                     padding: Maui.Style.space.medium
                     text: ""
-                    background: Rectangle
+                    background: Item
                     {
-                        color: Maui.Theme.alternateBackgroundColor
-                        radius: Maui.Style.radiusV
-                        border.width: 1
-                        border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+                        Rectangle
+                        {
+                            anchors.fill: parent
+                            radius: Maui.Style.radiusV
+                            opacity: 0.78
+                            gradient: Gradient
+                            {
+                                orientation: Gradient.Horizontal
+
+                                GradientStop
+                                {
+                                    position: 0.0
+                                    color: calendarPopup._weatherTintStart
+                                }
+
+                                GradientStop
+                                {
+                                    position: 1.0
+                                    color: calendarPopup._weatherTintEnd
+                                }
+                            }
+                        }
+
+                        Rectangle
+                        {
+                            anchors.fill: parent
+                            radius: Maui.Style.radiusV
+                            color: Qt.alpha(Maui.Theme.backgroundColor, 0.20)
+                            border.width: 1
+                            border.color: Qt.alpha(Maui.Theme.textColor, 0.12)
+                        }
                     }
                     label2.text: ""
                     template.visible: false
