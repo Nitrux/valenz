@@ -634,7 +634,6 @@ Window
                         {
                             Layout.preferredHeight: 8
                             height: 8
-                            visible: systemTrayController && systemTrayController.count > 0
                         }
 
                         VicinaeButton
