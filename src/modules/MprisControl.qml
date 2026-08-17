@@ -225,7 +225,7 @@ Item
 
             Action
             {
-                icon.name: "open-menu-symbolic"
+                icon.name: "application-menu"
                 onTriggered: mprisControl.toggleSourcesPopup()
             }
 

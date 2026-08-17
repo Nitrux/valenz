@@ -1025,7 +1025,7 @@ QVariantList SystemTrayController::trayMenuItems(int index) const
         {QStringLiteral("separator"), false},
         {QStringLiteral("checkable"), false},
         {QStringLiteral("checked"), false},
-        {QStringLiteral("iconName"), entry.itemIsMenu ? QStringLiteral("view-more-symbolic") : QStringLiteral("document-open")},
+        {QStringLiteral("iconName"), entry.itemIsMenu ? QStringLiteral("overflow-menu") : QStringLiteral("document-open")},
         {QStringLiteral("children"), QVariantList {}},
     });
     items.push_back(QVariantMap {
@@ -1047,7 +1047,7 @@ QVariantList SystemTrayController::trayMenuItems(int index) const
         {QStringLiteral("separator"), false},
         {QStringLiteral("checkable"), false},
         {QStringLiteral("checked"), false},
-        {QStringLiteral("iconName"), QStringLiteral("open-menu-symbolic")},
+        {QStringLiteral("iconName"), QStringLiteral("application-menu")},
         {QStringLiteral("children"), QVariantList {}},
     });
 
