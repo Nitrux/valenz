@@ -118,7 +118,9 @@ static void configureLayerShellWindow(QWindow *window, bool wantsActiveScreen)
     const int appliedBottom = spacingBottom;
     const int appliedLeft = spacingLeft;
     const int appliedRight = spacingRight;
-    const int exclusiveZone = barHeight + appliedTop + appliedBottom;
+    // Layer-shell includes the anchored top margin in the reserved area.
+    // Bottom spacing is an intentional gap between the bar and normal windows.
+    const int exclusiveZone = barHeight + appliedBottom;
     layerShellWindow->setExclusiveZone(window->isVisible()
                                            ? (exclusiveZone > 0 ? exclusiveZone : window->height())
                                            : 0);
@@ -132,7 +134,7 @@ static void configureLayerShellWindow(QWindow *window, bool wantsActiveScreen)
     anchors |= LayerShellQt::Window::AnchorRight;
     layerShellWindow->setAnchors(anchors);
     layerShellWindow->setDesiredSize(QSize(window->width(), window->height()));
-    layerShellWindow->setMargins(QMargins(appliedLeft, appliedTop, appliedRight, appliedBottom));
+    layerShellWindow->setMargins(QMargins(appliedLeft, appliedTop, appliedRight, 0));
 }
 
 static QString desktopFileNameForPortal()
