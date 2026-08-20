@@ -16,6 +16,8 @@ ToolButton
     property double _lastClosedAtMs: -1
     property Item popupAnchorMarker: _popupAnchorMarker
     readonly property bool popupVisible: screenCaptureButton.popup && screenCaptureButton.popup.visible
+    readonly property bool recordingActive: screenCaptureButton.popup && screenCaptureButton.popup.recordingActive
+    readonly property string recordingTimeText: screenCaptureButton.popup ? screenCaptureButton.popup.recordingTimeText : "0:00"
     readonly property color activeContentColor: (screenCaptureButton.down || screenCaptureButton.popupVisible) ? Maui.Theme.highlightedTextColor : Maui.Theme.textColor
 
     display: ToolButton.IconOnly
@@ -85,6 +87,39 @@ ToolButton
                 font.pointSize: Math.max(7, Math.round(parent.height * 0.65 * 0.75))
                 textFormat: Text.PlainText
                 renderType: Text.QtRendering
+            }
+        }
+
+        Item
+        {
+            Layout.alignment: Qt.AlignVCenter
+            visible: screenCaptureButton.recordingActive
+            implicitWidth: visible ? _recordingBadge.implicitWidth : 0
+            Layout.minimumWidth: implicitWidth
+            Layout.preferredWidth: implicitWidth
+            height: 20
+
+            WorkspaceBadge
+            {
+                id: _recordingBadge
+                anchors.centerIn: parent
+                badgeText: "REC " + screenCaptureButton.recordingTimeText
+                bridge: null
+                Maui.Controls.status: Maui.Controls.Negative
+
+                background: Rectangle
+                {
+                    color: Maui.Theme.negativeBackgroundColor
+                    radius: Maui.Style.radiusV
+                }
+
+                contentItem: Maui.IconLabel
+                {
+                    text: _recordingBadge.text
+                    font: _recordingBadge.font
+                    color: Maui.Theme.negativeTextColor
+                    alignment: Qt.AlignHCenter
+                }
             }
         }
     }

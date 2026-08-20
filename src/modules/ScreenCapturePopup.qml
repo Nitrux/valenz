@@ -21,6 +21,9 @@ Window
     property int _geometryRevision: 0
     property bool _fadeOutPending: false
     property bool _panelOpen: false
+    property bool recordingActive: false
+    property int recordingElapsedSeconds: 0
+    property double _recordingStartedAtMs: -1
 
     readonly property int _fadeInDurationMs: 25
     readonly property int _fadeOutDurationMs: 100
@@ -117,10 +120,62 @@ Window
 
     function toggleCapture(captureType, mode)
     {
+        const isRecording = captureType === "record"
+        const isStopRecording = isRecording && mode === "-stop"
+
         if (bridge && bridge.launchToma)
             bridge.launchToma(captureType, mode)
 
+        if (isRecording)
+            setRecordingActive(!isStopRecording)
+
         close()
+    }
+
+    function setRecordingActive(active)
+    {
+        if (recordingActive === active)
+            return
+
+        recordingActive = active
+        if (active)
+        {
+            _recordingStartedAtMs = Date.now()
+            recordingElapsedSeconds = 0
+            _recordingTimer.restart()
+        }
+        else
+        {
+            _recordingStartedAtMs = -1
+            recordingElapsedSeconds = 0
+            _recordingTimer.stop()
+        }
+    }
+
+    readonly property string recordingTimeText:
+    {
+        const totalSeconds = Math.max(0, recordingElapsedSeconds)
+        const seconds = String(totalSeconds % 60).padStart(2, "0")
+        const minutes = Math.floor(totalSeconds / 60)
+        if (minutes < 60)
+            return String(minutes) + ":" + seconds
+
+        const hours = Math.floor(minutes / 60)
+        return String(hours) + ":" + String(minutes % 60).padStart(2, "0") + ":" + seconds
+    }
+
+    Timer
+    {
+        id: _recordingTimer
+        interval: 1000
+        repeat: true
+        onTriggered:
+        {
+            if (screenCapturePopup._recordingStartedAtMs < 0)
+                return
+
+            screenCapturePopup.recordingElapsedSeconds = Math.floor((Date.now() - screenCapturePopup._recordingStartedAtMs) / 1000)
+        }
     }
 
     function open()
