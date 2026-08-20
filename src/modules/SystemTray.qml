@@ -252,6 +252,13 @@ RowLayout
                 width: 1
                 height: 1
                 visible: true
+
+                Rectangle
+                {
+                    anchors.fill: parent
+                    visible: false
+                    color: "#ff3b30"
+                }
             }
 
             readonly property Item popupAnchorMarker: _popupAnchorMarker
@@ -274,7 +281,7 @@ RowLayout
             if (!screenGeometry || screenGeometry.width <= 0)
                 return _margin
 
-            const targetX = _trayMenuOriginX || _margin
+            const targetX = (_trayMenuOriginX || (_margin + width)) - width
             const minX = _margin
             const maxX = Math.max(minX, screenGeometry.width - width - _margin)
             return Math.max(minX, Math.min(maxX, targetX))

@@ -887,7 +887,7 @@ Window
                                                 {
                                                     id: _olderNotificationCard
                                                     required property var modelData
-                                                    readonly property bool _replyExpanded: notificationsCenter._replyNotificationId === Number(modelData.id)
+                                                    readonly property bool _replyExpanded: notificationsCenter._replyNotificationId === Number(modelData.notificationId)
 
                                                     width: _groupCard.width - (notificationsCenter._cardPadding * 2)
                                                     flat: false
@@ -945,7 +945,7 @@ Window
                                                                 onClicked:
                                                                 {
                                                                     if (notificationsCenter.controller && notificationsCenter.controller.dismissById)
-                                                                        notificationsCenter.controller.dismissById(modelData.id)
+                                                                        notificationsCenter.controller.dismissById(modelData.notificationId)
                                                                 }
                                                             }
                                                         }
@@ -981,11 +981,11 @@ Window
                                                                         const key = String(modelData.key || "")
                                                                         if (key === "inline-reply")
                                                                         {
-                                                                            notificationsCenter.openReply(_olderNotificationCard.modelData.id)
+                                                                            notificationsCenter.openReply(_olderNotificationCard.modelData.notificationId)
                                                                             return
                                                                         }
 
-                                                                        notificationsCenter._invokeAction(_olderNotificationCard.modelData.id, key)
+                                                                        notificationsCenter._invokeAction(_olderNotificationCard.modelData.notificationId, key)
                                                                     }
                                                                 }
                                                             }
@@ -1031,7 +1031,7 @@ Window
 
                                                                     const replyText = _olderReplyField.text
                                                                     notificationsCenter._replyNotificationId = -1
-                                                                    notificationsCenter.controller.replyById(_olderNotificationCard.modelData.id, replyText)
+                                                                    notificationsCenter.controller.replyById(_olderNotificationCard.modelData.notificationId, replyText)
                                                                 }
                                                             }
                                                         }

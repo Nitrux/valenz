@@ -92,6 +92,11 @@ Window
             _controlCenterPopup.forceClose()
         else if (_controlCenterPopup.visible)
             _controlCenterPopup.close()
+
+        if (_screenCapturePopup.visible && _screenCapturePopup.forceClose)
+            _screenCapturePopup.forceClose()
+        else if (_screenCapturePopup.visible)
+            _screenCapturePopup.close()
     }
 
     function _pointInsideItem(item, x, y)
@@ -108,6 +113,7 @@ Window
         return _pointInsideItem(_weatherClock, x, y)
                 || _pointInsideItem(_notificationsCenterButton, x, y)
                 || _pointInsideItem(_controlCenterButton, x, y)
+                || _pointInsideItem(_screenCaptureButton, x, y)
     }
 
     function toggleMaximized()
@@ -331,6 +337,18 @@ Window
         controller: notificationsController
         notificationsPopup: _notificationsCenterPopup
         useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
+    }
+
+    ScreenCapturePopup
+    {
+        id: _screenCapturePopup
+        title: i18n("Screen Capture")
+        rootWindow: root
+        bridge: valenzBridge
+        overlayItem: root.contentItem
+        anchorButton: _screenCaptureButton.popupAnchorMarker
+        useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
+        glyphForIcon: root.controlCenterButtonGlyph
     }
 
     MprisSourcesPopup
@@ -587,7 +605,7 @@ Window
                     MouseArea
                     {
                         anchors.fill: parent
-                        enabled: _controlCenterPopup.visible || _notificationsCenterPopup.visible || _notificationsBubble.visible || _calendarPopup.visible || _mprisSourcesPopup.visible
+                        enabled: _controlCenterPopup.visible || _notificationsCenterPopup.visible || _notificationsBubble.visible || _calendarPopup.visible || _mprisSourcesPopup.visible || _screenCapturePopup.visible
                         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                         hoverEnabled: false
                         propagateComposedEvents: true
@@ -628,6 +646,20 @@ Window
                             controller: systemTrayController
                             rootWindow: root
                             debugDetails: root.systemTrayDebugDetails
+                        }
+
+                        Maui.Separator
+                        {
+                            Layout.preferredHeight: 8
+                            height: 8
+                        }
+
+                        ScreenCaptureButton
+                        {
+                            id: _screenCaptureButton
+                            popup: _screenCapturePopup
+                            useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
+                            glyphForIcon: root.controlCenterButtonGlyph
                         }
 
                         Maui.Separator

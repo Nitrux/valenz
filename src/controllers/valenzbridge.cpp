@@ -81,3 +81,24 @@ void ValenzBridge::openVicinaeClipboard()
     if (!startDetachedVicinaeCommand(m_clipboardCommand))
         startDetachedVicinaeCommand(QStringLiteral("vicinae vicinae://launch/clipboard/history"));
 }
+
+void ValenzBridge::launchToma(const QString &captureType, const QString &mode)
+{
+    const QString action = captureType.trimmed().toLower();
+    const QString flag = mode.trimmed().toLower();
+    const bool validAction = action == QStringLiteral("screenshot") || action == QStringLiteral("record");
+    const bool stopRecording = action == QStringLiteral("record") && flag == QStringLiteral("-stop");
+    const bool validMode = stopRecording
+            || flag == QStringLiteral("-f")
+            || flag == QStringLiteral("-s")
+            || flag == QStringLiteral("-w");
+
+    if (!validAction || !validMode)
+        return;
+
+    QStringList arguments{action, flag};
+    if (action == QStringLiteral("record") && !stopRecording)
+        arguments.append(QStringLiteral("--source=valenz"));
+
+    QProcess::startDetached(QStringLiteral("toma"), arguments);
+}

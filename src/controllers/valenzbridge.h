@@ -257,6 +257,7 @@ public:
     Q_INVOKABLE void executeControlCenterSettingsCommand();
     Q_INVOKABLE void toggleVicinae();
     Q_INVOKABLE void openVicinaeClipboard();
+    Q_INVOKABLE void launchToma(const QString &captureType, const QString &mode);
     Q_INVOKABLE void setControlCenterVolumePercentageFromSlider(int percent);
     Q_INVOKABLE void setControlCenterMicrophoneVolumePercentageFromSlider(int percent);
     Q_INVOKABLE void setControlCenterBrightnessPercentageFromSlider(int percent);
