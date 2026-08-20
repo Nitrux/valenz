@@ -54,7 +54,7 @@ checkinstall -D -y \
 	--pakdir=. \
 	--maintainer=uri_herrera@nxos.org \
 	--provides=valenz \
-	--requires="fonts-nitrux-desktop,hyprland,layer-shell-qt,v4l-utils,libkf6bluezqt6,libqt6svg6,mauikit \(\>= 4.0.4\),mauikit-calendar \(\>= 4.0.4\),mauikit-system \(\>= 4.0.4\),qml6-module-org-kde-bluezqt" \
+	--requires="fonts-nitrux-desktop,hyprland,layer-shell-qt,v4l-utils,libkf6bluezqt6,libqt6svg6,mauikit \(\>= 4.0.4\),mauikit-calendar \(\>= 4.0.4\),mauikit-system \(\>= 4.0.4\),qml6-module-org-kde-bluezqt,toma" \
 	--nodoc \
 	--strip=no \
 	--stripso=yes \
