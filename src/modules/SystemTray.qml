@@ -24,6 +24,7 @@ RowLayout
     readonly property int _minimumMenuWidth: Maui.Handy.isMobile ? 280 : 320
     readonly property int _rowHeight: _menuItemMetrics.implicitHeight + 4
     readonly property int _separatorHeight: Math.max(1, (Maui.Style.space.small * 2) + 1)
+    readonly property int _dropOffset: 6
     property int _geometryRevision: 0
     property double _lastMenuClosedAtMs: -1
     property bool _menuOpen: false
@@ -120,11 +121,13 @@ RowLayout
 
         const anchor = trayMenuAnchor ? trayMenuAnchor : systemTray
         const point = _anchorPointInScreen(anchor, 0, 0)
-        const anchorHeight = anchor && anchor.height ? anchor.height : _rowHeight
+        const popupTargetY = systemTray.rootWindow && systemTray.rootWindow.popupTargetY ? systemTray.rootWindow.popupTargetY() : null
         if (point)
         {
             _trayMenuOriginX = point.x
-            _trayMenuOriginY = point.y + anchorHeight + Maui.Style.space.small
+            _trayMenuOriginY = popupTargetY !== null
+                    ? popupTargetY
+                    : point.y + Maui.Style.space.small + _dropOffset
         }
         else
         {
@@ -281,7 +284,7 @@ RowLayout
             if (!screenGeometry || screenGeometry.width <= 0)
                 return _margin
 
-            const targetX = (_trayMenuOriginX || (_margin + width)) - width
+            const targetX = (_trayMenuOriginX || (_margin + (width / 2))) - (width / 2)
             const minX = _margin
             const maxX = Math.max(minX, screenGeometry.width - width - _margin)
             return Math.max(minX, Math.min(maxX, targetX))

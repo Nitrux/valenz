@@ -43,7 +43,10 @@ Window
 
         const minY = _margin
         let targetY = Math.max(Maui.Style.toolBarHeightAlt, Maui.Style.units.gridUnit * 2) + _margin
-        if (anchorButton)
+        const popupTargetY = rootWindow && rootWindow.popupTargetY ? rootWindow.popupTargetY() : null
+        if (popupTargetY !== null)
+            targetY = popupTargetY
+        else if (anchorButton)
         {
             const point = _anchorPointInScreen(0, 0)
             if (point)
@@ -237,7 +240,10 @@ Window
 
         const minY = _margin
         let targetY = Math.max(Maui.Style.toolBarHeightAlt, Maui.Style.units.gridUnit * 2) + _margin
-        if (anchorButton)
+        const popupTargetY = rootWindow && rootWindow.popupTargetY ? rootWindow.popupTargetY() : null
+        if (popupTargetY !== null)
+            targetY = popupTargetY
+        else if (anchorButton)
         {
             const point = _anchorPointInScreen(0, 0)
             if (point)

@@ -21,6 +21,19 @@ Window
     readonly property real popupSurfaceOpacity: 0.76
     readonly property color popupSurfaceColor: Qt.alpha(Maui.Theme.backgroundColor, root.popupSurfaceOpacity)
     readonly property int popupSurfaceRadius: Maui.Style.radiusV + 3
+    readonly property int popupGap: 3
+
+    function popupTargetY()
+    {
+        if (!root.contentItem || !root.contentItem.mapToGlobal)
+            return null
+
+        const point = root.contentItem.mapToGlobal(0, root.height)
+        if (point && isFinite(point.y))
+            return point.y + root.popupGap
+
+        return null
+    }
     visible: !valenzBridge || !valenzBridge.focusedWindowFullscreen
     readonly property bool useDirectionalSpacing: barLayerSpacingTop > 0 || barLayerSpacingBottom > 0 || barLayerSpacingLeft > 0 || barLayerSpacingRight > 0
     width:
