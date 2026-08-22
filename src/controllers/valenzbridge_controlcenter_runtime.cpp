@@ -753,9 +753,9 @@ void ValenzBridge::executeControlCenterPowerCommand()
 {
     const QString command = normalizePowerCommand(m_controlCenterPowerCommand);
     if (!startDetachedCommand(command)
-        && command.compare(QStringLiteral("wlogout"), Qt::CaseInsensitive) != 0)
+        && command.compare(QStringLiteral("qmlogout"), Qt::CaseInsensitive) != 0)
     {
-        startDetachedCommand(QStringLiteral("wlogout"));
+        startDetachedCommand(QStringLiteral("qmlogout"));
     }
 }
 

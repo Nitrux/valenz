@@ -162,7 +162,7 @@ inline int normalizeWeatherRefreshMinutes(const QVariant &value)
 inline QString normalizePowerCommand(const QString &value)
 {
     const QString trimmed = value.trimmed();
-    return trimmed.isEmpty() ? QStringLiteral("wlogout") : trimmed;
+    return trimmed.isEmpty() ? QStringLiteral("qmlogout") : trimmed;
 }
 
 inline QString normalizeControlCenterIconMode(const QString &value)

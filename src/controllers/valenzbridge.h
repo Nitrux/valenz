@@ -489,7 +489,7 @@ private:
     bool m_controlCenterNightLightCommandTarget = false;
     int m_controlCenterNightLightPendingChecks = 0;
     bool m_controlCenterNightLightAvailable = false;
-    QString m_controlCenterPowerCommand = QStringLiteral("wlogout");
+    QString m_controlCenterPowerCommand = QStringLiteral("qmlogout");
     QString m_controlCenterSettingsCommand = QStringLiteral("systemsettings");
     QString m_launcherCommand = QStringLiteral("vicinae toggle");
     QString m_clipboardCommand = QStringLiteral("vicinae vicinae://launch/clipboard/history");

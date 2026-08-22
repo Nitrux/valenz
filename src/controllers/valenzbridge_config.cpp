@@ -441,7 +441,7 @@ void ValenzBridge::initializeConfig()
     m_controlCenterVolumePercentage = QStringLiteral("50%");
     m_controlCenterBatteryCharging = false;
     m_controlCenterBatteryPercentage = QStringLiteral("0%");
-    m_controlCenterPowerCommand = normalizePowerCommand(userSettings.value(kControlCenterPowerCommandKey, "wlogout").toString());
+    m_controlCenterPowerCommand = normalizePowerCommand(userSettings.value(kControlCenterPowerCommandKey, "qmlogout").toString());
     m_controlCenterSettingsCommand = userSettings.value(kControlCenterSettingsCommandKey, QStringLiteral("systemsettings")).toString().trimmed();
     m_launcherCommand = userSettings.value(kLauncherCommandKey, QStringLiteral("vicinae toggle")).toString().trimmed();
     m_clipboardCommand = userSettings.value(kClipboardCommandKey, QStringLiteral("vicinae vicinae://launch/clipboard/history")).toString().trimmed();
@@ -541,7 +541,7 @@ void ValenzBridge::reloadConfig()
            normalizeControlCenterIconMode(settings.value(kControlCenterIconModeKey, QStringLiteral("system16")).toString()),
            [this] { Q_EMIT controlCenterIconModeChanged(m_controlCenterIconMode); });
     update(m_controlCenterPowerCommand,
-           normalizePowerCommand(settings.value(kControlCenterPowerCommandKey, QStringLiteral("wlogout")).toString()),
+           normalizePowerCommand(settings.value(kControlCenterPowerCommandKey, QStringLiteral("qmlogout")).toString()),
            [this] { Q_EMIT controlCenterPowerCommandChanged(m_controlCenterPowerCommand); });
 
     QString settingsCommand = settings.value(kControlCenterSettingsCommandKey, QStringLiteral("systemsettings")).toString().trimmed();
