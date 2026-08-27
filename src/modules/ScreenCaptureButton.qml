@@ -93,32 +93,85 @@ ToolButton
         Item
         {
             Layout.alignment: Qt.AlignVCenter
-            visible: screenCaptureButton.recordingActive
-            implicitWidth: visible ? _recordingBadge.implicitWidth : 0
-            Layout.minimumWidth: implicitWidth
+            implicitWidth: _recordingBadge.width
+            Layout.minimumWidth: 0
             Layout.preferredWidth: implicitWidth
             height: 20
 
             WorkspaceBadge
             {
                 id: _recordingBadge
-                anchors.centerIn: parent
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: screenCaptureButton.recordingActive ? implicitWidth : 0
+                clip: true
+
+                Behavior on width
+                {
+                    NumberAnimation
+                    {
+                        duration: 220
+                        easing.type: Easing.InOutCubic
+                    }
+                }
                 badgeText: "REC " + screenCaptureButton.recordingTimeText
                 bridge: null
                 Maui.Controls.status: Maui.Controls.Negative
 
                 background: Rectangle
                 {
-                    color: Maui.Theme.negativeBackgroundColor
+                    color: screenCaptureButton.recordingActive ? Maui.Theme.negativeBackgroundColor : "transparent"
+
+                    Behavior on color
+                    {
+                        ColorAnimation
+                        {
+                            duration: 220
+                            easing.type: Easing.InOutCubic
+                        }
+                    }
                     radius: Maui.Style.radiusV
                 }
 
-                contentItem: Maui.IconLabel
+                contentItem: RowLayout
                 {
-                    text: _recordingBadge.text
-                    font: _recordingBadge.font
-                    color: Maui.Theme.negativeTextColor
-                    alignment: Qt.AlignHCenter
+                    spacing: Maui.Style.space.tiny
+
+                    Item
+                    {
+                        Layout.minimumWidth: implicitWidth
+                        Layout.preferredWidth: implicitWidth
+                        Layout.alignment: Qt.AlignVCenter
+                        implicitWidth: Maui.Style.iconSizes.small
+                        implicitHeight: Maui.Style.iconSizes.small
+
+                        Maui.Icon
+                        {
+                            anchors.fill: parent
+                            source: "media-playback-stop"
+                            color: Maui.Theme.negativeTextColor
+                        }
+
+                        MouseArea
+                        {
+                            enabled: screenCaptureButton.recordingActive
+                            anchors.fill: parent
+                            onClicked:
+                            {
+                                if (screenCaptureButton.popup)
+                                    screenCaptureButton.popup.toggleCapture("record", "-stop")
+                            }
+                        }
+                    }
+
+                    Maui.IconLabel
+                    {
+                        Layout.alignment: Qt.AlignVCenter
+                        text: _recordingBadge.text
+                        font: _recordingBadge.font
+                        color: Maui.Theme.negativeTextColor
+                        alignment: Qt.AlignHCenter
+                    }
                 }
             }
         }

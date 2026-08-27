@@ -503,7 +503,6 @@ Window
                             Action { icon.name: "screen-record-fullscreen"; text: i18n("Record full screen"); onTriggered: screenCapturePopup.toggleCapture("record", "-f") }
                             Action { icon.name: "screen-record-select"; text: i18n("Record region"); onTriggered: screenCapturePopup.toggleCapture("record", "-s") }
                             Action { icon.name: "screen-record-window"; text: i18n("Record window"); onTriggered: screenCapturePopup.toggleCapture("record", "-w") }
-                            Action { icon.name: "media-playback-stop"; text: i18n("Stop recording"); onTriggered: screenCapturePopup.toggleCapture("record", "-stop") }
                         }
                     }
                 }
