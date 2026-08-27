@@ -497,41 +497,13 @@ Window
                         {
                             Layout.preferredWidth: Maui.Style.space.small
                             Layout.fillHeight: true
-                            visible: root.mprisModuleVisible
                         }
 
                         Maui.Separator
                         {
                             Layout.preferredHeight: 8
                             height: 8
-                            visible: root.mprisModuleVisible
-                        }
-
-                        Item
-                        {
-                            Layout.preferredWidth: Maui.Style.space.small
-                            Layout.fillHeight: true
-                            visible: root.mprisModuleVisible
-                        }
-
-                        MprisControl
-                        {
-                            id: _mprisControl
-                            bridge: valenzBridge
-                            popup: _mprisSourcesPopup
-                            visible: root.mprisModuleVisible
-                        }
-
-                        Item
-                        {
-                            Layout.preferredWidth: Maui.Style.space.small
-                            Layout.fillHeight: true
-                        }
-
-                        Maui.Separator
-                        {
-                            Layout.preferredHeight: 8
-                            height: 8
+                            visible: _windowTitleMiddle.hasWindows
                         }
                     }
                 }
@@ -646,11 +618,19 @@ Window
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: Maui.Style.space.medium
 
+                        MprisControl
+                        {
+                            id: _mprisControl
+                            bridge: valenzBridge
+                            popup: _mprisSourcesPopup
+                            visible: root.mprisModuleVisible
+                        }
+
                         Maui.Separator
                         {
                             Layout.preferredHeight: 8
                             height: 8
-                            visible: systemTrayController && systemTrayController.count > 0
+                            visible: root.mprisModuleVisible && (systemTrayController && systemTrayController.count > 0)
                         }
 
                         SystemTray
@@ -665,6 +645,7 @@ Window
                         {
                             Layout.preferredHeight: 8
                             height: 8
+                            visible: root.mprisModuleVisible || (systemTrayController && systemTrayController.count > 0)
                         }
 
                         ScreenCaptureButton

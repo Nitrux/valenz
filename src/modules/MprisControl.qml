@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import QtQuick.Controls
 import QtQuick.Layouts
 
@@ -50,27 +51,45 @@ Item
             Layout.alignment: Qt.AlignVCenter
             implicitWidth: Math.max(Maui.Style.iconSizes.medium, Maui.Style.toolBarHeightAlt - Maui.Style.space.small)
             implicitHeight: Maui.Style.iconSizes.big
-            radius: Maui.Style.radiusV
+            radius: Math.min(Maui.Style.radiusV, 4)
             color: Maui.Theme.alternateBackgroundColor
             clip: true
 
-            Image
+            Maui.IconItem
             {
                 id: _mediaArtImage
                 anchors.fill: parent
                 fillMode: Image.PreserveAspectCrop
-                source: (mprisControl.bridge && String(mprisControl.bridge.mediaArtSource || "").trim().length > 0)
+                imageSource: (mprisControl.bridge && String(mprisControl.bridge.mediaArtSource || "").trim().length > 0)
                         ? mprisControl.bridge.mediaArtSource
                         : ""
-                visible: true
+                maskRadius: _artFrame.radius
             }
 
-            Label
+            Maui.Icon
             {
+                id: _mediaArtFallback
                 anchors.centerIn: parent
-                font.pointSize: Maui.Style.fontSizes.big
-                text: "\u266B"
-                visible: _mediaArtImage.status !== Image.Ready
+                width: Math.min(parent.width, Maui.Style.iconSizes.big)
+                height: width
+                readonly property color fallbackColor: Maui.ColorUtils.tintWithAlpha(Maui.Theme.textColor, Maui.Theme.highlightColor, 0.2)
+                readonly property real fallbackBrightness: Maui.ColorUtils.grayForColor(fallbackColor)
+                                                           - Maui.ColorUtils.grayForColor("#4d4d4d")
+                source: Math.max(parent.width, parent.height) <= Maui.Style.iconSizes.big
+                        ? "qrc:/app/valenz/assets/cover_32x32.svg"
+                        : "qrc:/app/valenz/assets/cover_64x64.svg"
+                color: fallbackColor
+                visible: _mediaArtImage.image.status !== Image.Ready
+                         || _mediaArtImage.image.implicitWidth <= 0
+                         || _mediaArtImage.image.implicitHeight <= 0
+
+                layer.enabled: visible && GraphicsInfo.api !== GraphicsInfo.Software
+                layer.effect: MultiEffect
+                {
+                    colorization: 1
+                    brightness: _mediaArtFallback.fallbackBrightness
+                    colorizationColor: _mediaArtFallback.fallbackColor
+                }
             }
         }
 

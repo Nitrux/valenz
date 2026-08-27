@@ -52,7 +52,8 @@ qt_add_qml_module(${PROJECT_NAME}
     modules/NotificationsCenterButton.qml
     modules/NotificationsBubble.qml
     RESOURCES
-    assets/cover.png)
+    assets/cover_32x32.svg
+    assets/cover_64x64.svg)
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE
