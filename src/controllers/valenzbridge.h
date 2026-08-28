@@ -357,6 +357,8 @@ Q_SIGNALS:
     void weatherLongitudeChanged(double longitude);
     void weatherTemperatureUnitChanged(const QString &unit);
     void weatherRefreshMinutesChanged(int minutes);
+    void tomaRecordingStarted();
+    void tomaRecordingFinished();
 
 private Q_SLOTS:
     void scheduleConfigReload();

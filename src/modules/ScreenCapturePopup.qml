@@ -126,10 +126,25 @@ Window
         if (bridge && bridge.launchToma)
             bridge.launchToma(captureType, mode)
 
-        if (isRecording)
-            setRecordingActive(!isStopRecording)
+        if (isStopRecording)
+            setRecordingActive(false)
 
         close()
+    }
+
+    Connections
+    {
+        target: screenCapturePopup.bridge
+
+        function onTomaRecordingStarted()
+        {
+            screenCapturePopup.setRecordingActive(true)
+        }
+
+        function onTomaRecordingFinished()
+        {
+            screenCapturePopup.setRecordingActive(false)
+        }
     }
 
     function setRecordingActive(active)

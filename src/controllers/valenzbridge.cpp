@@ -100,5 +100,48 @@ void ValenzBridge::launchToma(const QString &captureType, const QString &mode)
     if (action == QStringLiteral("record") && !stopRecording)
         arguments.append(QStringLiteral("--source=valenz"));
 
+    if (action == QStringLiteral("record") && !stopRecording)
+    {
+        auto *process = new QProcess(this);
+        process->setProcessChannelMode(QProcess::MergedChannels);
+
+        connect(process, &QProcess::readyReadStandardOutput, this, [this, process] {
+            QByteArray output = process->property("tomaOutput").toByteArray();
+            output.append(process->readAllStandardOutput());
+            const QByteArray marker = QByteArrayLiteral("TOMA_RECORDING_STARTED\n");
+            if (!process->property("recordingStarted").toBool() && output.contains(marker))
+            {
+                process->setProperty("recordingStarted", true);
+                Q_EMIT tomaRecordingStarted();
+            }
+            if (output.size() >= marker.size())
+                output = output.right(marker.size() - 1);
+            process->setProperty("tomaOutput", output);
+        });
+
+        connect(process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this, [this, process](int, QProcess::ExitStatus) {
+            if (process->property("recordingStarted").toBool()
+                && !process->property("recordingFinished").toBool())
+            {
+                process->setProperty("recordingFinished", true);
+                Q_EMIT tomaRecordingFinished();
+            }
+            process->deleteLater();
+        });
+
+        connect(process, &QProcess::errorOccurred, this, [this, process](QProcess::ProcessError) {
+            if (process->property("recordingStarted").toBool()
+                && !process->property("recordingFinished").toBool())
+            {
+                process->setProperty("recordingFinished", true);
+                Q_EMIT tomaRecordingFinished();
+            }
+            process->deleteLater();
+        });
+
+        process->start(QStringLiteral("toma"), arguments);
+        return;
+    }
+
     QProcess::startDetached(QStringLiteral("toma"), arguments);
 }
