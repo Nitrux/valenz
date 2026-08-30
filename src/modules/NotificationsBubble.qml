@@ -654,7 +654,7 @@ Window
                         padding: 0
                         implicitWidth: 16
                         implicitHeight: 16
-                        icon.source: "qrc:/assets/close.svg"
+                        icon.name: "window-close"
                         icon.width: 16
                         icon.height: 16
                         icon.color: hovered || down ? Maui.Theme.negativeTextColor : Maui.Theme.textColor
