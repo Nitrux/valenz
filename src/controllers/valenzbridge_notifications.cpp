@@ -352,11 +352,7 @@ void NotificationsController::dismiss(int index)
 
 void NotificationsController::dismissById(uint id)
 {
-    const int row = indexOfId(id);
-    if (row < 0)
-        return;
-
-    removeByIndex(row, kCloseReasonDismissedByUser);
+    removeById(id, kCloseReasonDismissedByUser);
 }
 
 void NotificationsController::dismissGroup(const QString &sourceName)
@@ -395,21 +391,19 @@ void NotificationsController::invokeAction(int index)
 
 void NotificationsController::invokeActionById(uint id)
 {
-    const int row = indexOfId(id);
-    if (row < 0)
-        return;
-
-    invokeAction(row);
+    const NotificationEntry *entry = entryById(id);
+    if (entry && !entry->actionKey.isEmpty())
+        invokeActionByIdAndKey(id, entry->actionKey);
 }
 
 void NotificationsController::invokeActionByIdAndKey(uint id, const QString &actionKey)
 {
-    const int row = indexOfId(id);
-    if (row < 0)
+    const NotificationEntry *notification = entryById(id);
+    if (!notification)
         return;
 
     const QString requestedKey = actionKey.trimmed();
-    const NotificationEntry &entry = m_entries.at(row);
+    const NotificationEntry &entry = *notification;
     const auto action = std::find_if(entry.actions.cbegin(), entry.actions.cend(),
                                      [&requestedKey](const NotificationAction &candidate) {
                                          return candidate.key == requestedKey;
@@ -421,20 +415,20 @@ void NotificationsController::invokeActionByIdAndKey(uint id, const QString &act
     emitNotificationsSignal(QStringLiteral("ActionInvoked"),
                             {QVariant::fromValue(entry.id), QVariant::fromValue(requestedKey)});
 
-    removeByIndex(row, kCloseReasonDismissedByUser);
+    removeById(id, kCloseReasonDismissedByUser);
 }
 
 void NotificationsController::replyById(uint id, const QString &text)
 {
-    const int row = indexOfId(id);
-    if (row < 0)
+    const NotificationEntry *notification = entryById(id);
+    if (!notification)
         return;
 
     const QString replyText = text.trimmed().left(kMaximumReplyLength);
     if (replyText.isEmpty())
         return;
 
-    const NotificationEntry &entry = m_entries.at(row);
+    const NotificationEntry &entry = *notification;
     const bool hasReplyAction = std::any_of(entry.actions.cbegin(), entry.actions.cend(),
                                             [](const NotificationAction &action) {
                                                 return action.key == QLatin1String("inline-reply");
@@ -446,7 +440,7 @@ void NotificationsController::replyById(uint id, const QString &text)
     emitNotificationsSignal(QStringLiteral("NotificationReplied"),
                             {QVariant::fromValue(entry.id), QVariant::fromValue(replyText)});
 
-    removeByIndex(row, kCloseReasonDismissedByUser);
+    removeById(id, kCloseReasonDismissedByUser);
 }
 
 void NotificationsController::refreshTimestamps()
@@ -485,7 +479,7 @@ uint NotificationsController::Notify(const QString &appName,
     const int replaceRow = replacesId > 0 ? indexOfId(replacesId) : -1;
 
     NotificationEntry entry;
-    entry.id = replaceRow >= 0 ? replacesId : m_nextId++;
+    entry.id = replaceRow >= 0 || m_criticalEntries.contains(replacesId) ? replacesId : m_nextId++;
     entry.sourceName = boundedNotificationText(appName, kMaximumSourceLength);
     if (entry.sourceName.isEmpty())
         entry.sourceName = QStringLiteral("System");
@@ -502,7 +496,26 @@ uint NotificationsController::Notify(const QString &appName,
     entry.replyPlaceholderText = boundedNotificationText(hints.value(QStringLiteral("x-kde-reply-placeholder-text")).toString(), kMaximumActionFieldLength);
     entry.replySubmitButtonText = boundedNotificationText(hints.value(QStringLiteral("x-kde-reply-submit-button-text")).toString(), kMaximumActionFieldLength);
     entry.timeout = qBound(-1, timeout, 60 * 60 * 1000);
-    const bool suppressTransient = m_dndEnabled;
+    const bool critical = entry.urgencyLevel >= 2;
+    const bool suppressTransient = m_dndEnabled && !critical;
+
+    if (critical)
+    {
+        entry.timeout = 0;
+        if (replaceRow >= 0)
+        {
+            beginRemoveRows(QModelIndex(), replaceRow, replaceRow);
+            m_entries.removeAt(replaceRow);
+            endRemoveRows();
+            Q_EMIT countChanged(m_entries.size());
+            Q_EMIT notificationsChanged();
+        }
+        m_criticalEntries.insert(entry.id, entry);
+        Q_EMIT transientNotification(entry.id, entry.sourceName, entry.messageText, relativeTimestamp(entry.createdAt), entry.iconName, entry.urgencyLevel, entry.actionText, entry.actionKey, actionsToVariantList(entry.actions), entry.replyPlaceholderText, entry.replySubmitButtonText, entry.timeout);
+        return entry.id;
+    }
+
+    const bool replacedCritical = m_criticalEntries.remove(entry.id) > 0;
 
     if (replaceRow >= 0)
     {
@@ -523,18 +536,14 @@ uint NotificationsController::Notify(const QString &appName,
     endInsertRows();
     Q_EMIT countChanged(m_entries.size());
     Q_EMIT notificationsChanged();
-    if (!suppressTransient)
+    if (!suppressTransient || replacedCritical)
         Q_EMIT transientNotification(entry.id, entry.sourceName, entry.messageText, relativeTimestamp(entry.createdAt), entry.iconName, entry.urgencyLevel, entry.actionText, entry.actionKey, actionsToVariantList(entry.actions), entry.replyPlaceholderText, entry.replySubmitButtonText, entry.timeout);
     return entry.id;
 }
 
 void NotificationsController::CloseNotification(uint id)
 {
-    const int row = indexOfId(id);
-    if (row < 0)
-        return;
-
-    removeByIndex(row, kCloseReasonClosedByCall);
+    removeById(id, kCloseReasonClosedByCall);
 }
 
 QStringList NotificationsController::GetCapabilities() const
@@ -554,6 +563,29 @@ QString NotificationsController::GetServerInformation(QString &vendor, QString &
     version = QStringLiteral("0.1");
     specVersion = QStringLiteral("1.2");
     return QStringLiteral("Valenz");
+}
+
+const NotificationsController::NotificationEntry *NotificationsController::entryById(uint id) const
+{
+    const auto critical = m_criticalEntries.constFind(id);
+    if (critical != m_criticalEntries.cend())
+        return &critical.value();
+
+    const int row = indexOfId(id);
+    return row >= 0 ? &m_entries.at(row) : nullptr;
+}
+
+void NotificationsController::removeById(uint id, uint closeReason)
+{
+    if (m_criticalEntries.remove(id) > 0)
+    {
+        Q_EMIT NotificationClosed(id, closeReason);
+        emitNotificationsSignal(QStringLiteral("NotificationClosed"),
+                                {QVariant::fromValue(id), QVariant::fromValue(closeReason)});
+        return;
+    }
+
+    removeByIndex(indexOfId(id), closeReason);
 }
 
 int NotificationsController::indexOfId(uint id) const

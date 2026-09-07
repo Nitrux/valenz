@@ -5,6 +5,7 @@
 
 #include <QAbstractListModel>
 #include <QDateTime>
+#include <QHash>
 #include <QString>
 #include <QVariantList>
 #include <QVariantMap>
@@ -119,6 +120,8 @@ private:
         int timeout = 0;
     };
 
+    const NotificationEntry *entryById(uint id) const;
+    void removeById(uint id, uint closeReason);
     int indexOfId(uint id) const;
     QString relativeTimestamp(const QDateTime &createdAt) const;
     static QString normalizedGroupKey(const QString &sourceName);
@@ -133,6 +136,7 @@ private:
     void setAvailable(bool available);
 
     QVector<NotificationEntry> m_entries;
+    QHash<uint, NotificationEntry> m_criticalEntries;
     uint m_nextId = 1;
     bool m_dndEnabled = false;
     bool m_available = false;

@@ -27,6 +27,10 @@ Window
     property string actionText: ""
     property string actionKey: ""
     property var actions: []
+    property string replyPlaceholderText: ""
+    property string replySubmitButtonText: ""
+    property bool _replyExpanded: false
+    property var _pendingCriticalNotifications: []
 
     property int _geometryRevision: 0
     property bool _fadeOutPending: false
@@ -92,7 +96,7 @@ Window
     readonly property int _timeoutMs:
     {
         if (urgencyLevel >= 2)
-            return 7000
+            return 0
         if (urgencyLevel === 1)
             return 5500
         return 4200
@@ -110,7 +114,7 @@ Window
     Shortcut
     {
         sequences: [ StandardKey.Cancel ]
-        onActivated: notificationsBubble.close()
+        onActivated: notificationsBubble.dismissBubble()
     }
 
     onClosing: function(closeEvent)
@@ -119,7 +123,7 @@ Window
             return
 
         closeEvent.accepted = false
-        close()
+        dismissBubble()
     }
 
 
@@ -217,10 +221,34 @@ Window
         return nonDefault.length > 0 ? nonDefault : values
     }
 
-    function showNotification(idValue, sourceNameValue, messageTextValue, timestampTextValue, iconNameValue, urgencyLevelValue, actionTextValue, actionKeyValue, actionsValue)
+    function showNotification(idValue, sourceNameValue, messageTextValue, timestampTextValue, iconNameValue, urgencyLevelValue, actionTextValue, actionKeyValue, actionsValue, replyPlaceholderTextValue, replySubmitButtonTextValue)
     {
-        if (notificationsPopup && notificationsPopup.visible)
+        const critical = Number(urgencyLevelValue) >= 2
+        const values = [idValue, sourceNameValue, messageTextValue, timestampTextValue, iconNameValue, urgencyLevelValue, actionTextValue, actionKeyValue, actionsValue, replyPlaceholderTextValue, replySubmitButtonTextValue]
+        const pendingIndex = _pendingCriticalNotifications.findIndex(function(value) { return Number(value[0]) === Number(idValue) })
+        if (pendingIndex >= 0)
+        {
+            if (critical)
+            {
+                _pendingCriticalNotifications[pendingIndex] = values
+                return
+            }
+            _pendingCriticalNotifications.splice(pendingIndex, 1)
+        }
+
+        if (visible && ((_fadeOutPending && (critical || urgencyLevel >= 2)) || (urgencyLevel >= 2 && notificationId !== Number(idValue))))
+        {
+            if (critical)
+                _pendingCriticalNotifications.push(values)
             return
+        }
+
+        if (!critical && ((notificationsPopup && notificationsPopup.visible) || (controller && controller.dndEnabled)))
+        {
+            if (visible && notificationId === Number(idValue) && urgencyLevel >= 2)
+                close()
+            return
+        }
 
         notificationId = Number(idValue)
         sourceName = String(sourceNameValue || "").trim()
@@ -231,6 +259,10 @@ Window
         actionText = String(actionTextValue || "").trim()
         actionKey = String(actionKeyValue || "").trim()
         actions = actionsValue || []
+        replyPlaceholderText = String(replyPlaceholderTextValue || "")
+        replySubmitButtonText = String(replySubmitButtonTextValue || "")
+        _replyExpanded = false
+        _replyField.clear()
 
         if (!isFinite(notificationId))
             notificationId = -1
@@ -259,14 +291,20 @@ Window
             notificationsBubble._touchGeometryRevision()
         })
 
-        _autoCloseTimer.restart()
+        _autoCloseTimer.stop()
+        if (urgencyLevel < 2)
+            _autoCloseTimer.restart()
     }
 
     function dismissBubble()
     {
         _autoCloseTimer.stop()
         if (visible)
+        {
+            if (urgencyLevel >= 2 && controller && notificationId >= 0)
+                controller.dismissById(notificationId)
             close()
+        }
     }
 
     onActionTextChanged:
@@ -333,6 +371,9 @@ Window
 
     function forceClose()
     {
+        if (urgencyLevel >= 2)
+            return
+
         _fadeOutTimer.stop()
         _fadeOutPending = false
         _panelOpen = false
@@ -395,6 +436,11 @@ Window
             _fadeOutTimer.stop()
             _panelOpen = false
             closed()
+            Qt.callLater(function()
+            {
+                if (!visible && _pendingCriticalNotifications.length > 0)
+                    showNotification.apply(notificationsBubble, _pendingCriticalNotifications.shift())
+            })
         }
     }
 
@@ -488,7 +534,7 @@ Window
 
         function onVisibleChanged()
         {
-            if (notificationsBubble.notificationsPopup && notificationsBubble.notificationsPopup.visible)
+            if (notificationsBubble.urgencyLevel < 2 && notificationsBubble.notificationsPopup && notificationsBubble.notificationsPopup.visible)
                 notificationsBubble.dismissBubble()
         }
     }
@@ -497,9 +543,19 @@ Window
     {
         target: notificationsBubble.controller
 
+        function onNotificationClosed(id, reason)
+        {
+            notificationsBubble._pendingCriticalNotifications = notificationsBubble._pendingCriticalNotifications.filter(function(value) { return Number(value[0]) !== Number(id) })
+            if (notificationsBubble.visible && notificationsBubble.urgencyLevel >= 2 && notificationsBubble.notificationId === Number(id))
+            {
+                _autoCloseTimer.stop()
+                notificationsBubble.close()
+            }
+        }
+
         function onDndEnabledChanged()
         {
-            if (notificationsBubble.controller && notificationsBubble.controller.dndEnabled)
+            if (notificationsBubble.urgencyLevel < 2 && notificationsBubble.controller && notificationsBubble.controller.dndEnabled)
                 notificationsBubble.dismissBubble()
         }
     }
@@ -700,6 +756,12 @@ Window
                                 if (key === "inline-reply")
                                 {
                                     _autoCloseTimer.stop()
+                                    if (notificationsBubble.urgencyLevel >= 2)
+                                    {
+                                        notificationsBubble._replyExpanded = true
+                                        Qt.callLater(function() { _replyField.forceActiveFocus() })
+                                        return
+                                    }
                                     if (notificationsBubble.notificationsPopup
                                             && notificationsBubble.notificationsPopup.openReply)
                                         notificationsBubble.notificationsPopup.openReply(notificationsBubble.notificationId)
@@ -711,6 +773,33 @@ Window
 
                                 notificationsBubble.dismissBubble()
                             }
+                        }
+                    }
+                }
+
+                RowLayout
+                {
+                    Layout.fillWidth: true
+                    visible: notificationsBubble._replyExpanded
+                    spacing: Maui.Style.space.small
+
+                    Maui.TextField
+                    {
+                        id: _replyField
+                        Layout.fillWidth: true
+                        placeholderText: notificationsBubble.replyPlaceholderText || i18n("Type a reply…")
+                        onAccepted: _submitReplyButton.clicked()
+                    }
+
+                    Button
+                    {
+                        id: _submitReplyButton
+                        text: notificationsBubble.replySubmitButtonText || i18n("Send")
+                        enabled: _replyField.text.trim().length > 0
+                        onClicked:
+                        {
+                            if (enabled && notificationsBubble.controller)
+                                notificationsBubble.controller.replyById(notificationsBubble.notificationId, _replyField.text)
                         }
                     }
                 }
