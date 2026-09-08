@@ -677,7 +677,7 @@ Window
 
                             Repeater
                             {
-                                model: calendarPopup._weekdayLabelsShort()
+                                model: _calendarMonthModel.weekDays
 
                                 delegate: Label
                                 {
