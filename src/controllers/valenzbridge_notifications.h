@@ -93,7 +93,7 @@ Q_SIGNALS:
                                const QString &replySubmitButtonText,
                                int timeout);
 
-    void NotificationClosed(uint id, uint reason);
+    void notificationClosed(uint id, uint reason);
     void ActionInvoked(uint id, const QString &actionKey);
     void NotificationReplied(uint id, const QString &text);
 

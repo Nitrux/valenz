@@ -336,7 +336,7 @@ void NotificationsController::clearAllNotifications()
 
     for (uint id : ids)
     {
-        Q_EMIT NotificationClosed(id, kCloseReasonClosedByCall);
+        Q_EMIT notificationClosed(id, kCloseReasonClosedByCall);
         emitNotificationsSignal(QStringLiteral("NotificationClosed"),
                                 {QVariant::fromValue(id), QVariant::fromValue(kCloseReasonClosedByCall)});
     }
@@ -579,7 +579,7 @@ void NotificationsController::removeById(uint id, uint closeReason)
 {
     if (m_criticalEntries.remove(id) > 0)
     {
-        Q_EMIT NotificationClosed(id, closeReason);
+        Q_EMIT notificationClosed(id, closeReason);
         emitNotificationsSignal(QStringLiteral("NotificationClosed"),
                                 {QVariant::fromValue(id), QVariant::fromValue(closeReason)});
         return;
@@ -759,7 +759,7 @@ void NotificationsController::removeByIndex(int row, uint closeReason)
 
     Q_EMIT countChanged(m_entries.size());
     Q_EMIT notificationsChanged();
-    Q_EMIT NotificationClosed(id, closeReason);
+    Q_EMIT notificationClosed(id, closeReason);
     emitNotificationsSignal(QStringLiteral("NotificationClosed"),
                             {QVariant::fromValue(id), QVariant::fromValue(closeReason)});
 }

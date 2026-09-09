@@ -154,9 +154,6 @@ Item
                         _mediaPrimaryFade.restart()
                     }
 
-                    ToolTip.delay: 500
-                    ToolTip.visible: _mediaPrimaryHover.hovered && _mediaPrimaryTextWrap.overflow
-                    ToolTip.text: text
                 }
             }
 
