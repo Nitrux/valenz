@@ -1206,6 +1206,7 @@ Window
                             {
                                 id: _powerProfileSelector
                                 readonly property string _fallbackLabel: i18n("Select Profile")
+                                readonly property string _automaticLabel: i18n("Automatic")
                                 readonly property string _longestLabel:
                                 {
                                     const entries = controlCenter.bridge ? controlCenter.bridge.controlCenterPowerProfiles : []
@@ -1218,6 +1219,9 @@ Window
                                             longest = candidate
                                     }
 
+                                    if (_automaticLabel.length > longest.length)
+                                        longest = _automaticLabel
+
                                     return longest
                                 }
                                 readonly property real _contentDrivenWidth: Math.ceil(_powerProfileLongestLabelMetrics.advanceWidth + (Maui.Style.space.big * 3) + Maui.Style.iconSizes.small)
@@ -1228,7 +1232,9 @@ Window
                                 currentIndex: -1
                                 enabled: controlCenter.bridge && controlCenter.bridge.controlCenterPowerProfiles.length > 0
                                 model: controlCenter.bridge ? controlCenter.bridge.controlCenterPowerProfiles : []
-                                displayText: currentIndex === -1 ? _fallbackLabel : controlCenter._powerProfileLabel(currentText)
+                                displayText: controlCenter.bridge && controlCenter.bridge.controlCenterPowerProfileAutomatic
+                                    ? _automaticLabel
+                                    : currentIndex === -1 ? _fallbackLabel : controlCenter._powerProfileLabel(currentText)
                                 TextMetrics
                                 {
                                     id: _powerProfileLongestLabelMetrics

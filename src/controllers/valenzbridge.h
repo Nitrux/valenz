@@ -53,6 +53,7 @@ class ValenzBridge : public QObject
     Q_PROPERTY(QString controlCenterVolumeState READ controlCenterVolumeState WRITE setControlCenterVolumeState NOTIFY controlCenterVolumeStateChanged FINAL)
     Q_PROPERTY(QStringList controlCenterPowerProfiles READ controlCenterPowerProfiles WRITE setControlCenterPowerProfiles NOTIFY controlCenterPowerProfilesChanged FINAL)
     Q_PROPERTY(QString controlCenterPowerProfileCurrent READ controlCenterPowerProfileCurrent WRITE setControlCenterPowerProfileCurrent NOTIFY controlCenterPowerProfileCurrentChanged FINAL)
+    Q_PROPERTY(bool controlCenterPowerProfileAutomatic READ controlCenterPowerProfileAutomatic NOTIFY controlCenterPowerProfileAutomaticChanged FINAL)
     Q_PROPERTY(QString controlCenterVolumePercentage READ controlCenterVolumePercentage WRITE setControlCenterVolumePercentage NOTIFY controlCenterVolumePercentageChanged FINAL)
     Q_PROPERTY(bool controlCenterBatteryCharging READ controlCenterBatteryCharging WRITE setControlCenterBatteryCharging NOTIFY controlCenterBatteryChargingChanged FINAL)
     Q_PROPERTY(QString controlCenterBatteryPercentage READ controlCenterBatteryPercentage WRITE setControlCenterBatteryPercentage NOTIFY controlCenterBatteryPercentageChanged FINAL)
@@ -162,6 +163,8 @@ public:
     void setControlCenterPowerProfiles(const QStringList &profiles);
     QString controlCenterPowerProfileCurrent() const;
     void setControlCenterPowerProfileCurrent(const QString &profile);
+    bool controlCenterPowerProfileAutomatic() const;
+    void setControlCenterPowerProfileAutomatic(bool automatic);
     QString controlCenterVolumePercentage() const;
     void setControlCenterVolumePercentage(const QString &value);
     bool controlCenterBatteryCharging() const;
@@ -320,6 +323,7 @@ Q_SIGNALS:
     void controlCenterVolumeStateChanged(const QString &state);
     void controlCenterPowerProfilesChanged(const QStringList &profiles);
     void controlCenterPowerProfileCurrentChanged(const QString &profile);
+    void controlCenterPowerProfileAutomaticChanged(bool automatic);
     void controlCenterVolumePercentageChanged(const QString &value);
     void controlCenterBatteryChargingChanged(bool charging);
     void controlCenterBatteryPercentageChanged(const QString &value);
@@ -458,6 +462,7 @@ private:
     QString m_controlCenterVolumeState;
     QStringList m_controlCenterPowerProfiles;
     QString m_controlCenterPowerProfileCurrent;
+    bool m_controlCenterPowerProfileAutomatic = true;
     QString m_controlCenterVolumePercentage;
     bool m_controlCenterVolumeMuted = false;
     QString m_controlCenterMicrophoneVolumePercentage = QStringLiteral("0%");

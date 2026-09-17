@@ -615,6 +615,20 @@ void ValenzBridge::setControlCenterPowerProfileCurrent(const QString &profile)
 }
 
 
+bool ValenzBridge::controlCenterPowerProfileAutomatic() const
+{
+    return m_controlCenterPowerProfileAutomatic;
+}
+
+void ValenzBridge::setControlCenterPowerProfileAutomatic(bool automatic)
+{
+    if (m_controlCenterPowerProfileAutomatic == automatic)
+        return;
+
+    m_controlCenterPowerProfileAutomatic = automatic;
+    Q_EMIT controlCenterPowerProfileAutomaticChanged(m_controlCenterPowerProfileAutomatic);
+}
+
 QString ValenzBridge::controlCenterVolumePercentage() const
 {
     return m_controlCenterVolumePercentage;

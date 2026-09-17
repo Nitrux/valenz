@@ -12,6 +12,7 @@
 #include <QMetaObject>
 #include <QPointer>
 #include <QProcess>
+#include <QSettings>
 #include <QTimer>
 #include <QThreadPool>
 
@@ -57,8 +58,16 @@ struct ControlCenterRuntimeSnapshot
     bool nightLightEnabled = false;
     bool powerProfileCurrentValid = false;
     QString powerProfileCurrent;
+    bool powerProfileAutomatic = true;
     QStringList powerProfiles;
 };
+
+bool nxPowerdAutomaticMode()
+{
+    const QString configPath = QDir::homePath() + QStringLiteral("/.config/nx-powerd/nx-powerd.conf");
+    const QSettings settings(configPath, QSettings::IniFormat);
+    return settings.value(QStringLiteral("Daemon/enabled"), true).toBool();
+}
 
 struct NetworkTrafficSnapshot
 {
@@ -454,6 +463,7 @@ ControlCenterRuntimeSnapshot collectControlCenterRuntimeSnapshot(const QString &
     snapshot.nightLightAvailable = MauiKitSystem::controlCenterNightLightState(&snapshot.nightLightEnabled);
 
     snapshot.powerProfileCurrentValid = MauiKitSystem::currentPowerProfile(&snapshot.powerProfileCurrent);
+    snapshot.powerProfileAutomatic = nxPowerdAutomaticMode();
     snapshot.powerProfiles = MauiKitSystem::powerProfilesFromPowerProfilesCtl();
 
     return snapshot;
@@ -613,6 +623,8 @@ void ValenzBridge::refreshControlCenterRuntimeState()
 
             if (snapshot.powerProfileCurrentValid)
                 bridge->updateControlCenterPowerProfileCurrentFromSystem(snapshot.powerProfileCurrent);
+
+            bridge->setControlCenterPowerProfileAutomatic(snapshot.powerProfileAutomatic);
 
             if (bridge->m_controlCenterRuntimeRefreshPending)
             {
