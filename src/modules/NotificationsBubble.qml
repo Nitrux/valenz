@@ -221,6 +221,11 @@ Window
         return nonDefault.length > 0 ? nonDefault : values
     }
 
+    function _currentNotificationValues()
+    {
+        return [notificationId, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey, actions, replyPlaceholderText, replySubmitButtonText]
+    }
+
     function showNotification(idValue, sourceNameValue, messageTextValue, timestampTextValue, iconNameValue, urgencyLevelValue, actionTextValue, actionKeyValue, actionsValue, replyPlaceholderTextValue, replySubmitButtonTextValue)
     {
         const critical = Number(urgencyLevelValue) >= 2
@@ -243,12 +248,13 @@ Window
             return
         }
 
-        if (!critical && ((notificationsPopup && notificationsPopup.visible) || (controller && controller.dndEnabled)))
+        if (!critical && controller && controller.dndEnabled)
         {
-            if (visible && notificationId === Number(idValue) && urgencyLevel >= 2)
-                close()
             return
         }
+
+        if (visible && urgencyLevel >= 2 && !critical && notificationId >= 0 && notificationId !== Number(idValue))
+            _pendingCriticalNotifications.unshift(_currentNotificationValues())
 
         notificationId = Number(idValue)
         sourceName = String(sourceNameValue || "").trim()
