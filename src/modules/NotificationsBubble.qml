@@ -350,7 +350,7 @@ Window
             return
 
         if (rootWindow && rootWindow.closeTransientPopups)
-            rootWindow.closeTransientPopups()
+            rootWindow.closeTransientPopups(notificationsBubble)
         aboutToShow()
         _fadeOutPending = false
         _panelOpen = false
@@ -429,8 +429,17 @@ Window
     }
     height: Math.min(_panel.implicitHeight, _availableHeightFromAnchor)
 
+    onHeightChanged:
+    {
+        if (rootWindow && rootWindow._touchNotificationBubbleStackGeometry)
+            rootWindow._touchNotificationBubbleStackGeometry()
+    }
+
     onVisibleChanged:
     {
+        if (rootWindow && rootWindow._touchNotificationBubbleStackGeometry)
+            rootWindow._touchNotificationBubbleStackGeometry()
+
         if (visible)
         {
             opened()
@@ -475,6 +484,7 @@ Window
     y:
     {
         const dep = _geometryRevision
+        const stackRevision = rootWindow ? rootWindow.notificationBubbleStackRevision : 0
         const overlay = notificationsBubble.overlayItem
         if (!overlay)
             return _margin
@@ -492,6 +502,8 @@ Window
         }
 
         const finalY = Math.max(minY, targetY)
+        if (rootWindow && rootWindow.notificationBubbleY)
+            return rootWindow.notificationBubbleY(notificationsBubble, finalY)
         return finalY
     }
 

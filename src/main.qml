@@ -22,6 +22,7 @@ Window
     readonly property color popupSurfaceColor: Qt.alpha(Maui.Theme.backgroundColor, root.popupSurfaceOpacity)
     readonly property int popupSurfaceRadius: Maui.Style.radiusV + 3
     readonly property int popupGap: 3
+    property int notificationBubbleStackRevision: 0
 
     function popupTargetY()
     {
@@ -76,15 +77,52 @@ Window
         _calendarPopup.toggleFromAnchor()
     }
 
-    function closeTransientPopups()
+    function _notificationBubbles()
+    {
+        return [_notificationsBubble, _notificationsBubbleSecondary, _notificationsBubbleTertiary]
+    }
+
+    function _touchNotificationBubbleStackGeometry()
+    {
+        notificationBubbleStackRevision += 1
+    }
+
+    function notificationBubbleY(bubble, targetY)
+    {
+        const stackRevision = notificationBubbleStackRevision
+        let stackedY = targetY
+        const bubbles = _notificationBubbles()
+        for (let index = 0; index < bubbles.length; ++index)
+        {
+            const candidate = bubbles[index]
+            if (candidate === bubble)
+                break
+
+            if (candidate.visible)
+                stackedY += candidate.height + Maui.Style.space.small
+        }
+
+        return stackedY
+    }
+
+    function closeTransientPopups(fromNotificationBubble)
     {
         if (_systemTray && _systemTray.closeTrayMenu)
             _systemTray.closeTrayMenu()
 
-        if (_notificationsBubble.visible && _notificationsBubble.forceClose)
-            _notificationsBubble.forceClose()
-        else if (_notificationsBubble.visible)
-            _notificationsBubble.close()
+        const keepNotificationBubbles = fromNotificationBubble && _notificationBubbles().indexOf(fromNotificationBubble) >= 0
+        if (!keepNotificationBubbles)
+        {
+            const bubbles = _notificationBubbles()
+            for (let index = 0; index < bubbles.length; ++index)
+            {
+                const bubble = bubbles[index]
+                if (bubble.visible && bubble.forceClose)
+                    bubble.forceClose()
+                else if (bubble.visible)
+                    bubble.close()
+            }
+        }
 
         if (_calendarPopup.visible && _calendarPopup.forceClose)
             _calendarPopup.forceClose()
@@ -110,6 +148,57 @@ Window
             _screenCapturePopup.forceClose()
         else if (_screenCapturePopup.visible)
             _screenCapturePopup.close()
+    }
+
+    function _showNotificationBubble(id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey, actions, replyPlaceholderText, replySubmitButtonText)
+    {
+        const values = [id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey, actions, replyPlaceholderText, replySubmitButtonText]
+        const notificationId = Number(id)
+        const critical = Number(urgencyLevel) >= 2
+        const bubbles = _notificationBubbles()
+
+        for (let index = 0; index < bubbles.length; ++index)
+        {
+            const bubble = bubbles[index]
+            if (bubble.notificationId === notificationId && bubble.visible)
+            {
+                bubble.showNotification.apply(bubble, values)
+                return
+            }
+        }
+
+        let target = null
+        for (let index = 0; index < bubbles.length; ++index)
+        {
+            const bubble = bubbles[index]
+            if (!bubble.visible && !bubble._fadeOutPending && bubble._pendingCriticalNotifications.length === 0)
+            {
+                target = bubble
+                break
+            }
+        }
+
+        if (!target && critical)
+        {
+            for (let index = 0; index < bubbles.length; ++index)
+            {
+                const bubble = bubbles[index]
+                if (bubble.urgencyLevel < 2)
+                {
+                    target = bubble
+                    break
+                }
+            }
+        }
+
+        if (!target)
+        {
+            if (critical)
+                bubbles[0].showNotification.apply(bubbles[0], values)
+            return
+        }
+
+        target.showNotification.apply(target, values)
     }
 
     function _pointInsideItem(item, x, y)
@@ -352,6 +441,28 @@ Window
         useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
     }
 
+    NotificationsBubble
+    {
+        id: _notificationsBubbleSecondary
+        anchorButton: _notificationsCenterButton.popupAnchorMarker
+        rootWindow: root
+        overlayItem: root.contentItem
+        controller: notificationsController
+        notificationsPopup: _notificationsCenterPopup
+        useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
+    }
+
+    NotificationsBubble
+    {
+        id: _notificationsBubbleTertiary
+        anchorButton: _notificationsCenterButton.popupAnchorMarker
+        rootWindow: root
+        overlayItem: root.contentItem
+        controller: notificationsController
+        notificationsPopup: _notificationsCenterPopup
+        useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
+    }
+
     ScreenCapturePopup
     {
         id: _screenCapturePopup
@@ -390,7 +501,7 @@ Window
 
         function onTransientNotification(id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey, actions, replyPlaceholderText, replySubmitButtonText)
         {
-            _notificationsBubble.showNotification(id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey, actions, replyPlaceholderText, replySubmitButtonText)
+            _showNotificationBubble(id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey, actions, replyPlaceholderText, replySubmitButtonText)
         }
     }
 
@@ -587,7 +698,7 @@ Window
                     MouseArea
                     {
                         anchors.fill: parent
-                        enabled: _controlCenterPopup.visible || _notificationsCenterPopup.visible || _notificationsBubble.visible || _calendarPopup.visible || _mprisSourcesPopup.visible || _screenCapturePopup.visible
+                        enabled: _controlCenterPopup.visible || _notificationsCenterPopup.visible || _notificationsBubble.visible || _notificationsBubbleSecondary.visible || _notificationsBubbleTertiary.visible || _calendarPopup.visible || _mprisSourcesPopup.visible || _screenCapturePopup.visible
                         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                         hoverEnabled: false
                         propagateComposedEvents: true
