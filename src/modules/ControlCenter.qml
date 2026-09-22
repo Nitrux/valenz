@@ -1154,6 +1154,7 @@ Window
                         }
                         Layout.fillWidth: true
                         Layout.columnSpan: 2
+                        enabled: controlCenter.bridge ? !controlCenter.bridge.controlCenterPowerProfileAutomatic : false
                         flat: false
                         clip: true
                         padding: controlCenter._cardPadding
