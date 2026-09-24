@@ -52,14 +52,17 @@ Window
             return _margin
 
         let targetY = Math.max(Maui.Style.toolBarHeightAlt, Maui.Style.units.gridUnit * 2) + _margin
-        const popupTargetY = rootWindow && rootWindow.popupTargetY ? rootWindow.popupTargetY() : null
-        if (popupTargetY !== null)
-            targetY = popupTargetY
-        else if (anchorButton)
+        if (anchorButton)
         {
             const p = _anchorPointInScreen(0, 0)
             if (p)
                 targetY = p.y + Maui.Style.space.small + _dropOffset
+        }
+        else
+        {
+            const popupTargetY = rootWindow && rootWindow.popupTargetY ? rootWindow.popupTargetY() : null
+            if (popupTargetY !== null)
+                targetY = popupTargetY
         }
 
         return targetY
@@ -79,14 +82,17 @@ Window
 
         const minY = _margin
         let targetY = Math.max(Maui.Style.toolBarHeightAlt, Maui.Style.units.gridUnit * 2) + _margin
-        const popupTargetY = rootWindow && rootWindow.popupTargetY ? rootWindow.popupTargetY() : null
-        if (popupTargetY !== null)
-            targetY = popupTargetY
-        else if (anchorButton)
+        if (anchorButton)
         {
             const p = _anchorPointInScreen(0, 0)
             if (p)
                 targetY = p.y + Maui.Style.space.small + _dropOffset
+        }
+        else
+        {
+            const popupTargetY = rootWindow && rootWindow.popupTargetY ? rootWindow.popupTargetY() : null
+            if (popupTargetY !== null)
+                targetY = popupTargetY
         }
 
         const startY = Math.max(minY, targetY)
@@ -491,20 +497,32 @@ Window
 
         const minY = _margin
         let targetY = Math.max(Maui.Style.toolBarHeightAlt, Maui.Style.units.gridUnit * 2) + _margin
-        const popupTargetY = rootWindow && rootWindow.popupTargetY ? rootWindow.popupTargetY() : null
-        if (popupTargetY !== null)
-            targetY = popupTargetY
-        else if (anchorButton)
+        if (anchorButton)
         {
             const p = _anchorPointInScreen(0, 0)
             if (p)
                 targetY = p.y + Maui.Style.space.small + _dropOffset
+        }
+        else
+        {
+            const popupTargetY = rootWindow && rootWindow.popupTargetY ? rootWindow.popupTargetY() : null
+            if (popupTargetY !== null)
+                targetY = popupTargetY
         }
 
         const finalY = Math.max(minY, targetY)
         if (rootWindow && rootWindow.notificationBubbleY)
             return rootWindow.notificationBubbleY(notificationsBubble, finalY)
         return finalY
+    }
+
+    Behavior on y
+    {
+        NumberAnimation
+        {
+            duration: notificationsBubble._fadeOutDurationMs
+            easing.type: Easing.OutCubic
+        }
     }
 
     Timer

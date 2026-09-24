@@ -90,19 +90,19 @@ Window
     function notificationBubbleY(bubble, targetY)
     {
         const stackRevision = notificationBubbleStackRevision
-        let stackedY = targetY
         const bubbles = _notificationBubbles()
-        for (let index = 0; index < bubbles.length; ++index)
-        {
-            const candidate = bubbles[index]
-            if (candidate === bubble)
-                break
+        const bubbleIndex = bubbles.indexOf(bubble)
+        if (bubbleIndex <= 0)
+            return targetY
 
-            if (candidate.visible)
-                stackedY += candidate.height + Maui.Style.space.small
+        for (let index = bubbleIndex - 1; index >= 0; --index)
+        {
+            const previousBubble = bubbles[index]
+            if (previousBubble.visible)
+                return previousBubble.y + previousBubble.height + Maui.Style.space.small
         }
 
-        return stackedY
+        return targetY
     }
 
     function closeTransientPopups(fromNotificationBubble)
