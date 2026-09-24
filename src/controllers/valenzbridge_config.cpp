@@ -6,6 +6,9 @@
 #include "mauikit_system_control.h"
 
 #include <QCryptographicHash>
+#include <QGuiApplication>
+#include <QPalette>
+#include <KColorScheme>
 #include <KConfig>
 #include <KConfigGroup>
 #include <KSharedConfig>
@@ -26,6 +29,14 @@ namespace
 QString kdeGlobalsPath()
 {
     return QDir::home().filePath(QStringLiteral(".config/kdeglobals"));
+}
+
+void refreshApplicationPalette(const KSharedConfigPtr &settings)
+{
+    // MauiKit derives Maui.Theme from QGuiApplication::palette() and reacts to its change event.
+    const QPalette palette = KColorScheme::createApplicationPalette(settings);
+    if (QGuiApplication::palette() != palette)
+        QGuiApplication::setPalette(palette);
 }
 
 QString colorSchemeFilePath(const QString &scheme)
@@ -253,6 +264,8 @@ void ValenzBridge::refreshSharedSettingsFromFile()
 {
     const QString path = kdeGlobalsPath();
     const KSharedConfigPtr settings = KSharedConfig::openConfig(path, KConfig::SimpleConfig);
+    settings->reparseConfiguration();
+    refreshApplicationPalette(settings);
     const KConfigGroup generalGroup(settings, QStringLiteral("General"));
     QString scheme = generalGroup.readEntry(QStringLiteral("ColorScheme"), QString());
     if (scheme.isEmpty())

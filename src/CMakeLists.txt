@@ -62,6 +62,7 @@ target_link_libraries(${PROJECT_NAME}
     MauiKitSystem::Control
     KF6::BluezQt
     KF6::ConfigCore
+    KF6::ColorScheme
     KF6::I18n
     LayerShellQt::Interface
     Qt6::Core
