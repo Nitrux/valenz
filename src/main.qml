@@ -100,7 +100,7 @@ Window
         for (let index = bubbleIndex - 1; index >= 0; --index)
         {
             const previousBubble = bubbles[index]
-            if (previousBubble.visible)
+            if (previousBubble.visible && !previousBubble._fadeOutPending)
                 return previousBubble.y + previousBubble.height + Maui.Style.space.small
         }
 

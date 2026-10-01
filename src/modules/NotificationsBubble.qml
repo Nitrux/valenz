@@ -377,6 +377,8 @@ Window
             return
 
         _fadeOutPending = true
+        if (rootWindow && rootWindow._touchNotificationBubbleStackGeometry)
+            rootWindow._touchNotificationBubbleStackGeometry()
         _panelOpen = false
         _fadeOutTimer.restart()
     }
