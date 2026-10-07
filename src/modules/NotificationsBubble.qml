@@ -43,6 +43,7 @@ Window
     readonly property int _dropOffset: 6
     readonly property int _panelInsetX: 6
     readonly property int _panelInsetY: 6
+    readonly property bool _anchorAvailable: anchorButton && (!rootWindow || rootWindow.visible)
     readonly property color _panelColor: notificationsBubble.rootWindow ? notificationsBubble.rootWindow.popupSurfaceColor : Maui.Theme.backgroundColor
     readonly property int _preferredPanelWidth: Maui.Handy.isMobile ? _baseUnit * 16 : _baseUnit * 20
     readonly property real _targetY:
@@ -52,13 +53,13 @@ Window
             return _margin
 
         let targetY = Math.max(Maui.Style.toolBarHeightAlt, Maui.Style.units.gridUnit * 2) + _margin
-        if (anchorButton)
+        if (_anchorAvailable)
         {
             const p = _anchorPointInScreen(0, 0)
             if (p)
                 targetY = p.y + Maui.Style.space.small + _dropOffset
         }
-        else
+        else if (!rootWindow || rootWindow.visible)
         {
             const popupTargetY = rootWindow && rootWindow.popupTargetY ? rootWindow.popupTargetY() : null
             if (popupTargetY !== null)
@@ -82,13 +83,13 @@ Window
 
         const minY = _margin
         let targetY = Math.max(Maui.Style.toolBarHeightAlt, Maui.Style.units.gridUnit * 2) + _margin
-        if (anchorButton)
+        if (_anchorAvailable)
         {
             const p = _anchorPointInScreen(0, 0)
             if (p)
                 targetY = p.y + Maui.Style.space.small + _dropOffset
         }
-        else
+        else if (!rootWindow || rootWindow.visible)
         {
             const popupTargetY = rootWindow && rootWindow.popupTargetY ? rootWindow.popupTargetY() : null
             if (popupTargetY !== null)
@@ -478,7 +479,7 @@ Window
         const maxX = Math.max(minX, screenGeometry.width - width - _margin)
         let targetX = maxX
 
-        if (anchorButton)
+        if (_anchorAvailable)
         {
             const p = _anchorPointInScreen(0, 0)
             if (p)
@@ -499,13 +500,13 @@ Window
 
         const minY = _margin
         let targetY = Math.max(Maui.Style.toolBarHeightAlt, Maui.Style.units.gridUnit * 2) + _margin
-        if (anchorButton)
+        if (_anchorAvailable)
         {
             const p = _anchorPointInScreen(0, 0)
             if (p)
                 targetY = p.y + Maui.Style.space.small + _dropOffset
         }
-        else
+        else if (!rootWindow || rootWindow.visible)
         {
             const popupTargetY = rootWindow && rootWindow.popupTargetY ? rootWindow.popupTargetY() : null
             if (popupTargetY !== null)
