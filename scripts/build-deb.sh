@@ -32,7 +32,7 @@ Priority: optional
 Architecture: ${TARGET_ARCH}
 Maintainer: uri_herrera@nxos.org
 Provides: valenz
-Depends: fonts-nitrux-desktop,hyprland,layer-shell-qt,v4l-utils,libkf6bluezqt6,libkf6colorscheme6,libqt6svg6,mauikit (>= 4.0.5),mauikit-calendar (>= 4.0.5),mauikit-system (>= 4.0.5),qml6-module-org-kde-bluezqt,toma
+Depends: fonts-nitrux-desktop,hyprland,layer-shell-qt,v4l-utils,libkf6bluezqt6,libkf6colorscheme6,libqt6svg6,mauikit (>= 4.0.5),mauikit-calendar (>= 4.0.5),mauikit-system (>= 4.0.5),qml6-module-org-kde-bluezqt,qml6-module-qtquick,qml6-module-qtquick-controls,qml6-module-qtquick-layouts,qml6-module-qtquick-effects,qml6-module-qtquick-window,toma
 Description: valenz
  valenz
 CONTROL
