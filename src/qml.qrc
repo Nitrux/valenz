@@ -1,0 +1,23 @@
+<RCC>
+    <qresource prefix="/app/valenz">
+        <file>main.qml</file>
+        <file>modules/ControlCenter.qml</file>
+        <file>modules/WorkspaceBadge.qml</file>
+        <file>modules/WorkspaceNavigation.qml</file>
+        <file>modules/MprisControl.qml</file>
+        <file>modules/MprisSourcesPopup.qml</file>
+        <file>modules/WindowTitle.qml</file>
+        <file>modules/WeatherClock.qml</file>
+        <file>modules/CalendarPopup.qml</file>
+        <file>modules/SystemTray.qml</file>
+        <file>modules/ScreenCapturePopup.qml</file>
+        <file>modules/ScreenCaptureButton.qml</file>
+        <file>modules/VicinaeButton.qml</file>
+        <file>modules/ControlCenterButton.qml</file>
+        <file>modules/NotificationsCenter.qml</file>
+        <file>modules/NotificationsCenterButton.qml</file>
+        <file>modules/NotificationsBubble.qml</file>
+        <file>assets/cover_32x32.svg</file>
+        <file>assets/cover_64x64.svg</file>
+    </qresource>
+</RCC>

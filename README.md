@@ -20,9 +20,9 @@ Valenz is intended to sit in the desktop shell layer above the compositor, combi
 ### Runtime Requirements
 
 ```
-mauikit (>= 4.0.4)
-mauikit-system (>= 4.0.4)
-mauikit-calendar (>= 4.0.4)
+mauikit (>= 4.0.5)
+mauikit-system (>= 4.0.5)
+mauikit-calendar (>= 4.0.5)
 hyprland (>= 0.55.1)
 qt6 (>= 6.9.2)
 layer-shell-qt (>= 6.6.4)

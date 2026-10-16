@@ -38,6 +38,27 @@ Window
         return null
     }
     visible: !valenzBridge || !valenzBridge.focusedWindowFullscreen
+    onVisibleChanged:
+    {
+        console.log("[ValenzDebug] root visibility",
+                    "visible=", visible,
+                    "fullscreen=", valenzBridge ? valenzBridge.focusedWindowFullscreen : false,
+                    "geometry=", [x, y, width, height],
+                    "screen=", screen ? screen.name : "")
+    }
+
+    Connections
+    {
+        target: valenzBridge
+
+        function onFocusedWindowFullscreenChanged(fullscreen)
+        {
+            console.log("[ValenzDebug] fullscreen property",
+                        "fullscreen=", fullscreen,
+                        "rootVisible=", root.visible,
+                        "geometry=", [root.x, root.y, root.width, root.height])
+        }
+    }
     readonly property bool useDirectionalSpacing: barLayerSpacingTop > 0 || barLayerSpacingBottom > 0 || barLayerSpacingLeft > 0 || barLayerSpacingRight > 0
     width:
     {
@@ -158,6 +179,14 @@ Window
         const notificationId = Number(id)
         const critical = Number(urgencyLevel) >= 2
         const bubbles = _notificationBubbles()
+
+        console.log("[ValenzDebug] notification dispatch",
+                    "id=", notificationId,
+                    "urgency=", urgencyLevel,
+                    "critical=", critical,
+                    "rootVisible=", root.visible,
+                    "fullscreen=", valenzBridge ? valenzBridge.focusedWindowFullscreen : false,
+                    "rootGeometry=", [root.x, root.y, root.width, root.height])
 
         for (let index = 0; index < bubbles.length; ++index)
         {
@@ -503,6 +532,10 @@ Window
 
         function onTransientNotification(id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey, actions, replyPlaceholderText, replySubmitButtonText)
         {
+            console.log("[ValenzDebug] notification signal",
+                        "id=", id,
+                        "source=", sourceName,
+                        "urgency=", urgencyLevel)
             _showNotificationBubble(id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey, actions, replyPlaceholderText, replySubmitButtonText)
         }
     }

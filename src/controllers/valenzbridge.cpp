@@ -107,6 +107,7 @@ void ValenzBridge::launchToma(const QString &captureType, const QString &mode)
     {
         auto *process = new QProcess(this);
         process->setProcessChannelMode(QProcess::MergedChannels);
+        process->setStandardInputFile(QProcess::nullDevice());
 
         connect(process, &QProcess::readyReadStandardOutput, this, [this, process] {
             QByteArray output = process->property("tomaOutput").toByteArray();

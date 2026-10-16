@@ -140,18 +140,56 @@ Window
         _geometryRevision += 1
     }
 
-    function _anchorPointInScreen(offsetX, offsetY)
+    function _anchorPointInScreen(offsetX, offsetY, logResult)
     {
-        if (!anchorButton || !anchorButton.mapToGlobal)
+        if (!anchorButton)
         {
+            if (logResult)
+                console.log("[ValenzDebug] bubble anchor mapping=unavailable reason=no-anchor")
+            return null
+        }
+
+        if (rootWindow && rootWindow.contentItem && anchorButton.mapToItem
+                && rootWindow.screen && rootWindow.screen.geometry)
+        {
+            const localPoint = anchorButton.mapToItem(rootWindow.contentItem, offsetX, offsetY)
+            const screenGeometry = rootWindow.screen.geometry
+            const leftMargin = Number(rootWindow.barLayerSpacingLeft || 0)
+            const topMargin = Number(rootWindow.barLayerSpacingTop || 0)
+            if (localPoint && isFinite(localPoint.x) && isFinite(localPoint.y)
+                    && screenGeometry.width > 0 && screenGeometry.height > 0)
+            {
+                const mappedPoint = Qt.point(screenGeometry.x + leftMargin + localPoint.x,
+                                             screenGeometry.y + topMargin + localPoint.y)
+                if (logResult)
+                    console.log("[ValenzDebug] bubble anchor mapping=logical",
+                                "local=", localPoint.x, localPoint.y,
+                                "screen=", screenGeometry.x, screenGeometry.y,
+                                "margins=", leftMargin, topMargin,
+                                "result=", mappedPoint.x, mappedPoint.y)
+                return mappedPoint
+            }
+        }
+
+        if (!anchorButton.mapToGlobal)
+        {
+            if (logResult)
+                console.log("[ValenzDebug] bubble anchor mapping=unavailable reason=no-mapToGlobal")
             return null
         }
 
         const globalPoint = anchorButton.mapToGlobal(offsetX, offsetY)
         if (globalPoint && isFinite(globalPoint.x) && isFinite(globalPoint.y))
         {
+            if (logResult)
+                console.log("[ValenzDebug] bubble anchor mapping=mapToGlobal",
+                            "result=", globalPoint.x, globalPoint.y)
             return globalPoint
         }
+
+        if (logResult)
+            console.log("[ValenzDebug] bubble anchor mapping=unavailable reason=invalid-point")
+
         return null
     }
 
@@ -363,7 +401,6 @@ Window
         _panelOpen = false
         visible = true
         _deferredGeometryRefreshTimer.restart()
-        requestActivate()
         Qt.callLater(function()
         {
             if (visible)
@@ -397,6 +434,35 @@ Window
 
     function _logPopupGeometry(reason)
     {
+        const screen = rootWindow ? rootWindow.screen : null
+        const screenGeometry = screen && screen.geometry ? screen.geometry : null
+        const availableGeometry = screen && screen.availableGeometry ? screen.availableGeometry : null
+        const anchorPoint = _anchorPointInScreen(0, 0, true)
+        const popupTargetY = rootWindow && rootWindow.popupTargetY ? rootWindow.popupTargetY() : null
+        const rootGeometry = rootWindow
+                ? [rootWindow.x, rootWindow.y, rootWindow.width, rootWindow.height]
+                : []
+        const bubbleGeometry = [x, y, width, height]
+        const anchorGeometry = anchorButton
+                ? [anchorButton.x, anchorButton.y, anchorButton.width, anchorButton.height]
+                : []
+
+        console.log("[ValenzDebug] bubble geometry",
+                    "reason=", reason,
+                    "id=", notificationId,
+                    "visible=", visible,
+                    "rootVisible=", rootWindow ? rootWindow.visible : false,
+                    "fullscreen=", valenzBridge ? valenzBridge.focusedWindowFullscreen : false,
+                    "anchorAvailable=", _anchorAvailable,
+                    "anchorPoint=", anchorPoint ? [anchorPoint.x, anchorPoint.y] : [],
+                    "anchorItem=", anchorGeometry,
+                    "bubble=", bubbleGeometry,
+                    "root=", rootGeometry,
+                    "screen=", screenGeometry ? [screenGeometry.x, screenGeometry.y, screenGeometry.width, screenGeometry.height] : [],
+                    "available=", availableGeometry ? [availableGeometry.x, availableGeometry.y, availableGeometry.width, availableGeometry.height] : [],
+                    "targetY=", _targetY,
+                    "popupTargetY=", popupTargetY,
+                    "stackRevision=", rootWindow ? rootWindow.notificationBubbleStackRevision : -1)
     }
 
     Timer

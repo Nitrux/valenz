@@ -38,18 +38,6 @@ Q_DECLARE_METATYPE(DBusMenuLayoutItem)
 namespace
 {
 
-QDBusArgument &operator<<(QDBusArgument &argument, const DBusMenuLayoutItem &obj)
-{
-    argument.beginStructure();
-    argument << obj.id << obj.properties;
-    argument.beginArray(qMetaTypeId<QDBusVariant>());
-    for (const DBusMenuLayoutItem &child : obj.children)
-        argument << QDBusVariant(QVariant::fromValue(child));
-    argument.endArray();
-    argument.endStructure();
-    return argument;
-}
-
 constexpr int kMaximumMenuDepth = 8;
 constexpr int kMaximumMenuNodes = 256;
 

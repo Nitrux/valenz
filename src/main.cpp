@@ -33,7 +33,7 @@
 #include <LayerShellQt/Window>
 
 #include <KAboutData>
-#include <KLocalizedContext>
+#include <KLocalizedQmlContext>
 #include <KLocalizedString>
 
 #include <MauiKit4/Core/mauiapp.h>
@@ -138,6 +138,19 @@ static void configureLayerShellWindow(QWindow *window, bool wantsActiveScreen)
     layerShellWindow->setAnchors(anchors);
     layerShellWindow->setDesiredSize(QSize(window->width(), window->height()));
     layerShellWindow->setMargins(QMargins(appliedLeft, appliedTop, appliedRight, 0));
+
+    qInfo().noquote() << QStringLiteral("[ValenzDebug] layer configure visible=%1 size=%2x%3 position=%4,%5 screen=%6 activeScreen=%7 margins=%8,%9,%10,0 exclusiveZone=%11")
+                            .arg(window->isVisible() ? QStringLiteral("true") : QStringLiteral("false"))
+                            .arg(window->width())
+                            .arg(window->height())
+                            .arg(window->x())
+                            .arg(window->y())
+                            .arg(window->screen() ? window->screen()->name() : QStringLiteral("<none>"))
+                            .arg(wantsActiveScreen ? QStringLiteral("true") : QStringLiteral("false"))
+                            .arg(appliedLeft)
+                            .arg(appliedTop)
+                            .arg(appliedRight)
+                            .arg(window->isVisible() ? (exclusiveZone > 0 ? exclusiveZone : window->height()) : 0);
 }
 
 static QString desktopFileNameForPortal()
@@ -225,7 +238,7 @@ int main(int argc, char *argv[])
     MauiApp::instance()->setIconName(QStringLiteral("preferences-system-windows"));
 
     QQmlApplicationEngine engine;
-    engine.rootContext()->setContextObject(new KLocalizedContext(&engine));
+    engine.rootContext()->setContextObject(new KLocalizedQmlContext(&engine));
     LayerShellPopupHelper layerShellPopupHelper;
     engine.rootContext()->setContextProperty(QStringLiteral("layerShellHelper"), &layerShellPopupHelper);
     LegacyTrayProxyHelper legacyTrayProxyHelper;
