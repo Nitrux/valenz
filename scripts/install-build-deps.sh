@@ -42,6 +42,7 @@ $APT_COMMAND install -y --no-install-recommends \
     gnupg2 \
     libkf6bluezqt-dev \
     libkf6colorscheme-dev \
+    libkf6calendarcore-dev \
     libkf6coreaddons-dev \
     libkf6i18n-dev \
     libkf6notifications-dev \
