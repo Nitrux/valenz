@@ -6,7 +6,7 @@
 
 # -- Exit on errors.
 
-set -e
+set -euo pipefail
 
 
 # -- Check if running as root.
@@ -26,14 +26,14 @@ $APT_COMMAND install -y --no-install-recommends \
     automake \
     autotools-dev \
     build-essential \
+    cmake \
+    extra-cmake-modules \
     qt6-multimedia-dev \
     libxkbcommon-dev \
     libxcb-shape0-dev \
     libxcb-icccm4-dev \
     libkf6config-dev \
     clang \
-    meson \
-    ninja-build \
     pkg-config \
     curl \
     devscripts \
