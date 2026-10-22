@@ -139,7 +139,7 @@ static void configureLayerShellWindow(QWindow *window, bool wantsActiveScreen)
     layerShellWindow->setDesiredSize(QSize(window->width(), window->height()));
     layerShellWindow->setMargins(QMargins(appliedLeft, appliedTop, appliedRight, 0));
 
-    qInfo().noquote() << QStringLiteral("[ValenzDebug] layer configure visible=%1 size=%2x%3 position=%4,%5 screen=%6 activeScreen=%7 margins=%8,%9,%10,0 exclusiveZone=%11")
+    qInfo().noquote() << QStringLiteral("[ValenzDebug] layer visible=%1 size=%2x%3 pos=%4,%5 screen=%6 active=%7 margins=%8,%9,%10 zone=%11")
                             .arg(window->isVisible() ? QStringLiteral("true") : QStringLiteral("false"))
                             .arg(window->width())
                             .arg(window->height())

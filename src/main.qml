@@ -40,11 +40,7 @@ Window
     visible: !valenzBridge || !valenzBridge.focusedWindowFullscreen
     onVisibleChanged:
     {
-        console.log("[ValenzDebug] root visibility",
-                    "visible=", visible,
-                    "fullscreen=", valenzBridge ? valenzBridge.focusedWindowFullscreen : false,
-                    "geometry=", [x, y, width, height],
-                    "screen=", screen ? screen.name : "")
+        console.log("[ValenzDebug] root visible=", visible, "fullscreen=", valenzBridge ? valenzBridge.focusedWindowFullscreen : false)
     }
 
     Connections
@@ -53,10 +49,7 @@ Window
 
         function onFocusedWindowFullscreenChanged(fullscreen)
         {
-            console.log("[ValenzDebug] fullscreen property",
-                        "fullscreen=", fullscreen,
-                        "rootVisible=", root.visible,
-                        "geometry=", [root.x, root.y, root.width, root.height])
+            console.log("[ValenzDebug] fullscreen=", fullscreen, "rootVisible=", root.visible)
         }
     }
     readonly property bool useDirectionalSpacing: barLayerSpacingTop > 0 || barLayerSpacingBottom > 0 || barLayerSpacingLeft > 0 || barLayerSpacingRight > 0
@@ -118,14 +111,65 @@ Window
         if (bubbleIndex <= 0)
             return targetY
 
-        for (let index = bubbleIndex - 1; index >= 0; --index)
+        let stackedY = targetY
+        for (let index = 0; index < bubbleIndex; ++index)
         {
             const previousBubble = bubbles[index]
             if (previousBubble.visible && !previousBubble._fadeOutPending)
-                return previousBubble.y + previousBubble.height + Maui.Style.space.small
+            {
+                const previousTargetY = index === 0
+                        ? targetY
+                        : notificationBubbleY(previousBubble, targetY)
+                stackedY = previousTargetY + previousBubble.height + Maui.Style.space.small
+            }
         }
 
-        return targetY
+        return stackedY
+    }
+
+    function _notificationBubbleMarkers()
+    {
+        return [_notificationsBubbleMarker, _notificationsBubbleSecondaryMarker, _notificationsBubbleTertiaryMarker]
+    }
+
+    function _notificationBubbleAnchorPointInContent()
+    {
+        const anchor = _notificationsCenterButton ? _notificationsCenterButton.popupAnchorMarker : null
+        if (!anchor || !root.contentItem || !anchor.mapToItem)
+            return null
+
+        const point = anchor.mapToItem(root.contentItem, 0, 0)
+        if (!point || !isFinite(point.x) || !isFinite(point.y))
+            return null
+
+        return point
+    }
+
+    function notificationBubbleMarkerX()
+    {
+        const stackRevision = notificationBubbleStackRevision
+        const point = _notificationBubbleAnchorPointInContent()
+        return point ? point.x : 0
+    }
+
+    function notificationBubbleMarkerY(index)
+    {
+        const stackRevision = notificationBubbleStackRevision
+        const point = _notificationBubbleAnchorPointInContent()
+        if (!point)
+            return 0
+
+        const bubbles = _notificationBubbles()
+        const markers = _notificationBubbleMarkers()
+        let markerY = point.y + Maui.Style.space.small + _notificationsBubble._dropOffset
+        for (let markerIndex = 0; markerIndex < index; ++markerIndex)
+        {
+            const bubble = bubbles[markerIndex]
+            if ((bubble.visible || bubble._openPending) && !bubble._fadeOutPending)
+                markerY = markers[markerIndex].y + bubble.stackHeight + Maui.Style.space.small
+        }
+
+        return markerY
     }
 
     function closeTransientPopups(fromNotificationBubble)
@@ -180,13 +224,7 @@ Window
         const critical = Number(urgencyLevel) >= 2
         const bubbles = _notificationBubbles()
 
-        console.log("[ValenzDebug] notification dispatch",
-                    "id=", notificationId,
-                    "urgency=", urgencyLevel,
-                    "critical=", critical,
-                    "rootVisible=", root.visible,
-                    "fullscreen=", valenzBridge ? valenzBridge.focusedWindowFullscreen : false,
-                    "rootGeometry=", [root.x, root.y, root.width, root.height])
+        console.log("[ValenzDebug] dispatch id=", notificationId, "urgency=", urgencyLevel, "critical=", critical)
 
         for (let index = 0; index < bubbles.length; ++index)
         {
@@ -202,7 +240,7 @@ Window
         for (let index = 0; index < bubbles.length; ++index)
         {
             const bubble = bubbles[index]
-            if (!bubble.visible && !bubble._fadeOutPending && bubble._pendingCriticalNotifications.length === 0)
+            if (!bubble.visible && !bubble._openPending && !bubble._fadeOutPending && bubble._pendingCriticalNotifications.length === 0)
             {
                 target = bubble
                 break
@@ -214,7 +252,7 @@ Window
             for (let index = 0; index < bubbles.length; ++index)
             {
                 const bubble = bubbles[index]
-                if (bubble.urgencyLevel < 2)
+                if (!bubble._openPending && bubble.urgencyLevel < 2)
                 {
                     target = bubble
                     break
@@ -461,10 +499,48 @@ Window
         useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
     }
 
+    Item
+    {
+        id: _notificationsBubbleMarker
+        property int bubbleIndex: 0
+        x: root.notificationBubbleMarkerX()
+        y: root.notificationBubbleMarkerY(bubbleIndex)
+        opacity: 0
+    }
+
+    Item
+    {
+        id: _notificationsBubbleSecondaryMarker
+        property int bubbleIndex: 1
+        x: root.notificationBubbleMarkerX()
+        y: root.notificationBubbleMarkerY(bubbleIndex)
+        opacity: 0
+    }
+
+    Item
+    {
+        id: _notificationsBubbleTertiaryMarker
+        property int bubbleIndex: 2
+        x: root.notificationBubbleMarkerX()
+        y: root.notificationBubbleMarkerY(bubbleIndex)
+        opacity: 0
+    }
+
+    Connections
+    {
+        target: _notificationsCenterButton.popupAnchorMarker
+
+        function onXChanged() { root._touchNotificationBubbleStackGeometry() }
+        function onYChanged() { root._touchNotificationBubbleStackGeometry() }
+        function onWidthChanged() { root._touchNotificationBubbleStackGeometry() }
+        function onHeightChanged() { root._touchNotificationBubbleStackGeometry() }
+    }
+
     NotificationsBubble
     {
         id: _notificationsBubble
-        anchorButton: _notificationsCenterButton.popupAnchorMarker
+        anchorButton: _notificationsBubbleMarker
+        anchorIsBubbleMarker: true
         rootWindow: root
         overlayItem: root.contentItem
         controller: notificationsController
@@ -475,7 +551,8 @@ Window
     NotificationsBubble
     {
         id: _notificationsBubbleSecondary
-        anchorButton: _notificationsCenterButton.popupAnchorMarker
+        anchorButton: _notificationsBubbleSecondaryMarker
+        anchorIsBubbleMarker: true
         rootWindow: root
         overlayItem: root.contentItem
         controller: notificationsController
@@ -486,7 +563,8 @@ Window
     NotificationsBubble
     {
         id: _notificationsBubbleTertiary
-        anchorButton: _notificationsCenterButton.popupAnchorMarker
+        anchorButton: _notificationsBubbleTertiaryMarker
+        anchorIsBubbleMarker: true
         rootWindow: root
         overlayItem: root.contentItem
         controller: notificationsController
@@ -532,10 +610,7 @@ Window
 
         function onTransientNotification(id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey, actions, replyPlaceholderText, replySubmitButtonText)
         {
-            console.log("[ValenzDebug] notification signal",
-                        "id=", id,
-                        "source=", sourceName,
-                        "urgency=", urgencyLevel)
+            console.log("[ValenzDebug] notification id=", id, "source=", sourceName, "urgency=", urgencyLevel)
             _showNotificationBubble(id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey, actions, replyPlaceholderText, replySubmitButtonText)
         }
     }

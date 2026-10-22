@@ -237,7 +237,7 @@ bool ValenzBridge::refreshFocusedWindowState()
     if (fullscreenInternal != m_focusedWindowFullscreenInternal
             || fullscreenClient != m_focusedWindowFullscreenClient)
     {
-        qInfo().noquote() << QStringLiteral("[ValenzDebug] fullscreen state internal=%1 client=%2 effective=%3")
+        qInfo().noquote() << QStringLiteral("[ValenzDebug] fullscreen internal=%1 client=%2 effective=%3")
                                 .arg(fullscreenInternal)
                                 .arg(fullscreenClient)
                                 .arg((fullscreenInternal & kFullscreenModeFullscreen) != 0 ? QStringLiteral("true") : QStringLiteral("false"));
@@ -393,7 +393,7 @@ void ValenzBridge::handleHyprlandEventLine(const QString &line)
     const QString eventName = line.left(separatorIndex).trimmed();
 
     if (isFocusedWindowRelatedHyprlandEvent(eventName))
-        qInfo().noquote() << QStringLiteral("[ValenzDebug] Hyprland focused-window event=%1").arg(eventName);
+        qInfo().noquote() << QStringLiteral("[ValenzDebug] focus event=%1").arg(eventName);
 
     if (isWorkspaceRelatedHyprlandEvent(eventName))
         scheduleWorkspaceStateRefresh(50);

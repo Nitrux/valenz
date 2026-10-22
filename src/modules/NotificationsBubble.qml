@@ -35,6 +35,11 @@ Window
     property int _geometryRevision: 0
     property bool _fadeOutPending: false
     property bool _panelOpen: false
+    property bool _openPending: false
+    property bool anchorIsBubbleMarker: false
+    property bool _positionTraceActive: false
+    property real _positionTraceLastX: 0
+    property real _positionTraceLastY: 0
 
     readonly property int _baseUnit: Math.max(20, Maui.Style.units.gridUnit)
     readonly property int _fadeInDurationMs: 50
@@ -45,6 +50,7 @@ Window
     readonly property int _panelInsetY: 6
     readonly property bool _anchorAvailable: anchorButton && (!rootWindow || rootWindow.visible)
     readonly property color _panelColor: notificationsBubble.rootWindow ? notificationsBubble.rootWindow.popupSurfaceColor : Maui.Theme.backgroundColor
+    readonly property real stackHeight: _panel.implicitHeight
     readonly property int _preferredPanelWidth: Maui.Handy.isMobile ? _baseUnit * 16 : _baseUnit * 20
     readonly property real _targetY:
     {
@@ -57,7 +63,7 @@ Window
         {
             const p = _anchorPointInScreen(0, 0)
             if (p)
-                targetY = p.y + Maui.Style.space.small + _dropOffset
+                targetY = p.y + (anchorIsBubbleMarker ? 0 : Maui.Style.space.small + _dropOffset)
         }
         else if (!rootWindow || rootWindow.visible)
         {
@@ -87,7 +93,7 @@ Window
         {
             const p = _anchorPointInScreen(0, 0)
             if (p)
-                targetY = p.y + Maui.Style.space.small + _dropOffset
+                targetY = p.y + (anchorIsBubbleMarker ? 0 : Maui.Style.space.small + _dropOffset)
         }
         else if (!rootWindow || rootWindow.visible)
         {
@@ -140,14 +146,29 @@ Window
         _geometryRevision += 1
     }
 
-    function _anchorPointInScreen(offsetX, offsetY, logResult)
+    function _tracePopupPosition(reason, reset)
+    {
+        if (!visible || !_positionTraceActive)
+            return
+
+        const currentX = Number(x)
+        const currentY = Number(y)
+        const deltaX = reset ? 0 : currentX - _positionTraceLastX
+        const deltaY = reset ? 0 : currentY - _positionTraceLastY
+        _positionTraceLastX = currentX
+        _positionTraceLastY = currentY
+
+        console.log("[ValenzDebug] bubble", reason,
+                    "id=", notificationId,
+                    "pos=", [currentX, currentY],
+                    "delta=", [deltaX, deltaY],
+                    "size=", [width, height])
+    }
+
+    function _anchorPointInScreen(offsetX, offsetY)
     {
         if (!anchorButton)
-        {
-            if (logResult)
-                console.log("[ValenzDebug] bubble anchor mapping=unavailable reason=no-anchor")
             return null
-        }
 
         if (rootWindow && rootWindow.contentItem && anchorButton.mapToItem
                 && rootWindow.screen && rootWindow.screen.geometry)
@@ -158,39 +179,15 @@ Window
             const topMargin = Number(rootWindow.barLayerSpacingTop || 0)
             if (localPoint && isFinite(localPoint.x) && isFinite(localPoint.y)
                     && screenGeometry.width > 0 && screenGeometry.height > 0)
-            {
-                const mappedPoint = Qt.point(screenGeometry.x + leftMargin + localPoint.x,
-                                             screenGeometry.y + topMargin + localPoint.y)
-                if (logResult)
-                    console.log("[ValenzDebug] bubble anchor mapping=logical",
-                                "local=", localPoint.x, localPoint.y,
-                                "screen=", screenGeometry.x, screenGeometry.y,
-                                "margins=", leftMargin, topMargin,
-                                "result=", mappedPoint.x, mappedPoint.y)
-                return mappedPoint
-            }
+                return Qt.point(screenGeometry.x + leftMargin + localPoint.x,
+                                screenGeometry.y + topMargin + localPoint.y)
         }
 
         if (!anchorButton.mapToGlobal)
-        {
-            if (logResult)
-                console.log("[ValenzDebug] bubble anchor mapping=unavailable reason=no-mapToGlobal")
             return null
-        }
 
         const globalPoint = anchorButton.mapToGlobal(offsetX, offsetY)
-        if (globalPoint && isFinite(globalPoint.x) && isFinite(globalPoint.y))
-        {
-            if (logResult)
-                console.log("[ValenzDebug] bubble anchor mapping=mapToGlobal",
-                            "result=", globalPoint.x, globalPoint.y)
-            return globalPoint
-        }
-
-        if (logResult)
-            console.log("[ValenzDebug] bubble anchor mapping=unavailable reason=invalid-point")
-
-        return null
+        return globalPoint && isFinite(globalPoint.x) && isFinite(globalPoint.y) ? globalPoint : null
     }
 
     function _screenGeometry()
@@ -204,6 +201,13 @@ Window
             return Qt.rect(0, 0, screen.width, screen.height)
         if (screen && screen.virtualGeometry && screen.virtualGeometry.width > 0 && screen.virtualGeometry.height > 0)
             return screen.virtualGeometry
+
+        if (Screen.width > 0 && Screen.height > 0)
+        {
+            const virtualX = Number(Screen.virtualX || 0)
+            const virtualY = Number(Screen.virtualY || 0)
+            return Qt.rect(virtualX, virtualY, Screen.width, Screen.height)
+        }
 
         return Qt.rect(0, 0, 0, 0)
     }
@@ -332,19 +336,35 @@ Window
             _bubbleContentColumn.forceLayout()
 
         _touchGeometryRevision()
-        open()
-
         Qt.callLater(function()
         {
             if (_bubbleContentColumn && _bubbleContentColumn.forceLayout)
                 _bubbleContentColumn.forceLayout()
 
             notificationsBubble._touchGeometryRevision()
+            _scheduleOpen()
         })
 
         _autoCloseTimer.stop()
         if (urgencyLevel < 2)
             _autoCloseTimer.restart()
+    }
+
+    function _scheduleOpen()
+    {
+        if (visible || _openPending)
+            return
+
+        _openPending = true
+        Qt.callLater(function()
+        {
+            if (!_openPending)
+                return
+
+            _openPending = false
+            if (!visible)
+                open()
+        })
     }
 
     function dismissBubble()
@@ -406,7 +426,6 @@ Window
             if (visible)
                 _panelOpen = true
         })
-        _logPopupGeometry("opened")
     }
 
     function close()
@@ -427,42 +446,10 @@ Window
             return
 
         _fadeOutTimer.stop()
+        _openPending = false
         _fadeOutPending = false
         _panelOpen = false
         visible = false
-    }
-
-    function _logPopupGeometry(reason)
-    {
-        const screen = rootWindow ? rootWindow.screen : null
-        const screenGeometry = screen && screen.geometry ? screen.geometry : null
-        const availableGeometry = screen && screen.availableGeometry ? screen.availableGeometry : null
-        const anchorPoint = _anchorPointInScreen(0, 0, true)
-        const popupTargetY = rootWindow && rootWindow.popupTargetY ? rootWindow.popupTargetY() : null
-        const rootGeometry = rootWindow
-                ? [rootWindow.x, rootWindow.y, rootWindow.width, rootWindow.height]
-                : []
-        const bubbleGeometry = [x, y, width, height]
-        const anchorGeometry = anchorButton
-                ? [anchorButton.x, anchorButton.y, anchorButton.width, anchorButton.height]
-                : []
-
-        console.log("[ValenzDebug] bubble geometry",
-                    "reason=", reason,
-                    "id=", notificationId,
-                    "visible=", visible,
-                    "rootVisible=", rootWindow ? rootWindow.visible : false,
-                    "fullscreen=", valenzBridge ? valenzBridge.focusedWindowFullscreen : false,
-                    "anchorAvailable=", _anchorAvailable,
-                    "anchorPoint=", anchorPoint ? [anchorPoint.x, anchorPoint.y] : [],
-                    "anchorItem=", anchorGeometry,
-                    "bubble=", bubbleGeometry,
-                    "root=", rootGeometry,
-                    "screen=", screenGeometry ? [screenGeometry.x, screenGeometry.y, screenGeometry.width, screenGeometry.height] : [],
-                    "available=", availableGeometry ? [availableGeometry.x, availableGeometry.y, availableGeometry.width, availableGeometry.height] : [],
-                    "targetY=", _targetY,
-                    "popupTargetY=", popupTargetY,
-                    "stackRevision=", rootWindow ? rootWindow.notificationBubbleStackRevision : -1)
     }
 
     Timer
@@ -475,7 +462,6 @@ Window
             if (visible)
             {
                 _touchGeometryRevision()
-                _logPopupGeometry("deferred")
             }
         }
     }
@@ -504,10 +490,27 @@ Window
     }
     height: Math.min(_panel.implicitHeight, _availableHeightFromAnchor)
 
+    onXChanged:
+    {
+        _tracePopupPosition("x-changed", false)
+    }
+
+    onYChanged:
+    {
+        _tracePopupPosition("y-changed", false)
+    }
+
+    onWidthChanged:
+    {
+        _tracePopupPosition("width-changed", false)
+    }
+
     onHeightChanged:
     {
         if (rootWindow && rootWindow._touchNotificationBubbleStackGeometry)
             rootWindow._touchNotificationBubbleStackGeometry()
+
+        _tracePopupPosition("height-changed", false)
     }
 
     onVisibleChanged:
@@ -517,12 +520,14 @@ Window
 
         if (visible)
         {
+            _positionTraceActive = true
+            _tracePopupPosition("initial", true)
             opened()
-            _logPopupGeometry("visible")
             _deferredGeometryRefreshTimer.restart()
         }
         else
         {
+            _positionTraceActive = false
             _fadeOutTimer.stop()
             _panelOpen = false
             closed()
@@ -570,7 +575,7 @@ Window
         {
             const p = _anchorPointInScreen(0, 0)
             if (p)
-                targetY = p.y + Maui.Style.space.small + _dropOffset
+                targetY = p.y + (anchorIsBubbleMarker ? 0 : Maui.Style.space.small + _dropOffset)
         }
         else if (!rootWindow || rootWindow.visible)
         {
@@ -580,18 +585,9 @@ Window
         }
 
         const finalY = Math.max(minY, targetY)
-        if (rootWindow && rootWindow.notificationBubbleY)
+        if (!anchorIsBubbleMarker && rootWindow && rootWindow.notificationBubbleY)
             return rootWindow.notificationBubbleY(notificationsBubble, finalY)
         return finalY
-    }
-
-    Behavior on y
-    {
-        NumberAnimation
-        {
-            duration: notificationsBubble._fadeOutDurationMs
-            easing.type: Easing.OutCubic
-        }
     }
 
     Timer
@@ -670,7 +666,7 @@ Window
         id: _panel
         anchors.fill: parent
         opacity: 0.0
-        scale: 0.97
+        scale: 1.0
         transformOrigin: Item.Center
         clip: true
         implicitWidth: notificationsBubble.width
@@ -688,7 +684,6 @@ Window
                 {
                     target: _panel
                     opacity: 1.0
-                    scale: 1.0
                 }
             },
             State
@@ -699,7 +694,6 @@ Window
                 {
                     target: _panel
                     opacity: 0.0
-                    scale: 0.97
                 }
             }
         ]
@@ -708,7 +702,7 @@ Window
             reversible: true
             NumberAnimation
             {
-                properties: "opacity,scale"
+                properties: "opacity"
                 duration: notificationsBubble._panelOpen ? notificationsBubble._fadeInDurationMs : notificationsBubble._fadeOutDurationMs
                 easing.type: Easing.InOutCubic
             }
