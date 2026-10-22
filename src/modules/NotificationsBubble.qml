@@ -6,13 +6,15 @@ import QtQuick.Window
 
 import org.mauikit.controls as Maui
 
-Window
+Item
 {
 
     id: notificationsBubble
 
     property Item anchorButton
     property Item overlayItem
+    property QtObject hostWindow
+    property int bubbleIndex: 0
     property QtObject rootWindow
     property QtObject controller
     property var notificationsPopup
@@ -117,26 +119,12 @@ Window
 
     Maui.Theme.colorSet: Maui.Theme.View
 
-    Component.onCompleted: { }
-    color: "transparent"
-
     visible: false
-    flags: Qt.ToolTip | Qt.FramelessWindowHint
-    transientParent: rootWindow
 
     Shortcut
     {
         sequences: [ StandardKey.Cancel ]
         onActivated: notificationsBubble.dismissBubble()
-    }
-
-    onClosing: function(closeEvent)
-    {
-        if (_fadeOutPending)
-            return
-
-        closeEvent.accepted = false
-        dismissBubble()
     }
 
 
@@ -539,55 +527,16 @@ Window
         }
     }
 
-    x:
+    x: hostWindow ? hostWindow.width - width : 0
+    y: hostWindow && hostWindow.bubbleY ? hostWindow.bubbleY(bubbleIndex) : 0
+
+    Behavior on y
     {
-        const dep = _geometryRevision
-        const screenGeometry = notificationsBubble._screenGeometry()
-        if (!screenGeometry || screenGeometry.width <= 0)
-            return 0
-
-        const minX = _margin
-        const maxX = Math.max(minX, screenGeometry.width - width - _margin)
-        let targetX = maxX
-
-        if (_anchorAvailable)
+        NumberAnimation
         {
-            const p = _anchorPointInScreen(0, 0)
-            if (p)
-                targetX = p.x - width
+            duration: notificationsBubble._fadeOutDurationMs
+            easing.type: Easing.OutCubic
         }
-
-        const finalX = Math.max(minX, Math.min(maxX, targetX))
-        return finalX
-    }
-
-    y:
-    {
-        const dep = _geometryRevision
-        const stackRevision = rootWindow ? rootWindow.notificationBubbleStackRevision : 0
-        const overlay = notificationsBubble.overlayItem
-        if (!overlay)
-            return _margin
-
-        const minY = _margin
-        let targetY = Math.max(Maui.Style.toolBarHeightAlt, Maui.Style.units.gridUnit * 2) + _margin
-        if (_anchorAvailable)
-        {
-            const p = _anchorPointInScreen(0, 0)
-            if (p)
-                targetY = p.y + (anchorIsBubbleMarker ? 0 : Maui.Style.space.small + _dropOffset)
-        }
-        else if (!rootWindow || rootWindow.visible)
-        {
-            const popupTargetY = rootWindow && rootWindow.popupTargetY ? rootWindow.popupTargetY() : null
-            if (popupTargetY !== null)
-                targetY = popupTargetY
-        }
-
-        const finalY = Math.max(minY, targetY)
-        if (!anchorIsBubbleMarker && rootWindow && rootWindow.notificationBubbleY)
-            return rootWindow.notificationBubbleY(notificationsBubble, finalY)
-        return finalY
     }
 
     Timer

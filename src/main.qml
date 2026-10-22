@@ -160,16 +160,124 @@ Window
             return 0
 
         const bubbles = _notificationBubbles()
-        const markers = _notificationBubbleMarkers()
         let markerY = point.y + Maui.Style.space.small + _notificationsBubble._dropOffset
         for (let markerIndex = 0; markerIndex < index; ++markerIndex)
         {
             const bubble = bubbles[markerIndex]
-            if ((bubble.visible || bubble._openPending) && !bubble._fadeOutPending)
-                markerY = markers[markerIndex].y + bubble.stackHeight + Maui.Style.space.small
+            if (bubble.visible || bubble._openPending || bubble._fadeOutPending)
+                markerY += bubble.height + Maui.Style.space.small
         }
 
         return markerY
+    }
+
+    function _notificationBubbleHostAnchorPointInScreen()
+    {
+        const marker = _notificationsBubbleMarker
+        if (marker && marker.mapToGlobal)
+        {
+            const globalPoint = marker.mapToGlobal(0, 0)
+            if (globalPoint && isFinite(globalPoint.x) && isFinite(globalPoint.y))
+                return globalPoint
+        }
+
+        return _notificationBubbleAnchorPointInScreen()
+    }
+
+    function _notificationBubbleAnchorPointInScreen()
+    {
+        const point = _notificationBubbleAnchorPointInContent()
+        if (!point)
+            return null
+
+        if (root.contentItem && root.contentItem.mapToGlobal)
+        {
+            const globalPoint = root.contentItem.mapToGlobal(point.x, point.y)
+            if (globalPoint && isFinite(globalPoint.x) && isFinite(globalPoint.y))
+                return globalPoint
+        }
+
+        const screenGeometry = root.screen && root.screen.geometry ? root.screen.geometry : null
+        if (!screenGeometry || screenGeometry.width <= 0 || screenGeometry.height <= 0)
+            return null
+
+        return Qt.point(screenGeometry.x + root.barLayerSpacingLeft + point.x,
+                        screenGeometry.y + root.barLayerSpacingTop + point.y)
+    }
+
+    function notificationBubbleHostVisible()
+    {
+        const anchorPoint = _notificationBubbleHostAnchorPointInScreen()
+        if (!anchorPoint)
+            return false
+
+        const stackRevision = notificationBubbleStackRevision
+        const bubbles = _notificationBubbles()
+        for (let index = 0; index < bubbles.length; ++index)
+        {
+            const bubble = bubbles[index]
+            if (bubble.visible || bubble._fadeOutPending)
+                return true
+        }
+
+        return false
+    }
+
+    function notificationBubbleHostWidth()
+    {
+        const stackRevision = notificationBubbleStackRevision
+        const bubbles = _notificationBubbles()
+        let hostWidth = 0
+        for (let index = 0; index < bubbles.length; ++index)
+            hostWidth = Math.max(hostWidth, bubbles[index].width)
+        return Math.max(hostWidth, _notificationsBubble._preferredPanelWidth)
+    }
+
+    function notificationBubbleHostY()
+    {
+        const popupTargetY = root.popupTargetY ? root.popupTargetY() : null
+        if (popupTargetY !== null)
+            return popupTargetY
+
+        const point = _notificationBubbleHostAnchorPointInScreen()
+        return point ? point.y : 0
+    }
+
+    function notificationBubbleHostX()
+    {
+        const point = _notificationBubbleHostAnchorPointInScreen()
+        return point ? point.x - notificationBubbleHostWidth() : 0
+    }
+
+    function notificationBubbleHostBubbleY(index)
+    {
+        const stackRevision = notificationBubbleStackRevision
+        const point = _notificationBubbleAnchorPointInContent()
+        if (!point)
+            return 0
+
+        const baseY = _notificationsBubbleMarker.y
+        return notificationBubbleMarkerY(index) - baseY
+    }
+
+    function notificationBubbleHostHeight()
+    {
+        const stackRevision = notificationBubbleStackRevision
+        const point = _notificationBubbleAnchorPointInContent()
+        if (!point)
+            return 1
+
+        const bubbles = _notificationBubbles()
+        const baseY = _notificationsBubbleMarker.y
+        let hostHeight = 0
+        for (let index = 0; index < bubbles.length; ++index)
+        {
+            const bubble = bubbles[index]
+            if (bubble.visible || bubble._openPending || bubble._fadeOutPending)
+                hostHeight = Math.max(hostHeight, notificationBubbleMarkerY(index) - baseY + bubble.height)
+        }
+
+        return Math.max(1, hostHeight)
     }
 
     function closeTransientPopups(fromNotificationBubble)
@@ -177,7 +285,7 @@ Window
         if (_systemTray && _systemTray.closeTrayMenu)
             _systemTray.closeTrayMenu()
 
-        const keepNotificationBubbles = fromNotificationBubble && _notificationBubbles().indexOf(fromNotificationBubble) >= 0
+        const keepNotificationBubbles = !!fromNotificationBubble
         if (!keepNotificationBubbles)
         {
             const bubbles = _notificationBubbles()
@@ -536,40 +644,70 @@ Window
         function onHeightChanged() { root._touchNotificationBubbleStackGeometry() }
     }
 
-    NotificationsBubble
+    Window
     {
-        id: _notificationsBubble
-        anchorButton: _notificationsBubbleMarker
-        anchorIsBubbleMarker: true
-        rootWindow: root
-        overlayItem: root.contentItem
-        controller: notificationsController
-        notificationsPopup: _notificationsCenterPopup
-        useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
-    }
+        id: _notificationsBubbleHost
+        color: "transparent"
+        flags: Qt.ToolTip | Qt.FramelessWindowHint
+        transientParent: root
+        visible: root.notificationBubbleHostVisible()
+        x: root.notificationBubbleHostX()
+        y: root.notificationBubbleHostY()
+        width: root.notificationBubbleHostWidth()
+        height: root.notificationBubbleHostHeight()
 
-    NotificationsBubble
-    {
-        id: _notificationsBubbleSecondary
-        anchorButton: _notificationsBubbleSecondaryMarker
-        anchorIsBubbleMarker: true
-        rootWindow: root
-        overlayItem: root.contentItem
-        controller: notificationsController
-        notificationsPopup: _notificationsCenterPopup
-        useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
-    }
+        function bubbleY(index)
+        {
+            return root.notificationBubbleHostBubbleY(index)
+        }
 
-    NotificationsBubble
-    {
-        id: _notificationsBubbleTertiary
-        anchorButton: _notificationsBubbleTertiaryMarker
-        anchorIsBubbleMarker: true
-        rootWindow: root
-        overlayItem: root.contentItem
-        controller: notificationsController
-        notificationsPopup: _notificationsCenterPopup
-        useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
+        onClosing: function(closeEvent)
+        {
+            closeEvent.accepted = false
+            root.closeTransientPopups()
+        }
+
+        NotificationsBubble
+        {
+            id: _notificationsBubble
+            anchorButton: _notificationsBubbleMarker
+            anchorIsBubbleMarker: true
+            hostWindow: _notificationsBubbleHost
+            bubbleIndex: 0
+            rootWindow: root
+            overlayItem: root.contentItem
+            controller: notificationsController
+            notificationsPopup: _notificationsCenterPopup
+            useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
+        }
+
+        NotificationsBubble
+        {
+            id: _notificationsBubbleSecondary
+            anchorButton: _notificationsBubbleSecondaryMarker
+            anchorIsBubbleMarker: true
+            hostWindow: _notificationsBubbleHost
+            bubbleIndex: 1
+            rootWindow: root
+            overlayItem: root.contentItem
+            controller: notificationsController
+            notificationsPopup: _notificationsCenterPopup
+            useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
+        }
+
+        NotificationsBubble
+        {
+            id: _notificationsBubbleTertiary
+            anchorButton: _notificationsBubbleTertiaryMarker
+            anchorIsBubbleMarker: true
+            hostWindow: _notificationsBubbleHost
+            bubbleIndex: 2
+            rootWindow: root
+            overlayItem: root.contentItem
+            controller: notificationsController
+            notificationsPopup: _notificationsCenterPopup
+            useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
+        }
     }
 
     ScreenCapturePopup
