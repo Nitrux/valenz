@@ -6,7 +6,7 @@ import QtQuick.Window
 
 import org.mauikit.controls as Maui
 
-Window
+Item
 {
 
     id: notificationsCenter
@@ -14,31 +14,18 @@ Window
     property Item anchorButton
     property var rootWindow
     property Item overlayItem
+    property var hostWindow
     property QtObject controller
     property bool useSystemThemeIcons: true
 
     Maui.Theme.colorSet: Maui.Theme.View
 
     Component.onCompleted: { }
-    color: "transparent"
-
     visible: false
-    flags: Qt.FramelessWindowHint | Qt.Popup
-    transientParent: rootWindow
-
     Shortcut
     {
         sequences: [ StandardKey.Cancel ]
         onActivated: notificationsCenter.close()
-    }
-
-    onClosing: function(closeEvent)
-    {
-        if (_fadeOutPending)
-            return
-
-        closeEvent.accepted = false
-        close()
     }
 
 
@@ -234,8 +221,6 @@ Window
         _replyNotificationId = requestedId
         if (!visible)
             open()
-        else
-            requestActivate()
 
         _touchGeometryRevision()
     }
@@ -307,6 +292,7 @@ Window
             return
 
         _clearRemainingAnimations = Math.max(0, _clearRemainingAnimations - 1)
+        _logClearAnimation("finished", "center", -1, null, 0)
 
         if (_clearRemainingAnimations === 0)
         {
@@ -316,6 +302,12 @@ Window
                 _notificationsModel.clear()
 
             _clearingAll = false
+            _logClearAnimation("end", "center", -1, null, 0)
+            Qt.callLater(function()
+            {
+                if (visible)
+                    _logClearAnimation("post-clear", "center", -1, null, 0)
+            })
         }
     }
 
@@ -326,7 +318,24 @@ Window
 
         _clearRemainingAnimations = _topLevelNotificationCount
         _clearingAll = true
+        _logClearAnimation("begin", "center", -1, null, 0)
         clearAllTrigger += 1
+    }
+
+    function _logClearAnimation(reason, kind, index, card, delayMs)
+    {
+        const host = notificationsCenter.hostWindow
+        const cardGeometry = card ? [Number(card.x), Number(card.y), Number(card.width), Number(card.height), Number(card.opacity)] : []
+        console.log("[ValenzDebug] clear-all", reason,
+                    "kind=", kind,
+                    "index=", index,
+                    "delay=", Number(delayMs || 0),
+                    "card=", cardGeometry,
+                    "panel=", [Number(_panel.x), Number(_panel.y), Number(_panel.width), Number(_panel.height), Number(_panel.opacity), Number(_panel.scale)],
+                    "center=", [Number(x), Number(y), Number(width), Number(height)],
+                    "host=", host ? [Number(host.width), Number(host.height)] : [],
+                    "layer=", _panel.layer.enabled,
+                    "remaining=", _clearRemainingAnimations)
     }
 
     ListModel
@@ -348,8 +357,11 @@ Window
         aboutToShow()
         _fadeOutPending = false
         _panelOpen = false
+        if (rootWindow && rootWindow._touchNotificationBubbleStackGeometry)
+            rootWindow._touchNotificationBubbleStackGeometry()
+        if (rootWindow && rootWindow.configureNotificationCenterPopupAnchor)
+            rootWindow.configureNotificationCenterPopupAnchor()
         visible = true
-        requestActivate()
         Qt.callLater(function()
         {
             if (visible)
@@ -378,6 +390,19 @@ Window
 
     function _logPopupGeometry(reason)
     {
+        if (!visible)
+            return
+
+        const anchorPoint = _anchorPointInScreen(0, 0)
+        const anchor = anchorPoint ? [Number(anchorPoint.x), Number(anchorPoint.y)] : []
+        const host = notificationsCenter.hostWindow
+        const hostGeometry = host ? [Number(host.x), Number(host.y), Number(host.width), Number(host.height)] : []
+        console.log("[ValenzDebug] popup notifications-center-item-v2", reason,
+                    "item=", [Number(x), Number(y), Number(width), Number(height)],
+                    "hostQWindow=", hostGeometry,
+                    "popupMarkerLocal=", [Number(width), 0],
+                    "buttonAnchorScreen=", anchor,
+                    "revision=", _geometryRevision)
     }
 
     Timer
@@ -413,12 +438,23 @@ Window
     width: Math.max(_panel.implicitWidth, _minPanelWidth)
     height: Math.min(_panel.implicitHeight, _availableHeightFromAnchor)
 
+    onXChanged: _logPopupGeometry("item-x-changed")
+    onYChanged: _logPopupGeometry("item-y-changed")
+    onWidthChanged: _logPopupGeometry("item-width-changed")
+    onHeightChanged: _logPopupGeometry("item-height-changed")
+
     onVisibleChanged:
     {
         if (visible)
         {
             opened()
-            Qt.callLater(_touchGeometryRevision)
+            Qt.callLater(function()
+            {
+                if (visible)
+                {
+                    _touchGeometryRevision()
+                }
+            })
             _deferredGeometryRefreshTimer.restart()
             _logPopupGeometry("visible")
             if (controller)
@@ -431,52 +467,6 @@ Window
             _replyNotificationId = -1
             closed()
         }
-    }
-
-
-    x:
-    {
-        const dep = _geometryRevision
-        const screenGeometry = notificationsCenter._screenGeometry()
-        if (!screenGeometry || screenGeometry.width <= 0)
-            return 0
-
-        const minX = _margin
-        const maxX = Math.max(minX, screenGeometry.width - width - _margin)
-        let targetX = maxX
-
-        if (anchorButton)
-        {
-            const p = _anchorPointInScreen(0, 0)
-            if (p)
-                targetX = p.x - width
-        }
-
-        const finalX = Math.max(minX, Math.min(maxX, targetX))
-        return finalX
-    }
-
-    y:
-    {
-        const dep = _geometryRevision
-        const overlayItem = notificationsCenter.overlayItem
-        if (!overlayItem)
-            return 0
-
-        const minY = _margin
-        let targetY = Math.max(Maui.Style.toolBarHeightAlt, Maui.Style.units.gridUnit * 2) + _margin
-        const popupTargetY = rootWindow && rootWindow.popupTargetY ? rootWindow.popupTargetY() : null
-        if (popupTargetY !== null)
-            targetY = popupTargetY
-        else if (anchorButton)
-        {
-            const p = _anchorPointInScreen(0, 0)
-            if (p)
-                targetY = p.y + Maui.Style.space.small + _dropOffset
-        }
-
-        const finalY = Math.max(minY, targetY)
-        return finalY
     }
 
     Connections
@@ -514,8 +504,8 @@ Window
         id: _panel
         anchors.fill: parent
         opacity: 0.0
-        scale: 0.97
-        transformOrigin: Item.Center
+        scale: 1.0
+        transformOrigin: Item.TopRight
         implicitWidth: Math.max(notificationsCenter._minPanelWidth, _panelContent.implicitWidth + (notificationsCenter._panelInsetX * 2))
         implicitHeight: _panelContent.implicitHeight + (notificationsCenter._panelInsetY * 2)
         radius: Maui.Style.radiusV + 3
@@ -542,7 +532,7 @@ Window
                 {
                     target: _panel
                     opacity: 0.0
-                    scale: 0.97
+                    scale: 1.0
                 }
             }
         ]
@@ -551,12 +541,12 @@ Window
             reversible: true
             NumberAnimation
             {
-                properties: "opacity,scale"
+                properties: "opacity"
                 duration: notificationsCenter._panelOpen ? notificationsCenter._fadeInDurationMs : notificationsCenter._fadeOutDurationMs
                 easing.type: Easing.InOutCubic
             }
         }
-        layer.enabled: visible && GraphicsInfo.api !== GraphicsInfo.Software
+        layer.enabled: false
         layer.effect: MultiEffect
         {
             autoPaddingEnabled: true
@@ -707,7 +697,20 @@ Window
 
                                         _dismissing = true
                                         _dismissDelayMs = Math.max(0, delayMs || 0)
+                                        notificationsCenter._logClearAnimation("start", "group", index, _groupCard, _dismissDelayMs)
                                         _dismissAnimation.start()
+                                    }
+
+                                    onXChanged:
+                                    {
+                                        if (_dismissing)
+                                            notificationsCenter._logClearAnimation("x", "group", index, _groupCard, _dismissDelayMs)
+                                    }
+
+                                    onOpacityChanged:
+                                    {
+                                        if (_dismissing)
+                                            notificationsCenter._logClearAnimation("opacity", "group", index, _groupCard, _dismissDelayMs)
                                     }
 
                                     Connections
@@ -767,6 +770,7 @@ Window
 
                                         onFinished:
                                         {
+                                            notificationsCenter._logClearAnimation("animation-finished", "group", index, _groupCard, _dismissDelayMs)
                                             if (notificationsCenter._clearingAll)
                                                 notificationsCenter._onClearAllCardDismissed()
                                             else
@@ -1175,7 +1179,20 @@ Window
 
                                 _dismissing = true
                                 _dismissDelayMs = Math.max(0, delayMs || 0)
+                                notificationsCenter._logClearAnimation("start", "notification", index, _notificationCard, _dismissDelayMs)
                                 _dismissAnimation.start()
+                            }
+
+                            onXChanged:
+                            {
+                                if (_dismissing)
+                                    notificationsCenter._logClearAnimation("x", "notification", index, _notificationCard, _dismissDelayMs)
+                            }
+
+                            onOpacityChanged:
+                            {
+                                if (_dismissing)
+                                    notificationsCenter._logClearAnimation("opacity", "notification", index, _notificationCard, _dismissDelayMs)
                             }
 
                             Connections
@@ -1235,6 +1252,7 @@ Window
 
                                 onFinished:
                                 {
+                                    notificationsCenter._logClearAnimation("animation-finished", "notification", index, _notificationCard, _dismissDelayMs)
                                     if (notificationsCenter._clearingAll)
                                         notificationsCenter._onClearAllCardDismissed()
                                     else
@@ -1373,5 +1391,20 @@ Window
                 }
             }
         }
+    }
+
+    Rectangle
+    {
+        id: _popupAnchorMarker
+        x: notificationsCenter.width - (width / 2)
+        y: -(height / 2)
+        width: Maui.Style.units.gridUnit / 2
+        height: width
+        radius: width / 2
+        color: "#ff00ff"
+        border.width: 1
+        border.color: "white"
+        visible: notificationsCenter.visible
+        z: 1000
     }
 }

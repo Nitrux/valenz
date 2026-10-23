@@ -141,16 +141,41 @@ Item
 
         const currentX = Number(x)
         const currentY = Number(y)
+        const currentWidth = Number(width)
+        const currentHeight = Number(height)
         const deltaX = reset ? 0 : currentX - _positionTraceLastX
         const deltaY = reset ? 0 : currentY - _positionTraceLastY
         _positionTraceLastX = currentX
         _positionTraceLastY = currentY
 
-        console.log("[ValenzDebug] bubble", reason,
+        const anchorPoint = _anchorPointInScreen(0, 0)
+        const anchor = anchorPoint ? [Number(anchorPoint.x), Number(anchorPoint.y)] : []
+        const centerAnchorPoint = rootWindow && rootWindow._notificationBubbleAnchorPointInScreen
+                ? rootWindow._notificationBubbleAnchorPointInScreen() : null
+        const centerAnchor = centerAnchorPoint ? [Number(centerAnchorPoint.x), Number(centerAnchorPoint.y)] : []
+        const host = hostWindow ? [Number(hostWindow.x), Number(hostWindow.y), Number(hostWindow.width), Number(hostWindow.height)] : []
+        const global = hostWindow ? [Number(hostWindow.x) + currentX, Number(hostWindow.y) + currentY, currentWidth, currentHeight] : []
+        const centerAnchorDelta = centerAnchorPoint && global.length > 0
+                ? [global[0] + currentWidth - Number(centerAnchorPoint.x), global[1] - Number(centerAnchorPoint.y)]
+                : []
+        const expectedLocalX = hostWindow ? Number(hostWindow.width) - currentWidth : null
+        const expectedLocalY = hostWindow && hostWindow.bubbleY ? Number(hostWindow.bubbleY(bubbleIndex)) : null
+        const edgeDelta = anchorPoint && hostWindow
+                ? [global[0] + currentWidth - Number(anchorPoint.x), global[1] - Number(anchorPoint.y)]
+                : []
+
+        console.log("[ValenzDebug] bubble-position", reason,
                     "id=", notificationId,
-                    "pos=", [currentX, currentY],
-                    "delta=", [deltaX, deltaY],
-                    "size=", [width, height])
+                    "index=", bubbleIndex,
+                    "anchor=", anchor,
+                    "host=", host,
+                    "local=", [currentX, currentY, currentWidth, currentHeight],
+                    "screen=", global,
+                    "centerAnchor=", centerAnchor,
+                    "centerAnchorDelta=", centerAnchorDelta,
+                    "expectedLocal=", [expectedLocalX, expectedLocalY],
+                    "edgeDelta=", edgeDelta,
+                    "delta=", [deltaX, deltaY])
     }
 
     function _anchorPointInScreen(offsetX, offsetY)

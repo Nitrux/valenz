@@ -128,9 +128,15 @@ ToolButton
 
         Rectangle
         {
-            anchors.fill: parent
-            visible: false
-            color: "#ff3b30"
+            anchors.centerIn: parent
+            width: Maui.Style.units.gridUnit / 2
+            height: width
+            radius: width / 2
+            visible: true
+            color: "#ff00ff"
+            border.width: 1
+            border.color: "white"
+            z: 1000
         }
     }
 }

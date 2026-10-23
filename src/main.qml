@@ -173,14 +173,6 @@ Window
 
     function _notificationBubbleHostAnchorPointInScreen()
     {
-        const marker = _notificationsBubbleMarker
-        if (marker && marker.mapToGlobal)
-        {
-            const globalPoint = marker.mapToGlobal(0, 0)
-            if (globalPoint && isFinite(globalPoint.x) && isFinite(globalPoint.y))
-                return globalPoint
-        }
-
         return _notificationBubbleAnchorPointInScreen()
     }
 
@@ -235,6 +227,7 @@ Window
 
     function notificationBubbleHostY()
     {
+        const stackRevision = notificationBubbleStackRevision
         const popupTargetY = root.popupTargetY ? root.popupTargetY() : null
         if (popupTargetY !== null)
             return popupTargetY
@@ -245,6 +238,7 @@ Window
 
     function notificationBubbleHostX()
     {
+        const stackRevision = notificationBubbleStackRevision
         const point = _notificationBubbleHostAnchorPointInScreen()
         return point ? point.x - notificationBubbleHostWidth() : 0
     }
@@ -278,6 +272,55 @@ Window
         }
 
         return Math.max(1, hostHeight)
+    }
+
+    function notificationCenterHostVisible()
+    {
+        const stackRevision = notificationBubbleStackRevision
+        return root.visible && _notificationsCenterPopup.visible && _notificationBubbleAnchorPointInScreen() !== null
+    }
+
+    function notificationCenterHostWidth()
+    {
+        return Math.max(1, _notificationsCenterPopup.width)
+    }
+
+    function notificationCenterHostX()
+    {
+        const stackRevision = notificationBubbleStackRevision
+        const point = _notificationBubbleAnchorPointInScreen()
+        return point ? point.x - notificationCenterHostWidth() : 0
+    }
+
+    function notificationCenterHostHeight()
+    {
+        return Math.max(1, _notificationsCenterPopup.height)
+    }
+
+    function notificationCenterHostY()
+    {
+        const stackRevision = notificationBubbleStackRevision
+        const popupTargetY = root.popupTargetY ? root.popupTargetY() : null
+        if (popupTargetY !== null)
+            return popupTargetY
+
+        const point = _notificationBubbleAnchorPointInScreen()
+        return point ? point.y : 0
+    }
+
+    function configureNotificationCenterPopupAnchor()
+    {
+        if (!layerShellHelper || !layerShellHelper.configureQtPopupAnchor)
+            return
+
+        const point = _notificationBubbleAnchorPointInScreen()
+        if (!point)
+            return
+
+        layerShellHelper.configureQtPopupAnchor(_notificationsCenterHost,
+                                                root,
+                                                Math.round(point.x - notificationCenterHostWidth()),
+                                                Math.round(notificationCenterHostY()))
     }
 
     function closeTransientPopups(fromNotificationBubble)
@@ -596,15 +639,36 @@ Window
         notificationsControllerRef: notificationsController
     }
 
-    NotificationsCenter
+    Window
     {
-        id: _notificationsCenterPopup
-        title: i18n("Valenz Notifications Center")
-        controller: notificationsController
-        anchorButton: _notificationsCenterButton.popupAnchorMarker
-        rootWindow: root
-        overlayItem: root.contentItem
-        useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
+        id: _notificationsCenterHost
+        color: "transparent"
+        flags: Qt.FramelessWindowHint | Qt.Popup
+        transientParent: root
+        visible: root.notificationCenterHostVisible()
+        x: root.notificationCenterHostX()
+        y: root.notificationCenterHostY()
+        width: root.notificationCenterHostWidth()
+        height: root.notificationCenterHostHeight()
+
+        onClosing: function(closeEvent)
+        {
+            closeEvent.accepted = false
+            root.closeTransientPopups()
+        }
+
+        NotificationsCenter
+        {
+            id: _notificationsCenterPopup
+            x: 0
+            y: 0
+            controller: notificationsController
+            anchorButton: _notificationsCenterButton.popupAnchorMarker
+            rootWindow: root
+            overlayItem: root.contentItem
+            useSystemThemeIcons: root.controlCenterUseSystemThemeIcons
+            hostWindow: _notificationsCenterHost
+        }
     }
 
     Item
@@ -613,7 +677,20 @@ Window
         property int bubbleIndex: 0
         x: root.notificationBubbleMarkerX()
         y: root.notificationBubbleMarkerY(bubbleIndex)
-        opacity: 0
+        opacity: 1
+        visible: true
+
+        Rectangle
+        {
+            anchors.centerIn: parent
+            width: Maui.Style.units.gridUnit / 2
+            height: width
+            radius: width / 2
+            color: "#ff1744"
+            border.width: 1
+            border.color: "white"
+            z: 1000
+        }
     }
 
     Item
@@ -622,7 +699,20 @@ Window
         property int bubbleIndex: 1
         x: root.notificationBubbleMarkerX()
         y: root.notificationBubbleMarkerY(bubbleIndex)
-        opacity: 0
+        opacity: 1
+        visible: true
+
+        Rectangle
+        {
+            anchors.centerIn: parent
+            width: Maui.Style.units.gridUnit / 2
+            height: width
+            radius: width / 2
+            color: "#ff9100"
+            border.width: 1
+            border.color: "white"
+            z: 1000
+        }
     }
 
     Item
@@ -631,7 +721,20 @@ Window
         property int bubbleIndex: 2
         x: root.notificationBubbleMarkerX()
         y: root.notificationBubbleMarkerY(bubbleIndex)
-        opacity: 0
+        opacity: 1
+        visible: true
+
+        Rectangle
+        {
+            anchors.centerIn: parent
+            width: Maui.Style.units.gridUnit / 2
+            height: width
+            radius: width / 2
+            color: "#ffea00"
+            border.width: 1
+            border.color: "white"
+            z: 1000
+        }
     }
 
     Connections
@@ -655,6 +758,44 @@ Window
         y: root.notificationBubbleHostY()
         width: root.notificationBubbleHostWidth()
         height: root.notificationBubbleHostHeight()
+        property bool positionTraceActive: false
+        property real positionTraceLastX: 0
+        property real positionTraceLastY: 0
+
+        function tracePosition(reason, reset)
+        {
+            if (!visible || !positionTraceActive)
+                return
+
+            const currentX = Number(x)
+            const currentY = Number(y)
+            const deltaX = reset ? 0 : currentX - positionTraceLastX
+            const deltaY = reset ? 0 : currentY - positionTraceLastY
+            positionTraceLastX = currentX
+            positionTraceLastY = currentY
+            console.log("[ValenzDebug] popup notifications-host", reason,
+                        "pos=", [currentX, currentY],
+                        "delta=", [deltaX, deltaY],
+                        "size=", [width, height])
+        }
+
+        onXChanged: tracePosition("x-changed", false)
+        onYChanged: tracePosition("y-changed", false)
+        onWidthChanged: tracePosition("width-changed", false)
+        onHeightChanged: tracePosition("height-changed", false)
+
+        onVisibleChanged:
+        {
+            if (visible)
+            {
+                positionTraceActive = true
+                tracePosition("initial", true)
+            }
+            else
+            {
+                positionTraceActive = false
+            }
+        }
 
         function bubbleY(index)
         {

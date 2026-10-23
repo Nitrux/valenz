@@ -381,7 +381,6 @@ Window
             if (visible)
                 _panelOpen = true
         })
-        _logPopupGeometry("opened")
     }
 
     function close()
@@ -402,10 +401,6 @@ Window
         visible = false
     }
 
-    function _logPopupGeometry(reason)
-    {
-    }
-
     Timer
     {
         id: _deferredGeometryRefreshTimer
@@ -416,7 +411,6 @@ Window
             if (visible)
             {
                 _touchGeometryRevision()
-                _logPopupGeometry("deferred")
             }
         }
     }
@@ -461,7 +455,6 @@ Window
             opened()
             Qt.callLater(_touchGeometryRevision)
             _deferredGeometryRefreshTimer.restart()
-            _logPopupGeometry("visible")
             _systemResourcesRefreshActive = true
             if (bridge)
             {

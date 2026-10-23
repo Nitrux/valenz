@@ -20,6 +20,8 @@
 #include <QObject>
 #include <QUrl>
 #include <QMargins>
+#include <QRect>
+#include <QVariant>
 #include <QStandardPaths>
 #include <QScreen>
 #include <QHash>
@@ -71,6 +73,22 @@ public:
         layerShellWindow->setExclusiveZone(0);
         layerShellWindow->setDesiredSize(QSize(window->width(), window->height()));
         layerShellWindow->setMargins(QMargins(0, 0, 0, 0));
+    }
+
+    Q_INVOKABLE void configureQtPopupAnchor(QWindow *window, QWindow *parent, int popupX, int popupY)
+    {
+        if (!window || !parent)
+            return;
+
+        const QPoint parentPosition = parent->geometry().topLeft();
+        const QRect anchorRect(popupX - parentPosition.x(),
+                               popupY - parentPosition.y(),
+                               1, 1);
+        window->setProperty("_q_waylandPopupAnchorRect", anchorRect);
+        window->setProperty("_q_waylandPopupAnchor",
+                            QVariant::fromValue(Qt::Edges(Qt::TopEdge | Qt::RightEdge)));
+        window->setProperty("_q_waylandPopupGravity",
+                            QVariant::fromValue(Qt::Edges(Qt::BottomEdge | Qt::RightEdge)));
     }
 };
 
