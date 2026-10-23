@@ -678,7 +678,7 @@ Window
         x: root.notificationBubbleMarkerX()
         y: root.notificationBubbleMarkerY(bubbleIndex)
         opacity: 1
-        visible: true
+        visible: false
 
         Rectangle
         {
@@ -700,7 +700,7 @@ Window
         x: root.notificationBubbleMarkerX()
         y: root.notificationBubbleMarkerY(bubbleIndex)
         opacity: 1
-        visible: true
+        visible: false
 
         Rectangle
         {
@@ -722,7 +722,7 @@ Window
         x: root.notificationBubbleMarkerX()
         y: root.notificationBubbleMarkerY(bubbleIndex)
         opacity: 1
-        visible: true
+        visible: false
 
         Rectangle
         {

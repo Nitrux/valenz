@@ -132,7 +132,7 @@ ToolButton
             width: Maui.Style.units.gridUnit / 2
             height: width
             radius: width / 2
-            visible: true
+            visible: false
             color: "#ff00ff"
             border.width: 1
             border.color: "white"

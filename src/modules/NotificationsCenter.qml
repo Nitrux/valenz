@@ -1404,7 +1404,7 @@ Item
         color: "#ff00ff"
         border.width: 1
         border.color: "white"
-        visible: notificationsCenter.visible
+        visible: false
         z: 1000
     }
 }
