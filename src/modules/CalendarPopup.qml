@@ -5,7 +5,7 @@ import QtQuick.Layouts
 import QtQuick.Window
 
 import org.mauikit.controls as Maui
-import org.mauikit.calendar as Kalendar
+import org.mauikit.calendar 1.0 as MauiCalendar
 
 Window
 {
@@ -331,7 +331,7 @@ Window
         id: _eventsModel
     }
 
-    Kalendar.MonthModel
+    MauiCalendar.MonthModel
     {
         id: _calendarMonthModel
 
