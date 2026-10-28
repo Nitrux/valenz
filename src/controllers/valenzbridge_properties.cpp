@@ -5,6 +5,12 @@
 #include "valenzbridge_p.h"
 #include "mauikit_system_control.h"
 
+#include <QDBusConnection>
+#include <QDBusInterface>
+#include <QDBusReply>
+#include <QJsonDocument>
+#include <QJsonObject>
+
 namespace
 {
 
@@ -201,9 +207,46 @@ QVariantList ValenzBridge::mprisSources() const
     return m_mprisSources;
 }
 
+QVariantList ValenzBridge::agendaEvents() const
+{
+    return m_agendaEvents;
+}
+
 bool ValenzBridge::agendaInstalled() const
 {
     return m_agendaInstalled;
+}
+
+void ValenzBridge::refreshAgendaEvents(const QString &date)
+{
+    const auto normalizedDate = date.trimmed();
+    QVariantList events;
+    if (!normalizedDate.isEmpty()) {
+        QDBusInterface agenda(QStringLiteral("org.maui.agenda"), QStringLiteral("/Agenda"), QStringLiteral("org.maui.agenda"), QDBusConnection::sessionBus());
+        if (agenda.isValid()) {
+            const QDBusReply<QStringList> reply = agenda.call(QStringLiteral("eventsForDate"), normalizedDate);
+            if (reply.isValid()) {
+                for (const auto &serialized : reply.value()) {
+                    QJsonParseError parseError;
+                    const auto document = QJsonDocument::fromJson(serialized.toUtf8(), &parseError);
+                    if (parseError.error != QJsonParseError::NoError || !document.isObject()) continue;
+                    const auto object = document.object();
+                    events.append(QVariantMap {
+                        {QStringLiteral("dateKey"), object.value(QStringLiteral("dateKey")).toString()},
+                        {QStringLiteral("start"), object.value(QStringLiteral("start")).toString()},
+                        {QStringLiteral("end"), object.value(QStringLiteral("end")).toString()},
+                        {QStringLiteral("title"), object.value(QStringLiteral("title")).toString()},
+                        {QStringLiteral("location"), object.value(QStringLiteral("location")).toString()},
+                        {QStringLiteral("description"), object.value(QStringLiteral("description")).toString()},
+                        {QStringLiteral("allDay"), object.value(QStringLiteral("allDay")).toBool()}
+                    });
+                }
+            }
+        }
+    }
+    if (m_agendaEvents == events) return;
+    m_agendaEvents = events;
+    Q_EMIT agendaEventsChanged();
 }
 
 void ValenzBridge::setAgendaInstalled(bool installed)

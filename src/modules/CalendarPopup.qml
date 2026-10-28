@@ -39,6 +39,7 @@ Window
     readonly property int _minPanelHeight: Maui.Handy.isMobile ? _baseUnit * 19 : _baseUnit * 20
     readonly property int _preferredPanelHeight: Maui.Handy.isMobile ? _baseUnit * 23 : _baseUnit * 24
     readonly property int _calendarSpacing: Maui.Style.space.small
+    readonly property var _eventsModel: calendarPopup.bridge ? calendarPopup.bridge.agendaEvents : []
     readonly property int _eventsCount: _eventCountForSelectedDate()
     readonly property var _weatherForecast: calendarPopup.bridge ? calendarPopup.bridge.weatherForecast : []
     readonly property var _weatherDetailLabels: [i18n("Feels like"), i18n("Humidity"), i18n("UV index"), i18n("Wind")]
@@ -138,60 +139,55 @@ Window
 
     function _syncModelFromDisplay()
     {
-        if (!_calendarMonthModel || _calendarStateSyncing)
+        if (!_calendarMonthView || _calendarStateSyncing)
             return
 
         _calendarStateSyncing = true
-        _calendarMonthModel.year = displayYear
-        _calendarMonthModel.month = displayMonth + 1
+        _calendarMonthView.setToDate(new Date(displayYear, displayMonth, 1))
+        _calendarMonthView.selectedDate = selectedDate
         _calendarStateSyncing = false
     }
 
     function _syncDisplayFromModel()
     {
-        if (!_calendarMonthModel || _calendarStateSyncing)
+        if (!_calendarMonthView || !_calendarMonthView.firstDayOfMonth || _calendarStateSyncing)
             return
 
         _calendarStateSyncing = true
-        displayYear = _calendarMonthModel.year
-        displayMonth = Math.max(0, _calendarMonthModel.month - 1)
+        displayYear = _calendarMonthView.firstDayOfMonth.getFullYear()
+        displayMonth = _calendarMonthView.firstDayOfMonth.getMonth()
         _calendarStateSyncing = false
     }
 
     function _syncSelectionFromDate(dateValue)
     {
-        if (!_calendarMonthModel || _calendarStateSyncing)
-            return
+        if (_calendarMonthView)
+            _calendarMonthView.selectedDate = dateValue
+        _refreshAgendaEvents()
+    }
 
-        _calendarStateSyncing = true
-        _calendarMonthModel.selected = dateValue
-        _calendarStateSyncing = false
+    function _refreshAgendaEvents()
+    {
+        if (calendarPopup.bridge && calendarPopup.bridge.refreshAgendaEvents)
+            calendarPopup.bridge.refreshAgendaEvents(_dateKey(selectedDate))
     }
 
     function previousMonth()
     {
-        if (displayMonth === 0)
-        {
-            displayMonth = 11
-            displayYear -= 1
-        }
-        else
-        {
-            displayMonth -= 1
-        }
+        if (!_calendarMonthView)
+            return
+        _calendarMonthView.previousDate()
+        _syncDisplayFromModel()
+        _refreshAgendaEvents()
     }
 
     function nextMonth()
     {
-        if (displayMonth === 11)
-        {
-            displayMonth = 0
-            displayYear += 1
-        }
-        else
-        {
-            displayMonth += 1
-        }
+        if (!_calendarMonthView)
+            return
+        _calendarMonthView.nextDate()
+        _syncDisplayFromModel()
+        _refreshAgendaEvents()
     }
 
     function _dateKey(dateValue)
@@ -210,9 +206,9 @@ Window
 
         let count = 0
 
-        for (let i = 0; i < _eventsModel.count; ++i)
+        for (let i = 0; i < _eventsModel.length; ++i)
         {
-            if (_eventsModel.get(i).dateKey === selectedKey)
+            if (_eventsModel[i].dateKey === selectedKey)
                 count += 1
         }
 
@@ -326,24 +322,6 @@ Window
     onDisplayYearChanged: _syncModelFromDisplay()
     onSelectedDateChanged: _syncSelectionFromDate(selectedDate)
 
-    ListModel
-    {
-        id: _eventsModel
-    }
-
-    MauiCalendar.MonthModel
-    {
-        id: _calendarMonthModel
-
-        onMonthChanged: calendarPopup._syncDisplayFromModel()
-        onYearChanged: calendarPopup._syncDisplayFromModel()
-        onSelectedChanged:
-        {
-            if (!calendarPopup._calendarStateSyncing)
-                calendarPopup.selectedDate = selected
-        }
-    }
-
     signal aboutToShow()
     signal opened()
     signal closed()
@@ -445,6 +423,7 @@ Window
             displayYear = selectedDate.getFullYear()
             _syncModelFromDisplay()
             _syncSelectionFromDate(selectedDate)
+            _refreshAgendaEvents()
             _touchGeometryRevision()
             Qt.callLater(_touchGeometryRevision)
             _deferredGeometryRefreshTimer.restart()
@@ -660,76 +639,18 @@ Window
                             }
                         }
 
-                        GridLayout
+                        MauiCalendar.MonthView
                         {
+                            id: _calendarMonthView
                             Layout.fillWidth: true
-                            columns: 7
-                            uniformCellWidths: true
-                            rowSpacing: Maui.Style.space.tiny
-                            columnSpacing: Maui.Style.space.small
-
-                            Repeater
+                            Layout.preferredHeight: Maui.Style.units.gridUnit * 14
+                            selectedDate: calendarPopup.selectedDate
+                            dragDropEnabled: false
+                            onFirstDayOfMonthChanged: calendarPopup._syncDisplayFromModel()
+                            onDateClicked: function(date)
                             {
-                                model: _calendarMonthModel.weekDays
-
-                                delegate: Label
-                                {
-                                    required property string modelData
-                                    Layout.fillWidth: true
-                                    horizontalAlignment: Text.AlignHCenter
-                                    font.weight: Font.DemiBold
-                                    color: Qt.alpha(Maui.Theme.textColor, 0.95)
-                                    text: modelData
-                                }
-                            }
-                        }
-
-                        GridLayout
-                        {
-                            Layout.fillWidth: true
-                            columns: 7
-                            uniformCellWidths: true
-                            rowSpacing: Maui.Style.space.tiny
-                            columnSpacing: Maui.Style.space.small
-
-                            Repeater
-                            {
-                                model: _calendarMonthModel
-
-                                delegate: ToolButton
-                                {
-                                    required property bool sameMonth
-                                    required property date date
-                                    required property int dayNumber
-                                    required property bool isToday
-                                    required property bool isSelected
-
-                                    Layout.fillWidth: true
-                                    Layout.preferredHeight: Math.max(32, Maui.Style.rowHeight - Maui.Style.space.tiny)
-                                    display: ToolButton.TextOnly
-                                    padding: 0
-                                    leftPadding: 0
-                                    rightPadding: 0
-                                    topPadding: 0
-                                    bottomPadding: 0
-                                    text: String(dayNumber)
-                                    opacity: sameMonth ? 1 : 0.18
-                                    enabled: sameMonth
-                                    font.weight: (isToday || isSelected) ? Font.DemiBold : Font.Normal
-                                    onClicked:
-                                    {
-                                        calendarPopup.selectedDate = date
-                                        _calendarMonthModel.selected = date
-                                    }
-
-                                    background: Rectangle
-                                    {
-                                        radius: Maui.Style.radiusV
-                                        color: isSelected ? Qt.alpha(Maui.Theme.highlightColor, 0.32)
-                                                                    : parent.down || parent.hovered ? Qt.alpha(Maui.Theme.hoverColor, 0.65)
-                                                                                                   : "transparent"
-                                    }
-                                }
+                                calendarPopup.selectedDate = date
+                                calendarPopup._refreshAgendaEvents()
                             }
                         }
                     }
@@ -806,14 +727,21 @@ Window
 
                         Repeater
                         {
-                            model: _eventsModel
+                            model: calendarPopup._eventsModel
 
                             delegate: RowLayout
                             {
-                                required property string dateKey
-                                required property string timeText
-                                required property string titleText
-                                required property string detailsText
+                                required property var modelData
+
+                                readonly property string dateKey: modelData.dateKey || ""
+                                readonly property string titleText: modelData.title || i18n("Untitled event")
+                                readonly property string timeText: modelData.allDay ? i18n("All day") : new Date(modelData.start).toLocaleTimeString(Qt.locale(), Locale.ShortFormat)
+                                readonly property string detailsText: {
+                                    const details = []
+                                    if (modelData.location) details.push(modelData.location)
+                                    if (modelData.description) details.push(modelData.description)
+                                    return details.join(" · ")
+                                }
 
                                 readonly property bool _isForSelectedDate: dateKey === calendarPopup._dateKey(calendarPopup.selectedDate)
 

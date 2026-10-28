@@ -93,6 +93,7 @@ class ValenzBridge : public QObject
     Q_PROPERTY(QString screenPlacement READ screenPlacement WRITE setScreenPlacement NOTIFY screenPlacementChanged FINAL)
     Q_PROPERTY(bool systemTrayDebugDetails READ systemTrayDebugDetails NOTIFY systemTrayDebugDetailsChanged FINAL)
     Q_PROPERTY(bool agendaInstalled READ agendaInstalled NOTIFY agendaInstalledChanged FINAL)
+    Q_PROPERTY(QVariantList agendaEvents READ agendaEvents NOTIFY agendaEventsChanged FINAL)
     Q_PROPERTY(QString weatherIconName READ weatherIconName WRITE setWeatherIconName NOTIFY weatherIconNameChanged FINAL)
     Q_PROPERTY(QString weatherTemperature READ weatherTemperature WRITE setWeatherTemperature NOTIFY weatherTemperatureChanged FINAL)
     Q_PROPERTY(QString weatherConditionLabel READ weatherConditionLabel WRITE setWeatherConditionLabel NOTIFY weatherConditionLabelChanged FINAL)
@@ -232,6 +233,7 @@ public:
     void setScreenPlacement(const QString &placement);
     bool systemTrayDebugDetails() const;
     bool agendaInstalled() const;
+    QVariantList agendaEvents() const;
     QString weatherIconName() const;
     void setWeatherIconName(const QString &iconName);
     QString weatherTemperature() const;
@@ -282,6 +284,7 @@ public:
     Q_INVOKABLE void refreshControlCenterSystemResources();
     Q_INVOKABLE void refreshControlCenterRuntimeState();
     Q_INVOKABLE void refreshWeather();
+    Q_INVOKABLE void refreshAgendaEvents(const QString &date);
 
 Q_SIGNALS:
     void traceRaised(const QString &source, const QString &action, const QString &detail, const QString &timestamp);
@@ -351,6 +354,7 @@ Q_SIGNALS:
     void controlCenterNightLightEnabledChanged(bool enabled);
     void controlCenterNightLightAvailableChanged(bool available);
     void agendaInstalledChanged(bool installed);
+    void agendaEventsChanged();
     void weatherIconNameChanged(const QString &iconName);
     void weatherTemperatureChanged(const QString &temperature);
     void weatherConditionLabelChanged(const QString &label);
@@ -511,6 +515,7 @@ private:
     int m_barLayerSpacingLeft = 0;
     int m_barLayerSpacingRight = 0;
     bool m_agendaInstalled = false;
+    QVariantList m_agendaEvents;
     QString m_weatherIconName = QStringLiteral("weather-severe-alert");
     QString m_weatherTemperature = QStringLiteral("--°C");
     QString m_weatherConditionLabel;
