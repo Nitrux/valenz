@@ -2,7 +2,6 @@
 // Copyright 2026 Nitrux Latinoamericana S.C. <hello@nxos.org>
 
 #include "valenzbridge.h"
-#include <QDebug>
 #include "valenzbridge_p.h"
 
 namespace
@@ -234,15 +233,6 @@ bool ValenzBridge::refreshFocusedWindowState()
     const int fullscreenInternal = parseFullscreenMode(windowObject.value(QStringLiteral("fullscreen")));
     const int fullscreenClient = parseFullscreenMode(windowObject.value(QStringLiteral("fullscreenClient")));
 
-    if (fullscreenInternal != m_focusedWindowFullscreenInternal
-            || fullscreenClient != m_focusedWindowFullscreenClient)
-    {
-        qInfo().noquote() << QStringLiteral("[ValenzDebug] fullscreen internal=%1 client=%2 effective=%3")
-                                .arg(fullscreenInternal)
-                                .arg(fullscreenClient)
-                                .arg((fullscreenInternal & kFullscreenModeFullscreen) != 0 ? QStringLiteral("true") : QStringLiteral("false"));
-    }
-
     QString title = windowObject.value(QStringLiteral("title")).toString().trimmed();
     if (title.isEmpty())
         title = windowObject.value(QStringLiteral("initialTitle")).toString().trimmed();
@@ -391,9 +381,6 @@ void ValenzBridge::handleHyprlandEventLine(const QString &line)
         return;
 
     const QString eventName = line.left(separatorIndex).trimmed();
-
-    if (isFocusedWindowRelatedHyprlandEvent(eventName))
-        qInfo().noquote() << QStringLiteral("[ValenzDebug] focus event=%1").arg(eventName);
 
     if (isWorkspaceRelatedHyprlandEvent(eventName))
         scheduleWorkspaceStateRefresh(50);

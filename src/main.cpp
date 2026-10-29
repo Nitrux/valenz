@@ -156,19 +156,6 @@ static void configureLayerShellWindow(QWindow *window, bool wantsActiveScreen)
     layerShellWindow->setAnchors(anchors);
     layerShellWindow->setDesiredSize(QSize(window->width(), window->height()));
     layerShellWindow->setMargins(QMargins(appliedLeft, appliedTop, appliedRight, 0));
-
-    qInfo().noquote() << QStringLiteral("[ValenzDebug] layer visible=%1 size=%2x%3 pos=%4,%5 screen=%6 active=%7 margins=%8,%9,%10 zone=%11")
-                            .arg(window->isVisible() ? QStringLiteral("true") : QStringLiteral("false"))
-                            .arg(window->width())
-                            .arg(window->height())
-                            .arg(window->x())
-                            .arg(window->y())
-                            .arg(window->screen() ? window->screen()->name() : QStringLiteral("<none>"))
-                            .arg(wantsActiveScreen ? QStringLiteral("true") : QStringLiteral("false"))
-                            .arg(appliedLeft)
-                            .arg(appliedTop)
-                            .arg(appliedRight)
-                            .arg(window->isVisible() ? (exclusiveZone > 0 ? exclusiveZone : window->height()) : 0);
 }
 
 static QString desktopFileNameForPortal()

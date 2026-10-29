@@ -1120,13 +1120,3 @@ void ValenzBridge::setControlCenterDiskUsagePath(const QString &path)
     refreshControlCenterSystemResourcesState();
     Q_EMIT controlCenterDiskUsagePathChanged(m_controlCenterDiskUsagePath);
 }
-
-void ValenzBridge::trace(const QString &source, const QString &action, const QString &detail)
-{
-    if (!m_enabled)
-        return;
-
-    const QString timestamp = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
-    Q_EMIT traceRaised(source, action, detail, timestamp);
-}
-

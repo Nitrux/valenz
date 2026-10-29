@@ -19,7 +19,6 @@ Window
     readonly property int barLayerSpacingBottom: valenzBridge ? valenzBridge.barLayerSpacingBottom : 0
     readonly property int barLayerSpacingLeft: valenzBridge ? valenzBridge.barLayerSpacingLeft : 0
     readonly property int barLayerSpacingRight: valenzBridge ? valenzBridge.barLayerSpacingRight : 0
-    readonly property bool systemTrayDebugDetails: valenzBridge ? valenzBridge.systemTrayDebugDetails : false
     readonly property real popupSurfaceOpacity: 0.76
     readonly property color popupSurfaceColor: Qt.alpha(Maui.Theme.backgroundColor, root.popupSurfaceOpacity)
     readonly property int popupSurfaceRadius: Maui.Style.radiusV + 3
@@ -38,20 +37,6 @@ Window
         return null
     }
     visible: !valenzBridge || !valenzBridge.focusedWindowFullscreen
-    onVisibleChanged:
-    {
-        console.log("[ValenzDebug] root visible=", visible, "fullscreen=", valenzBridge ? valenzBridge.focusedWindowFullscreen : false)
-    }
-
-    Connections
-    {
-        target: valenzBridge
-
-        function onFocusedWindowFullscreenChanged(fullscreen)
-        {
-            console.log("[ValenzDebug] fullscreen=", fullscreen, "rootVisible=", root.visible)
-        }
-    }
     readonly property bool useDirectionalSpacing: barLayerSpacingTop > 0 || barLayerSpacingBottom > 0 || barLayerSpacingLeft > 0 || barLayerSpacingRight > 0
     width:
     {
@@ -78,16 +63,6 @@ Window
         windowRadius: root.popupSurfaceRadius
         enabled: true
     }
-
-    function traceMenu(action, detail)
-    {
-        if (detail === undefined)
-            detail = ""
-
-        if (valenzBridge)
-            valenzBridge.trace("overflow_menu", action, detail)
-    }
-
     function openCalendarPopup()
     {
         _calendarPopup.toggleFromAnchor()
@@ -375,7 +350,7 @@ Window
         const critical = Number(urgencyLevel) >= 2
         const bubbles = _notificationBubbles()
 
-        console.log("[ValenzDebug] dispatch id=", notificationId, "urgency=", urgencyLevel, "critical=", critical)
+
 
         for (let index = 0; index < bubbles.length; ++index)
         {
@@ -758,44 +733,6 @@ Window
         y: root.notificationBubbleHostY()
         width: root.notificationBubbleHostWidth()
         height: root.notificationBubbleHostHeight()
-        property bool positionTraceActive: false
-        property real positionTraceLastX: 0
-        property real positionTraceLastY: 0
-
-        function tracePosition(reason, reset)
-        {
-            if (!visible || !positionTraceActive)
-                return
-
-            const currentX = Number(x)
-            const currentY = Number(y)
-            const deltaX = reset ? 0 : currentX - positionTraceLastX
-            const deltaY = reset ? 0 : currentY - positionTraceLastY
-            positionTraceLastX = currentX
-            positionTraceLastY = currentY
-            console.log("[ValenzDebug] popup notifications-host", reason,
-                        "pos=", [currentX, currentY],
-                        "delta=", [deltaX, deltaY],
-                        "size=", [width, height])
-        }
-
-        onXChanged: tracePosition("x-changed", false)
-        onYChanged: tracePosition("y-changed", false)
-        onWidthChanged: tracePosition("width-changed", false)
-        onHeightChanged: tracePosition("height-changed", false)
-
-        onVisibleChanged:
-        {
-            if (visible)
-            {
-                positionTraceActive = true
-                tracePosition("initial", true)
-            }
-            else
-            {
-                positionTraceActive = false
-            }
-        }
 
         function bubbleY(index)
         {
@@ -889,7 +826,6 @@ Window
 
         function onTransientNotification(id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey, actions, replyPlaceholderText, replySubmitButtonText)
         {
-            console.log("[ValenzDebug] notification id=", id, "source=", sourceName, "urgency=", urgencyLevel)
             _showNotificationBubble(id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey, actions, replyPlaceholderText, replySubmitButtonText)
         }
     }
@@ -1135,7 +1071,6 @@ Window
                             id: _systemTray
                             controller: systemTrayController
                             rootWindow: root
-                            debugDetails: root.systemTrayDebugDetails
                         }
 
                         Maui.Separator

@@ -348,11 +348,6 @@ int ValenzBridge::barLayerSpacingRight() const
     return m_barLayerSpacingRight;
 }
 
-bool ValenzBridge::systemTrayDebugDetails() const
-{
-    return m_systemTrayDebugDetails;
-}
-
 int ValenzBridge::clampWorkspace(int workspace) const
 {
     return qBound(1, workspace, m_workspaceCount);
@@ -416,13 +411,6 @@ void ValenzBridge::initializeConfig()
     ensureKey(QString::fromLatin1(kWindowBarLayerSpacingLeftKey), QString(), 0);
     ensureKey(QString::fromLatin1(kWindowBarLayerSpacingRightKey), QString(), 0);
     ensureKey(QString::fromLatin1(kWindowScreenPlacementKey), QString(), QStringLiteral("active"));
-    ensureKey(QString::fromLatin1(kSystemTrayDebugDetailsKey), QString::fromLatin1(kLegacySystemTrayDebugDetailsKey), false);
-    ensureKey(QString::fromLatin1(kDebugSimulatedBrightnessAvailableKey), QString(), false);
-    ensureKey(QString::fromLatin1(kDebugSimulatedBrightnessPercentageKey), QString(), 65);
-    ensureKey(QString::fromLatin1(kDebugSimulatedBatteryAvailableKey), QString(), false);
-    ensureKey(QString::fromLatin1(kDebugSimulatedBatteryPercentageKey), QString(), 72);
-    ensureKey(QString::fromLatin1(kDebugSimulatedBatteryChargingKey), QString(), false);
-    ensureKey(QString::fromLatin1(kDebugSimulatedBatteryOnAcPowerKey), QString(), false);
     ensureKey(QString::fromLatin1(kControlCenterSettingsCommandKey), QString(), QStringLiteral("systemsettings"));
     ensureKey(QString::fromLatin1(kLauncherCommandKey), QString(), QStringLiteral("vicinae toggle"));
     ensureKey(QString::fromLatin1(kClipboardCommandKey), QString(), QStringLiteral("vicinae vicinae://launch/clipboard/history"));
@@ -481,13 +469,6 @@ void ValenzBridge::initializeConfig()
     m_screenPlacement = normalizeScreenPlacement(userSettings.value(kWindowScreenPlacementKey, QStringLiteral("active")).toString());
     userSettings.setValue(kWindowScreenPlacementKey, m_screenPlacement);
     userSettings.sync();
-    m_systemTrayDebugDetails = userSettings.value(kSystemTrayDebugDetailsKey, false).toBool();
-    m_debugSimulatedBrightnessAvailable = userSettings.value(kDebugSimulatedBrightnessAvailableKey, false).toBool();
-    m_debugSimulatedBrightnessPercentage = qBound(0, userSettings.value(kDebugSimulatedBrightnessPercentageKey, 65).toInt(), 100);
-    m_debugSimulatedBatteryAvailable = userSettings.value(kDebugSimulatedBatteryAvailableKey, false).toBool();
-    m_debugSimulatedBatteryPercentage = qBound(0, userSettings.value(kDebugSimulatedBatteryPercentageKey, 72).toInt(), 100);
-    m_debugSimulatedBatteryCharging = userSettings.value(kDebugSimulatedBatteryChargingKey, false).toBool();
-    m_debugSimulatedBatteryOnAcPower = userSettings.value(kDebugSimulatedBatteryOnAcPowerKey, false).toBool();
 
     m_weatherLatitude = normalizeWeatherCoordinate(userSettings.value(kWeatherLatitudeKey, 40.7128), -90.0, 90.0, 40.7128);
     m_weatherLongitude = normalizeWeatherCoordinate(userSettings.value(kWeatherLongitudeKey, -74.0060), -180.0, 180.0, -74.0060);
@@ -601,22 +582,6 @@ void ValenzBridge::reloadConfig()
     update(m_screenPlacement,
            normalizeScreenPlacement(settings.value(kWindowScreenPlacementKey, QStringLiteral("active")).toString()),
            [this] { Q_EMIT screenPlacementChanged(m_screenPlacement); });
-    update(m_systemTrayDebugDetails, settings.value(kSystemTrayDebugDetailsKey, false).toBool(),
-           [this] { Q_EMIT systemTrayDebugDetailsChanged(m_systemTrayDebugDetails); });
-
-    bool controlCenterRuntimeChanged = false;
-    controlCenterRuntimeChanged |= update(m_debugSimulatedBrightnessAvailable,
-                                          settings.value(kDebugSimulatedBrightnessAvailableKey, false).toBool(), [] {});
-    controlCenterRuntimeChanged |= update(m_debugSimulatedBrightnessPercentage,
-                                          qBound(0, settings.value(kDebugSimulatedBrightnessPercentageKey, 65).toInt(), 100), [] {});
-    controlCenterRuntimeChanged |= update(m_debugSimulatedBatteryAvailable,
-                                          settings.value(kDebugSimulatedBatteryAvailableKey, false).toBool(), [] {});
-    controlCenterRuntimeChanged |= update(m_debugSimulatedBatteryPercentage,
-                                          qBound(0, settings.value(kDebugSimulatedBatteryPercentageKey, 72).toInt(), 100), [] {});
-    controlCenterRuntimeChanged |= update(m_debugSimulatedBatteryCharging,
-                                          settings.value(kDebugSimulatedBatteryChargingKey, false).toBool(), [] {});
-    controlCenterRuntimeChanged |= update(m_debugSimulatedBatteryOnAcPower,
-                                          settings.value(kDebugSimulatedBatteryOnAcPowerKey, false).toBool(), [] {});
 
     bool weatherChanged = false;
     weatherChanged |= update(m_weatherLatitude,
@@ -639,8 +604,6 @@ void ValenzBridge::reloadConfig()
         refreshWeather();
     if (diskUsagePathChanged)
         refreshControlCenterSystemResourcesState();
-    if (controlCenterRuntimeChanged)
-        refreshControlCenterRuntimeState();
     refreshSharedSettingsFromFile();
 }
 

@@ -91,7 +91,6 @@ class ValenzBridge : public QObject
     Q_PROPERTY(int barLayerSpacingLeft READ barLayerSpacingLeft NOTIFY barLayerSpacingLeftChanged FINAL)
     Q_PROPERTY(int barLayerSpacingRight READ barLayerSpacingRight NOTIFY barLayerSpacingRightChanged FINAL)
     Q_PROPERTY(QString screenPlacement READ screenPlacement WRITE setScreenPlacement NOTIFY screenPlacementChanged FINAL)
-    Q_PROPERTY(bool systemTrayDebugDetails READ systemTrayDebugDetails NOTIFY systemTrayDebugDetailsChanged FINAL)
     Q_PROPERTY(bool agendaInstalled READ agendaInstalled NOTIFY agendaInstalledChanged FINAL)
     Q_PROPERTY(QVariantList agendaEvents READ agendaEvents NOTIFY agendaEventsChanged FINAL)
     Q_PROPERTY(QString weatherIconName READ weatherIconName WRITE setWeatherIconName NOTIFY weatherIconNameChanged FINAL)
@@ -231,7 +230,6 @@ public:
     int barLayerSpacingRight() const;
     QString screenPlacement() const;
     void setScreenPlacement(const QString &placement);
-    bool systemTrayDebugDetails() const;
     bool agendaInstalled() const;
     QVariantList agendaEvents() const;
     QString weatherIconName() const;
@@ -260,7 +258,6 @@ public:
     int weatherRefreshMinutes() const;
     void setWeatherRefreshMinutes(int minutes);
 
-    Q_INVOKABLE void trace(const QString &source, const QString &action, const QString &detail = QString());
     Q_INVOKABLE void executeControlCenterPowerCommand();
     Q_INVOKABLE void executeControlCenterSettingsCommand();
     Q_INVOKABLE void toggleVicinae();
@@ -287,7 +284,6 @@ public:
     Q_INVOKABLE void refreshAgendaEvents(const QString &date);
 
 Q_SIGNALS:
-    void traceRaised(const QString &source, const QString &action, const QString &detail, const QString &timestamp);
     void enabledChanged(bool enabled);
     void currentWorkspaceChanged(int currentWorkspace);
     void workspaceCountChanged(int workspaceCount);
@@ -319,7 +315,6 @@ Q_SIGNALS:
     void barLayerSpacingLeftChanged(int spacing);
     void barLayerSpacingRightChanged(int spacing);
     void screenPlacementChanged(const QString &placement);
-    void systemTrayDebugDetailsChanged(bool enabled);
     void controlCenterIconModeChanged(const QString &mode);
     void controlCenterNetworkModeChanged(const QString &state);
     void controlCenterBluetoothStateChanged(const QString &state);
@@ -376,6 +371,8 @@ private Q_SLOTS:
     void reloadConfig();
     void onMprisPropertiesChanged(const QString &interfaceName, const QVariantMap &changedProperties, const QStringList &invalidatedProperties);
     void onMprisNameOwnerChanged(const QString &serviceName, const QString &oldOwner, const QString &newOwner);
+    void onBluezNameOwnerChanged(const QString &serviceName, const QString &oldOwner, const QString &newOwner);
+    void onBluezArtworkTransferPropertiesChanged(const QString &interfaceName, const QVariantMap &changedProperties, const QStringList &invalidatedProperties);
     void onWeatherReplyFinished(QNetworkReply *reply);
 
 private:
@@ -409,6 +406,11 @@ private:
     void updateMprisPlaybackTicker();
     void updateMprisTimestampFromTicker();
     void requestMediaArtwork(const QString &source);
+    void requestBluezMediaArtwork(const QString &playerPath, const QString &deviceAddress, const QString &handle, quint16 obexPort);
+    void startBluezArtworkTransfer(quint64 requestId);
+    void finishBluezArtworkTransfer(bool success);
+    void cancelBluezArtworkTransfer();
+    void resetBluezArtworkSession();
     void startMediaArtworkRequest(const QUrl &url);
     void handleMediaArtworkReadyRead(QNetworkReply *reply);
     void handleMediaArtworkFinished(QNetworkReply *reply);
@@ -446,7 +448,6 @@ private:
     bool m_mediaPlaying = false;
     bool m_mprisVisible = false;
     bool m_mprisAlwaysVisible = false;
-    bool m_systemTrayDebugDetails = false;
     QVariantList m_mprisSources;
     QString m_focusedWindowTitle;
     QString m_focusedWindowIconName;
@@ -480,8 +481,6 @@ private:
     QString m_controlCenterDiskUsageText;
     QString m_controlCenterBrightnessPercentage = QStringLiteral("0%");
     bool m_controlCenterBrightnessAvailable = false;
-    bool m_debugSimulatedBrightnessAvailable = false;
-    int m_debugSimulatedBrightnessPercentage = 65;
     QString m_controlCenterNetworkState = QStringLiteral("offline");
     double m_controlCenterNetworkUploadRate = 0.0;
     double m_controlCenterNetworkDownloadRate = 0.0;
@@ -494,10 +493,6 @@ private:
     int m_controlCenterBluetoothConnectedDeviceCount = 0;
     bool m_controlCenterBatteryAvailable = false;
     bool m_controlCenterBatteryOnAcPower = false;
-    bool m_debugSimulatedBatteryAvailable = false;
-    int m_debugSimulatedBatteryPercentage = 72;
-    bool m_debugSimulatedBatteryCharging = false;
-    bool m_debugSimulatedBatteryOnAcPower = false;
     bool m_controlCenterNightLightEnabled = false;
     bool m_controlCenterNightLightCommandPending = false;
     bool m_controlCenterNightLightCommandTarget = false;
@@ -551,6 +546,16 @@ private:
     QUrl m_artworkRequestedUrl;
     int m_artworkRedirectCount = 0;
     QHash<QString, QString> m_artworkCache;
+    QString m_bluezArtworkPlayerPath;
+    QString m_bluezArtworkDeviceAddress;
+    QString m_bluezArtworkHandle;
+    QString m_bluezArtworkSessionPath;
+    QString m_bluezArtworkTransferPath;
+    QString m_bluezArtworkTargetPath;
+    QString m_bluezArtworkSource;
+    quint16 m_bluezArtworkObexPort = 0;
+    quint64 m_bluezArtworkRequestId = 0;
+    bool m_bluezArtworkRequestPending = false;
     QStringList m_artworkCacheOrder;
     QTimer *m_weatherRefreshTimer = nullptr;
     QTimer *m_controlCenterStatusTimer = nullptr;

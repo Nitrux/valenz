@@ -193,8 +193,6 @@ Item
     {
         if (controller && controller.invokeActionByIdAndKey)
             controller.invokeActionByIdAndKey(notificationId, actionKey)
-        else if (rootWindow && rootWindow.traceMenu)
-            rootWindow.traceMenu("notification_action", actionKey)
     }
 
     function openReply(notificationId)
@@ -292,8 +290,6 @@ Item
             return
 
         _clearRemainingAnimations = Math.max(0, _clearRemainingAnimations - 1)
-        _logClearAnimation("finished", "center", -1, null, 0)
-
         if (_clearRemainingAnimations === 0)
         {
             if (controller)
@@ -302,12 +298,6 @@ Item
                 _notificationsModel.clear()
 
             _clearingAll = false
-            _logClearAnimation("end", "center", -1, null, 0)
-            Qt.callLater(function()
-            {
-                if (visible)
-                    _logClearAnimation("post-clear", "center", -1, null, 0)
-            })
         }
     }
 
@@ -318,26 +308,8 @@ Item
 
         _clearRemainingAnimations = _topLevelNotificationCount
         _clearingAll = true
-        _logClearAnimation("begin", "center", -1, null, 0)
         clearAllTrigger += 1
     }
-
-    function _logClearAnimation(reason, kind, index, card, delayMs)
-    {
-        const host = notificationsCenter.hostWindow
-        const cardGeometry = card ? [Number(card.x), Number(card.y), Number(card.width), Number(card.height), Number(card.opacity)] : []
-        console.log("[ValenzDebug] clear-all", reason,
-                    "kind=", kind,
-                    "index=", index,
-                    "delay=", Number(delayMs || 0),
-                    "card=", cardGeometry,
-                    "panel=", [Number(_panel.x), Number(_panel.y), Number(_panel.width), Number(_panel.height), Number(_panel.opacity), Number(_panel.scale)],
-                    "center=", [Number(x), Number(y), Number(width), Number(height)],
-                    "host=", host ? [Number(host.width), Number(host.height)] : [],
-                    "layer=", _panel.layer.enabled,
-                    "remaining=", _clearRemainingAnimations)
-    }
-
     ListModel
     {
         id: _notificationsModel
@@ -367,7 +339,6 @@ Item
             if (visible)
                 _panelOpen = true
         })
-        _logPopupGeometry("opened")
     }
 
     function close()
@@ -387,24 +358,6 @@ Item
         _panelOpen = false
         visible = false
     }
-
-    function _logPopupGeometry(reason)
-    {
-        if (!visible)
-            return
-
-        const anchorPoint = _anchorPointInScreen(0, 0)
-        const anchor = anchorPoint ? [Number(anchorPoint.x), Number(anchorPoint.y)] : []
-        const host = notificationsCenter.hostWindow
-        const hostGeometry = host ? [Number(host.x), Number(host.y), Number(host.width), Number(host.height)] : []
-        console.log("[ValenzDebug] popup notifications-center-item-v2", reason,
-                    "item=", [Number(x), Number(y), Number(width), Number(height)],
-                    "hostQWindow=", hostGeometry,
-                    "popupMarkerLocal=", [Number(width), 0],
-                    "buttonAnchorScreen=", anchor,
-                    "revision=", _geometryRevision)
-    }
-
     Timer
     {
         id: _deferredGeometryRefreshTimer
@@ -415,7 +368,6 @@ Item
             if (visible)
             {
                 _touchGeometryRevision()
-                _logPopupGeometry("deferred")
             }
         }
     }
@@ -437,12 +389,6 @@ Item
 
     width: Math.max(_panel.implicitWidth, _minPanelWidth)
     height: Math.min(_panel.implicitHeight, _availableHeightFromAnchor)
-
-    onXChanged: _logPopupGeometry("item-x-changed")
-    onYChanged: _logPopupGeometry("item-y-changed")
-    onWidthChanged: _logPopupGeometry("item-width-changed")
-    onHeightChanged: _logPopupGeometry("item-height-changed")
-
     onVisibleChanged:
     {
         if (visible)
@@ -456,7 +402,6 @@ Item
                 }
             })
             _deferredGeometryRefreshTimer.restart()
-            _logPopupGeometry("visible")
             if (controller)
                 controller.refreshTimestamps()
         }
@@ -697,20 +642,7 @@ Item
 
                                         _dismissing = true
                                         _dismissDelayMs = Math.max(0, delayMs || 0)
-                                        notificationsCenter._logClearAnimation("start", "group", index, _groupCard, _dismissDelayMs)
                                         _dismissAnimation.start()
-                                    }
-
-                                    onXChanged:
-                                    {
-                                        if (_dismissing)
-                                            notificationsCenter._logClearAnimation("x", "group", index, _groupCard, _dismissDelayMs)
-                                    }
-
-                                    onOpacityChanged:
-                                    {
-                                        if (_dismissing)
-                                            notificationsCenter._logClearAnimation("opacity", "group", index, _groupCard, _dismissDelayMs)
                                     }
 
                                     Connections
@@ -770,7 +702,6 @@ Item
 
                                         onFinished:
                                         {
-                                            notificationsCenter._logClearAnimation("animation-finished", "group", index, _groupCard, _dismissDelayMs)
                                             if (notificationsCenter._clearingAll)
                                                 notificationsCenter._onClearAllCardDismissed()
                                             else
@@ -1179,20 +1110,7 @@ Item
 
                                 _dismissing = true
                                 _dismissDelayMs = Math.max(0, delayMs || 0)
-                                notificationsCenter._logClearAnimation("start", "notification", index, _notificationCard, _dismissDelayMs)
                                 _dismissAnimation.start()
-                            }
-
-                            onXChanged:
-                            {
-                                if (_dismissing)
-                                    notificationsCenter._logClearAnimation("x", "notification", index, _notificationCard, _dismissDelayMs)
-                            }
-
-                            onOpacityChanged:
-                            {
-                                if (_dismissing)
-                                    notificationsCenter._logClearAnimation("opacity", "notification", index, _notificationCard, _dismissDelayMs)
                             }
 
                             Connections
@@ -1252,7 +1170,6 @@ Item
 
                                 onFinished:
                                 {
-                                    notificationsCenter._logClearAnimation("animation-finished", "notification", index, _notificationCard, _dismissDelayMs)
                                     if (notificationsCenter._clearingAll)
                                         notificationsCenter._onClearAllCardDismissed()
                                     else
@@ -1379,9 +1296,6 @@ Item
                                                 notificationsCenter.controller.invokeAction(index)
                                                 return
                                             }
-
-                                            if (notificationsCenter.rootWindow && notificationsCenter.rootWindow.traceMenu)
-                                                notificationsCenter.rootWindow.traceMenu("notification_action", actionKey)
                                         }
                                     }
                                 }

@@ -4,6 +4,14 @@
 #include "valenzbridge.h"
 
 #include <QBuffer>
+#include <QDBusConnection>
+#include <QDBusInterface>
+#include <QDBusMessage>
+#include <QDBusObjectPath>
+#include <QDBusPendingCallWatcher>
+#include <QDBusPendingReply>
+#include <QDBusReply>
+#include <QDBusVariant>
 #include <QCryptographicHash>
 #include <QFile>
 #include <QFileInfo>
@@ -27,6 +35,12 @@ constexpr int kArtworkDimensionLimit = 4096;
 constexpr qint64 kArtworkPixelLimit = 16 * 1024 * 1024;
 constexpr int kArtworkOutputDimensionLimit = 512;
 constexpr int kArtworkCacheEntryLimit = 32;
+constexpr auto kBluezObexService = "org.bluez.obex";
+constexpr auto kBluezObexRootPath = "/org/bluez/obex";
+constexpr auto kBluezObexClientInterface = "org.bluez.obex.Client1";
+constexpr auto kBluezObexImageInterface = "org.bluez.obex.Image1";
+constexpr auto kBluezObexTransferInterface = "org.bluez.obex.Transfer1";
+constexpr auto kDbusPropertiesInterface = "org.freedesktop.DBus.Properties";
 
 bool imageDimensionsAreSafe(const QSize &size)
 {
@@ -145,6 +159,231 @@ bool validateLocalArtwork(const QString &path)
     QImage normalizedImage;
     return decodeNormalizedArtwork(&reader, &normalizedImage);
 }
+}
+
+void ValenzBridge::requestBluezMediaArtwork(const QString &playerPath,
+                                             const QString &deviceAddress,
+                                             const QString &handle,
+                                             quint16 obexPort)
+{
+    if (playerPath.isEmpty())
+        return;
+
+    if (deviceAddress.isEmpty() || handle.isEmpty() || obexPort == 0
+        || !m_artworkCacheDir || !m_artworkCacheDir->isValid())
+    {
+        if (m_bluezArtworkPlayerPath == playerPath)
+        {
+            ++m_bluezArtworkRequestId;
+            cancelBluezArtworkTransfer();
+            resetBluezArtworkSession();
+            m_bluezArtworkPlayerPath.clear();
+            m_bluezArtworkDeviceAddress.clear();
+            m_bluezArtworkHandle.clear();
+            m_bluezArtworkTargetPath.clear();
+            m_bluezArtworkSource.clear();
+            m_bluezArtworkObexPort = 0;
+            m_bluezArtworkRequestPending = false;
+            updateMediaArtSource(QString());
+        }
+        return;
+    }
+
+    const bool sameRequest = m_bluezArtworkPlayerPath == playerPath
+        && m_bluezArtworkDeviceAddress == deviceAddress
+        && m_bluezArtworkHandle == handle
+        && m_bluezArtworkObexPort == obexPort;
+    if (sameRequest && (m_bluezArtworkRequestPending || !m_bluezArtworkSource.isEmpty()))
+        return;
+
+    const bool sameSession = sameRequest && !m_bluezArtworkSessionPath.isEmpty();
+    cancelBluezArtworkTransfer();
+    ++m_bluezArtworkRequestId;
+    m_bluezArtworkPlayerPath = playerPath;
+    m_bluezArtworkDeviceAddress = deviceAddress;
+    m_bluezArtworkHandle = handle;
+    m_bluezArtworkObexPort = obexPort;
+    m_bluezArtworkSource.clear();
+    m_bluezArtworkTargetPath = m_artworkCacheDir->filePath(
+        QString::fromLatin1(QCryptographicHash::hash((playerPath + QLatin1Char(':') + handle).toUtf8(),
+                                                      QCryptographicHash::Sha256).toHex())
+        + QStringLiteral(".img"));
+    QFile::remove(m_bluezArtworkTargetPath);
+    cancelMediaArtworkRequest();
+    updateMediaArtSource(QString());
+
+    if (sameSession)
+    {
+        startBluezArtworkTransfer(m_bluezArtworkRequestId);
+        return;
+    }
+
+    resetBluezArtworkSession();
+    const quint64 requestId = m_bluezArtworkRequestId;
+    m_bluezArtworkRequestPending = true;
+    QVariantMap options;
+    options.insert(QStringLiteral("Target"), QStringLiteral("bip-avrcp"));
+    options.insert(QStringLiteral("PSM"), QVariant::fromValue(obexPort));
+
+    QDBusMessage call = QDBusMessage::createMethodCall(QString::fromLatin1(kBluezObexService),
+                                                       QString::fromLatin1(kBluezObexRootPath),
+                                                       QString::fromLatin1(kBluezObexClientInterface),
+                                                       QStringLiteral("CreateSession"));
+    call << deviceAddress << options;
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(call), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, requestId] {
+        QDBusPendingReply<QDBusObjectPath> reply = *watcher;
+        watcher->deleteLater();
+        if (requestId != m_bluezArtworkRequestId)
+            return;
+        if (reply.isError())
+        {
+            m_bluezArtworkRequestPending = false;
+            return;
+        }
+
+        m_bluezArtworkSessionPath = reply.value().path();
+        startBluezArtworkTransfer(requestId);
+    });
+}
+
+void ValenzBridge::startBluezArtworkTransfer(quint64 requestId)
+{
+    if (requestId != m_bluezArtworkRequestId || m_bluezArtworkSessionPath.isEmpty()
+        || m_bluezArtworkTargetPath.isEmpty())
+    {
+        return;
+    }
+
+    QDBusMessage call = QDBusMessage::createMethodCall(QString::fromLatin1(kBluezObexService),
+                                                       m_bluezArtworkSessionPath,
+                                                       QString::fromLatin1(kBluezObexImageInterface),
+                                                       QStringLiteral("Get"));
+    call << m_bluezArtworkTargetPath << m_bluezArtworkHandle << QVariantMap();
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(call), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, requestId] {
+        QDBusPendingReply<QDBusObjectPath, QVariantMap> reply = *watcher;
+        watcher->deleteLater();
+        if (requestId != m_bluezArtworkRequestId)
+            return;
+        if (reply.isError())
+        {
+            m_bluezArtworkRequestPending = false;
+            resetBluezArtworkSession();
+            return;
+        }
+
+        m_bluezArtworkTransferPath = reply.argumentAt<0>().path();
+        const bool connected = QDBusConnection::sessionBus().connect(
+            QString::fromLatin1(kBluezObexService),
+            m_bluezArtworkTransferPath,
+            QString::fromLatin1(kDbusPropertiesInterface),
+            QStringLiteral("PropertiesChanged"),
+            this,
+            SLOT(onBluezArtworkTransferPropertiesChanged(QString,QVariantMap,QStringList)));
+        if (!connected)
+        {
+            finishBluezArtworkTransfer(false);
+            return;
+        }
+
+        QDBusInterface propertiesIface(QString::fromLatin1(kBluezObexService),
+                                       m_bluezArtworkTransferPath,
+                                       QString::fromLatin1(kDbusPropertiesInterface),
+                                       QDBusConnection::sessionBus());
+        const QDBusReply<QDBusVariant> statusReply = propertiesIface.call(
+            QStringLiteral("Get"),
+            QString::fromLatin1(kBluezObexTransferInterface),
+            QStringLiteral("Status"));
+        if (!statusReply.isValid())
+            return;
+
+        const QString status = statusReply.value().variant().toString();
+        if (status.compare(QStringLiteral("complete"), Qt::CaseInsensitive) == 0)
+            finishBluezArtworkTransfer(true);
+        else if (status.compare(QStringLiteral("error"), Qt::CaseInsensitive) == 0)
+            finishBluezArtworkTransfer(false);
+        else
+            m_bluezArtworkRequestPending = true;
+    });
+}
+
+void ValenzBridge::onBluezArtworkTransferPropertiesChanged(const QString &interfaceName,
+                                                           const QVariantMap &changedProperties,
+                                                           const QStringList &invalidatedProperties)
+{
+    Q_UNUSED(invalidatedProperties)
+    if (interfaceName != QString::fromLatin1(kBluezObexTransferInterface))
+        return;
+
+    const QString status = changedProperties.value(QStringLiteral("Status")).toString();
+    if (status.compare(QStringLiteral("complete"), Qt::CaseInsensitive) == 0)
+        finishBluezArtworkTransfer(true);
+    else if (status.compare(QStringLiteral("error"), Qt::CaseInsensitive) == 0)
+        finishBluezArtworkTransfer(false);
+}
+
+void ValenzBridge::finishBluezArtworkTransfer(bool success)
+{
+    if (!m_bluezArtworkTransferPath.isEmpty())
+    {
+        QDBusConnection::sessionBus().disconnect(
+            QString::fromLatin1(kBluezObexService),
+            m_bluezArtworkTransferPath,
+            QString::fromLatin1(kDbusPropertiesInterface),
+            QStringLiteral("PropertiesChanged"),
+            this,
+            SLOT(onBluezArtworkTransferPropertiesChanged(QString,QVariantMap,QStringList)));
+    }
+    m_bluezArtworkTransferPath.clear();
+    m_bluezArtworkRequestPending = false;
+
+    if (!success || !validateLocalArtwork(m_bluezArtworkTargetPath))
+    {
+        QFile::remove(m_bluezArtworkTargetPath);
+        resetBluezArtworkSession();
+        return;
+    }
+
+    m_bluezArtworkSource = QUrl::fromLocalFile(m_bluezArtworkTargetPath).toString();
+    updateMediaArtSource(m_bluezArtworkSource);
+}
+
+void ValenzBridge::cancelBluezArtworkTransfer()
+{
+    if (m_bluezArtworkTransferPath.isEmpty())
+        return;
+
+    QDBusConnection::sessionBus().disconnect(
+        QString::fromLatin1(kBluezObexService),
+        m_bluezArtworkTransferPath,
+        QString::fromLatin1(kDbusPropertiesInterface),
+        QStringLiteral("PropertiesChanged"),
+        this,
+        SLOT(onBluezArtworkTransferPropertiesChanged(QString,QVariantMap,QStringList)));
+
+    QDBusMessage cancel = QDBusMessage::createMethodCall(QString::fromLatin1(kBluezObexService),
+                                                         m_bluezArtworkTransferPath,
+                                                         QString::fromLatin1(kBluezObexTransferInterface),
+                                                         QStringLiteral("Cancel"));
+    QDBusConnection::sessionBus().asyncCall(cancel);
+    m_bluezArtworkTransferPath.clear();
+    m_bluezArtworkRequestPending = false;
+}
+
+void ValenzBridge::resetBluezArtworkSession()
+{
+    cancelBluezArtworkTransfer();
+    if (!m_bluezArtworkSessionPath.isEmpty())
+    {
+        QDBusMessage remove = QDBusMessage::createMethodCall(QString::fromLatin1(kBluezObexService),
+                                                             QString::fromLatin1(kBluezObexRootPath),
+                                                             QString::fromLatin1(kBluezObexClientInterface),
+                                                             QStringLiteral("RemoveSession"));
+        remove << QVariant::fromValue(QDBusObjectPath(m_bluezArtworkSessionPath));
+        QDBusConnection::sessionBus().asyncCall(remove);
+    }
+    m_bluezArtworkSessionPath.clear();
 }
 
 void ValenzBridge::requestMediaArtwork(const QString &source)

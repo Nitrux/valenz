@@ -798,11 +798,6 @@ Window
                             {
                                 visible: calendarPopup._agendaInstalled
                                 text: i18n("Edit Events")
-                                onClicked:
-                                {
-                                    if (calendarPopup.rootWindow && calendarPopup.rootWindow.traceMenu)
-                                        calendarPopup.rootWindow.traceMenu("calendar_open_agenda", Qt.formatDate(calendarPopup.selectedDate, "yyyy-MM-dd"))
-                                }
                             }
                         }
                     }

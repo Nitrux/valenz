@@ -350,29 +350,6 @@ void SystemTrayController::secondaryActivate(int index)
     requestItemMethod(index, QStringLiteral("SecondaryActivate"));
 }
 
-void SystemTrayController::debugTrayItem(int index)
-{
-    if (index < 0 || index >= m_items.size())
-        return;
-
-    const TrayItemEntry &entry = m_items.at(index);
-    const auto safe = [](const QString &value) -> QString {
-        return value.isEmpty() ? QStringLiteral("<empty>") : value;
-    };
-
-    qInfo().noquote() << QStringLiteral("System tray item %1\n  itemId: %2\n  title: %3\n  service: %4\n  objectPath: %5\n  status: %6\n  iconName: %7\n  iconSource: %8\n  menu: %9\n  itemIsMenu: %10")
-                             .arg(QString::number(index),
-                                  safe(entry.id),
-                                  safe(entry.title),
-                                  safe(entry.service),
-                                  safe(entry.objectPath),
-                                  safe(entry.status),
-                                  safe(entry.iconName),
-                                  safe(entry.iconSource),
-                                  safe(entry.menu),
-                                  QString::number(entry.itemIsMenu));
-}
-
 void SystemTrayController::contextMenu(int index, qreal x, qreal y)
 {
     requestItemMethod(index, QStringLiteral("ContextMenu"), qRound(x), qRound(y));

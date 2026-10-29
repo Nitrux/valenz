@@ -59,19 +59,16 @@ void ValenzBridge::onWeatherReplyFinished(QNetworkReply *reply)
     const QByteArray payload = success && reply->isReadable()
                                    ? reply->readAll()
                                    : QByteArray();
-    const QString errorString = reply->errorString();
     reply->deleteLater();
 
     if (!success)
     {
-        trace(QStringLiteral("weather"), QStringLiteral("refresh_failed"), errorString);
         QTimer::singleShot(15000, this, &ValenzBridge::refreshWeather);
         return;
     }
 
     if (payload.isEmpty())
     {
-        trace(QStringLiteral("weather"), QStringLiteral("empty_reply"));
         QTimer::singleShot(15000, this, &ValenzBridge::refreshWeather);
         return;
     }
@@ -80,7 +77,6 @@ void ValenzBridge::onWeatherReplyFinished(QNetworkReply *reply)
     const QJsonDocument document = QJsonDocument::fromJson(payload, &parseError);
     if (parseError.error != QJsonParseError::NoError || !document.isObject())
     {
-        trace(QStringLiteral("weather"), QStringLiteral("parse_failed"), QString::fromUtf8(payload.left(120)));
         QTimer::singleShot(15000, this, &ValenzBridge::refreshWeather);
         return;
     }

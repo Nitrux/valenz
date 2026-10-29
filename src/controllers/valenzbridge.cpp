@@ -58,6 +58,7 @@ ValenzBridge::ValenzBridge(QObject *parent)
 ValenzBridge::~ValenzBridge()
 {
     cancelMediaArtworkRequest();
+    resetBluezArtworkSession();
     delete m_artworkCacheDir;
 }
 

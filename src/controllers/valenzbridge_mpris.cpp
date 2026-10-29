@@ -7,6 +7,7 @@
 #include <QDBusObjectPath>
 #include <QDBusMetaType>
 #include <QMap>
+#include <limits>
 
 namespace
 {
@@ -38,6 +39,22 @@ QString bluezParentDevicePath(const QString &playerPath)
         return {};
 
     return playerPath.left(slashIndex);
+}
+
+QString bluezDeviceAddress(const QString &playerPath)
+{
+    const QString devicePath = bluezParentDevicePath(playerPath);
+    if (devicePath.isEmpty())
+        return {};
+
+    QDBusInterface propertiesIface(QString::fromLatin1(kBluezService),
+                                   devicePath,
+                                   QString::fromLatin1(kDbusPropertiesInterface),
+                                   QDBusConnection::systemBus());
+    const QDBusReply<QDBusVariant> addressReply = propertiesIface.call(QStringLiteral("Get"),
+                                                                         QString::fromLatin1(kBluezDeviceInterface),
+                                                                         QStringLiteral("Address"));
+    return addressReply.isValid() ? addressReply.value().variant().toString().trimmed() : QString();
 }
 
 QString bluezFallbackDeviceLabel(const QString &devicePath)
@@ -216,6 +233,13 @@ void ValenzBridge::connectMprisSignalObservers()
                                           QStringLiteral("NameOwnerChanged"),
                                           this,
                                           SLOT(onMprisNameOwnerChanged(QString,QString,QString)));
+
+    QDBusConnection::systemBus().connect(QString::fromLatin1(kDbusService),
+                                         QString::fromLatin1(kDbusPath),
+                                         QString::fromLatin1(kDbusInterface),
+                                         QStringLiteral("NameOwnerChanged"),
+                                         this,
+                                         SLOT(onBluezNameOwnerChanged(QString,QString,QString)));
 }
 
 void ValenzBridge::updateMprisPropertiesSubscription(const QString &serviceName)
@@ -257,6 +281,16 @@ void ValenzBridge::clearMprisPropertiesSubscription()
 
 void ValenzBridge::clearMprisState()
 {
+    ++m_bluezArtworkRequestId;
+    cancelBluezArtworkTransfer();
+    resetBluezArtworkSession();
+    m_bluezArtworkPlayerPath.clear();
+    m_bluezArtworkDeviceAddress.clear();
+    m_bluezArtworkHandle.clear();
+    m_bluezArtworkTargetPath.clear();
+    m_bluezArtworkSource.clear();
+    m_bluezArtworkObexPort = 0;
+    m_bluezArtworkRequestPending = false;
     m_mprisServiceName.clear();
     m_mprisTrackLengthUs = 0;
     m_mprisPositionUs = 0;
@@ -278,17 +312,8 @@ void ValenzBridge::updateMprisRefreshTimer()
     if (!m_mprisRefreshTimer)
         return;
 
-    const bool needsPolling = !m_mprisServiceName.isEmpty() && isBluezMediaSourceId(m_mprisServiceName);
-
-    if (needsPolling)
-    {
-        if (!m_mprisRefreshTimer->isActive())
-            m_mprisRefreshTimer->start();
-    }
-    else if (m_mprisRefreshTimer->isActive())
-    {
-        m_mprisRefreshTimer->stop();
-    }
+    if (!m_mprisRefreshTimer->isActive())
+        m_mprisRefreshTimer->start();
 }
 
 void ValenzBridge::setMprisSources(const QVariantList &sources)
@@ -362,6 +387,30 @@ void ValenzBridge::onMprisNameOwnerChanged(const QString &serviceName,
     if (!serviceName.startsWith(QString::fromLatin1(kMprisServicePrefix)))
         return;
 
+    refreshMprisState();
+}
+
+void ValenzBridge::onBluezNameOwnerChanged(const QString &serviceName,
+                                           const QString &oldOwner,
+                                           const QString &newOwner)
+{
+    Q_UNUSED(oldOwner)
+    Q_UNUSED(newOwner)
+
+    if (serviceName != QString::fromLatin1(kBluezService))
+        return;
+
+    ++m_bluezArtworkRequestId;
+    cancelBluezArtworkTransfer();
+    resetBluezArtworkSession();
+    m_bluezArtworkPlayerPath.clear();
+    m_bluezArtworkDeviceAddress.clear();
+    m_bluezArtworkHandle.clear();
+    m_bluezArtworkTargetPath.clear();
+    m_bluezArtworkSource.clear();
+    m_bluezArtworkObexPort = 0;
+    m_bluezArtworkRequestPending = false;
+    updateMediaArtSource(QString());
     refreshMprisState();
 }
 
@@ -582,12 +631,34 @@ void ValenzBridge::refreshMprisState()
 
         selectedTitle = bluezSourceLabel(selectedMetadata, deviceLabel);
         selectedArtist = !artistString.isEmpty() ? artistString : artistList.join(QStringLiteral(", "));
-        selectedArtSource = QString();
+        const QString artHandle = unwrapMprisVariant(selectedMetadata.value(QStringLiteral("ImgHandle"))).toString().trimmed();
+        bool obexPortValid = false;
+        const uint obexPort = unwrapMprisVariant(selectedProperties.value(QStringLiteral("ObexPort"))).toUInt(&obexPortValid);
+        const QString deviceAddress = bluezDeviceAddress(sourceId);
+        requestBluezMediaArtwork(sourceId, deviceAddress, artHandle,
+                                 obexPortValid && obexPort <= std::numeric_limits<quint16>::max()
+                                     ? static_cast<quint16>(obexPort) : 0);
+        selectedArtSource = m_bluezArtworkPlayerPath == sourceId && m_bluezArtworkHandle == artHandle
+            ? m_bluezArtworkSource : QString();
         selectedTrackLengthUs = bluezTrackLengthUs(selectedMetadata);
         selectedPositionUs = bluezMediaPlayerPositionUs(sourceId);
     }
     else
     {
+        if (!m_bluezArtworkPlayerPath.isEmpty())
+        {
+            ++m_bluezArtworkRequestId;
+            cancelBluezArtworkTransfer();
+            resetBluezArtworkSession();
+            m_bluezArtworkPlayerPath.clear();
+            m_bluezArtworkDeviceAddress.clear();
+            m_bluezArtworkHandle.clear();
+            m_bluezArtworkTargetPath.clear();
+            m_bluezArtworkSource.clear();
+            m_bluezArtworkObexPort = 0;
+            m_bluezArtworkRequestPending = false;
+        }
+
         selectedProperties = mprisPlayerProperties(sourceId);
         if (selectedProperties.isEmpty())
         {
@@ -693,8 +764,6 @@ void ValenzBridge::mediaPreviousTrack()
 {
     if (!invokeMprisPlayerMethod(QStringLiteral("Previous")))
         return;
-
-    trace(QStringLiteral("mpris"), QStringLiteral("previous_track"));
     refreshMprisState();
 }
 
@@ -717,8 +786,6 @@ void ValenzBridge::mediaTogglePlayPause()
         if (!invokeMprisPlayerMethod(QStringLiteral("PlayPause")))
             return;
     }
-
-    trace(QStringLiteral("mpris"), QStringLiteral("toggle_play_pause"));
     refreshMprisState();
 }
 
@@ -726,8 +793,6 @@ void ValenzBridge::mediaNextTrack()
 {
     if (!invokeMprisPlayerMethod(QStringLiteral("Next")))
         return;
-
-    trace(QStringLiteral("mpris"), QStringLiteral("next_track"));
     refreshMprisState();
 }
 

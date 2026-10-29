@@ -383,13 +383,7 @@ void collectControlCenterNetworkState(ControlCenterRuntimeSnapshot *snapshot)
     }
 }
 
-ControlCenterRuntimeSnapshot collectControlCenterRuntimeSnapshot(const QString &preferredMicrophoneSource,
-                                                                bool debugSimulatedBrightnessAvailable,
-                                                                int debugSimulatedBrightnessPercentage,
-                                                                bool debugSimulatedBatteryAvailable,
-                                                                int debugSimulatedBatteryPercentage,
-                                                                bool debugSimulatedBatteryCharging,
-                                                                bool debugSimulatedBatteryOnAcPower)
+ControlCenterRuntimeSnapshot collectControlCenterRuntimeSnapshot(const QString &preferredMicrophoneSource)
 {
     ControlCenterRuntimeSnapshot snapshot;
 
@@ -414,50 +408,32 @@ ControlCenterRuntimeSnapshot collectControlCenterRuntimeSnapshot(const QString &
     snapshot.microphoneVolumePercentage = microphone.volumePercentage;
     snapshot.microphoneAvailable = microphone.available;
 
-    if (debugSimulatedBrightnessAvailable)
+    snapshot.brightnessAvailable = MauiKitSystem::currentControlCenterBrightnessPercent(&snapshot.brightnessPercentage);
+    if (!snapshot.brightnessAvailable)
+        snapshot.brightnessPercentage = QStringLiteral("0%");
+
+    QString batteryPath;
+    bool mainsOnline = false;
+    snapshot.batteryAvailable = MauiKitSystem::batteryPowerSupplyState(&batteryPath, &mainsOnline);
+
+    if (snapshot.batteryAvailable)
     {
-        snapshot.brightnessAvailable = true;
-        snapshot.brightnessPercentage = QStringLiteral("%1%").arg(qBound(0, debugSimulatedBrightnessPercentage, 100));
+        QString capacityText = QStringLiteral("0");
+        QString statusText;
+        MauiKitSystem::readBatteryCharge(batteryPath, &capacityText, &statusText);
+
+        const int percent = MauiKitSystem::parseBatteryPercent(capacityText);
+        const QString normalizedStatus = statusText.toLower();
+        snapshot.batteryCharging = normalizedStatus == QLatin1String("charging");
+        const bool statusImpliesAc = normalizedStatus == QLatin1String("charging")
+                || normalizedStatus == QLatin1String("full")
+                || normalizedStatus == QLatin1String("not charging");
+        snapshot.batteryOnAcPower = mainsOnline || statusImpliesAc;
+        snapshot.batteryPercentage = QStringLiteral("%1%").arg(percent);
     }
     else
     {
-        snapshot.brightnessAvailable = MauiKitSystem::currentControlCenterBrightnessPercent(&snapshot.brightnessPercentage);
-        if (!snapshot.brightnessAvailable)
-            snapshot.brightnessPercentage = QStringLiteral("0%");
-    }
-
-    if (debugSimulatedBatteryAvailable)
-    {
-        snapshot.batteryAvailable = true;
-        snapshot.batteryOnAcPower = debugSimulatedBatteryOnAcPower || debugSimulatedBatteryCharging;
-        snapshot.batteryCharging = debugSimulatedBatteryCharging;
-        snapshot.batteryPercentage = QStringLiteral("%1%").arg(qBound(0, debugSimulatedBatteryPercentage, 100));
-    }
-    else
-    {
-        QString batteryPath;
-        bool mainsOnline = false;
-        snapshot.batteryAvailable = MauiKitSystem::batteryPowerSupplyState(&batteryPath, &mainsOnline);
-
-        if (snapshot.batteryAvailable)
-        {
-            QString capacityText = QStringLiteral("0");
-            QString statusText;
-            MauiKitSystem::readBatteryCharge(batteryPath, &capacityText, &statusText);
-
-            const int percent = MauiKitSystem::parseBatteryPercent(capacityText);
-            const QString normalizedStatus = statusText.toLower();
-            snapshot.batteryCharging = normalizedStatus == QLatin1String("charging");
-            const bool statusImpliesAc = normalizedStatus == QLatin1String("charging")
-                    || normalizedStatus == QLatin1String("full")
-                    || normalizedStatus == QLatin1String("not charging");
-            snapshot.batteryOnAcPower = mainsOnline || statusImpliesAc;
-            snapshot.batteryPercentage = QStringLiteral("%1%").arg(percent);
-        }
-        else
-        {
-            snapshot.batteryPercentage = QStringLiteral("0%");
-        }
+        snapshot.batteryPercentage = QStringLiteral("0%");
     }
 
     snapshot.nightLightAvailable = MauiKitSystem::controlCenterNightLightState(&snapshot.nightLightEnabled);
@@ -532,29 +508,10 @@ void ValenzBridge::refreshControlCenterRuntimeState()
     m_controlCenterRuntimeRefreshInFlight = true;
 
     const QString preferredMicrophoneSource = m_controlCenterMicrophoneSource;
-    const bool debugSimulatedBrightnessAvailable = m_debugSimulatedBrightnessAvailable;
-    const int debugSimulatedBrightnessPercentage = m_debugSimulatedBrightnessPercentage;
-    const bool debugSimulatedBatteryAvailable = m_debugSimulatedBatteryAvailable;
-    const int debugSimulatedBatteryPercentage = m_debugSimulatedBatteryPercentage;
-    const bool debugSimulatedBatteryCharging = m_debugSimulatedBatteryCharging;
-    const bool debugSimulatedBatteryOnAcPower = m_debugSimulatedBatteryOnAcPower;
     QPointer<ValenzBridge> bridge(this);
 
-    QThreadPool::globalInstance()->start([bridge,
-                       preferredMicrophoneSource,
-                       debugSimulatedBrightnessAvailable,
-                       debugSimulatedBrightnessPercentage,
-                       debugSimulatedBatteryAvailable,
-                       debugSimulatedBatteryPercentage,
-                       debugSimulatedBatteryCharging,
-                       debugSimulatedBatteryOnAcPower]() {
-        const ControlCenterRuntimeSnapshot snapshot = collectControlCenterRuntimeSnapshot(preferredMicrophoneSource,
-                                                                                          debugSimulatedBrightnessAvailable,
-                                                                                          debugSimulatedBrightnessPercentage,
-                                                                                          debugSimulatedBatteryAvailable,
-                                                                                          debugSimulatedBatteryPercentage,
-                                                                                          debugSimulatedBatteryCharging,
-                                                                                          debugSimulatedBatteryOnAcPower);
+    QThreadPool::globalInstance()->start([bridge, preferredMicrophoneSource]() {
+        const ControlCenterRuntimeSnapshot snapshot = collectControlCenterRuntimeSnapshot(preferredMicrophoneSource);
         if (!bridge)
             return;
 
@@ -822,13 +779,6 @@ void ValenzBridge::refreshControlCenterNightLightState()
 
 void ValenzBridge::refreshControlCenterBrightnessState()
 {
-    if (m_debugSimulatedBrightnessAvailable)
-    {
-        setControlCenterBrightnessAvailable(true);
-        setControlCenterBrightnessPercentage(QStringLiteral("%1%").arg(qBound(0, m_debugSimulatedBrightnessPercentage, 100)));
-        return;
-    }
-
     QString percentText;
     const bool available = MauiKitSystem::currentControlCenterBrightnessPercent(&percentText);
     setControlCenterBrightnessAvailable(available);
@@ -915,15 +865,6 @@ void ValenzBridge::refreshControlCenterSystemResourcesState()
 
 void ValenzBridge::refreshControlCenterBatteryState()
 {
-    if (m_debugSimulatedBatteryAvailable)
-    {
-        setControlCenterBatteryAvailable(true);
-        setControlCenterBatteryOnAcPower(m_debugSimulatedBatteryOnAcPower || m_debugSimulatedBatteryCharging);
-        setControlCenterBatteryCharging(m_debugSimulatedBatteryCharging);
-        setControlCenterBatteryPercentage(QStringLiteral("%1%").arg(qBound(0, m_debugSimulatedBatteryPercentage, 100)));
-        return;
-    }
-
     QString batteryPath;
     bool mainsOnline = false;
     const bool hasBattery = MauiKitSystem::batteryPowerSupplyState(&batteryPath, &mainsOnline);
