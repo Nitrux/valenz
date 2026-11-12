@@ -798,6 +798,12 @@ Window
                             {
                                 visible: calendarPopup._agendaInstalled
                                 text: i18n("Edit Events")
+                                onClicked:
+                                {
+                                    if (calendarPopup.bridge && calendarPopup.bridge.openAgenda)
+                                        calendarPopup.bridge.openAgenda()
+                                    calendarPopup.close()
+                                }
                             }
                         }
                     }

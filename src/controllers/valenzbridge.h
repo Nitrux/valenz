@@ -282,6 +282,7 @@ public:
     Q_INVOKABLE void refreshControlCenterRuntimeState();
     Q_INVOKABLE void refreshWeather();
     Q_INVOKABLE void refreshAgendaEvents(const QString &date);
+    Q_INVOKABLE void openAgenda();
 
 Q_SIGNALS:
     void enabledChanged(bool enabled);
@@ -374,6 +375,7 @@ private Q_SLOTS:
     void onBluezNameOwnerChanged(const QString &serviceName, const QString &oldOwner, const QString &newOwner);
     void onBluezArtworkTransferPropertiesChanged(const QString &interfaceName, const QVariantMap &changedProperties, const QStringList &invalidatedProperties);
     void onWeatherReplyFinished(QNetworkReply *reply);
+    void onAgendaCalendarChanged();
 
 private:
     int clampWorkspace(int workspace) const;
@@ -511,6 +513,9 @@ private:
     int m_barLayerSpacingRight = 0;
     bool m_agendaInstalled = false;
     QVariantList m_agendaEvents;
+    QString m_agendaDate;
+    qint64 m_agendaDaemonPid = 0;
+    bool m_agendaUiHandoffPending = false;
     QString m_weatherIconName = QStringLiteral("weather-severe-alert");
     QString m_weatherTemperature = QStringLiteral("--°C");
     QString m_weatherConditionLabel;

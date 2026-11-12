@@ -5,11 +5,18 @@
 #include "valenzbridge_p.h"
 #include "mauikit_system_control.h"
 
+#include <QDebug>
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QProcess>
+#include <QStandardPaths>
+#include <QTimer>
+#include <QThread>
+#include <csignal>
+#include <unistd.h>
 
 namespace
 {
@@ -217,36 +224,148 @@ bool ValenzBridge::agendaInstalled() const
     return m_agendaInstalled;
 }
 
+void ValenzBridge::onAgendaCalendarChanged()
+{
+    qInfo() << "[Valenz][Agenda] calendarChanged received; selected date:" << m_agendaDate;
+    if (!m_agendaDate.isEmpty()) refreshAgendaEvents(m_agendaDate);
+}
+
 void ValenzBridge::refreshAgendaEvents(const QString &date)
 {
     const auto normalizedDate = date.trimmed();
+    m_agendaDate = normalizedDate;
+    qInfo() << "[Valenz][Agenda] requesting events for date:" << normalizedDate;
     QVariantList events;
     if (!normalizedDate.isEmpty()) {
         QDBusInterface agenda(QStringLiteral("org.maui.agenda"), QStringLiteral("/Agenda"), QStringLiteral("org.maui.agenda"), QDBusConnection::sessionBus());
-        if (agenda.isValid()) {
+        if (!agenda.isValid()) {
+            const auto *busInterface = QDBusConnection::sessionBus().interface();
+            const auto serviceState = busInterface ? busInterface->isServiceRegistered(QStringLiteral("org.maui.agenda")) : QDBusReply<bool>();
+            const bool serviceRegistered = serviceState.isValid() && serviceState.value();
+            qWarning() << "[Valenz][Agenda] D-Bus interface unavailable; service:" << agenda.service()
+                       << "path:" << agenda.path() << "interface:" << agenda.interface()
+                       << "serviceRegistered:" << serviceRegistered
+                       << "error:" << agenda.lastError().name() << agenda.lastError().message();
+            if (!serviceRegistered && m_agendaDaemonPid == 0) {
+                const auto program = QStandardPaths::findExecutable(QStringLiteral("agenda"));
+                if (program.isEmpty()) {
+                    qWarning() << "[Valenz][Agenda] cannot start background calendar service: 'agenda' was not found in PATH";
+                } else {
+                    qint64 daemonPid = 0;
+                    if (QProcess::startDetached(program, {QStringLiteral("--reminder-daemon")}, {}, &daemonPid)) {
+                        m_agendaDaemonPid = daemonPid;
+                        qInfo() << "[Valenz][Agenda] started headless Agenda calendar service; pid:" << daemonPid;
+                    } else {
+                        qWarning() << "[Valenz][Agenda] failed to start headless Agenda calendar service:" << program;
+                    }
+                }
+            } else if (serviceRegistered) {
+                qWarning() << "[Valenz][Agenda] service owns its D-Bus name but its /Agenda interface is not available yet";
+                QTimer::singleShot(250, this, [this, normalizedDate] { refreshAgendaEvents(normalizedDate); });
+            }
+            return;
+        } else {
             const QDBusReply<QStringList> reply = agenda.call(QStringLiteral("eventsForDate"), normalizedDate);
-            if (reply.isValid()) {
-                for (const auto &serialized : reply.value()) {
+            if (!reply.isValid()) {
+                qWarning() << "[Valenz][Agenda] eventsForDate D-Bus call failed for" << normalizedDate
+                           << "error:" << reply.error().name() << reply.error().message();
+                return;
+            } else {
+                const auto serializedEvents = reply.value();
+                qInfo() << "[Valenz][Agenda] D-Bus call succeeded; serialized event count:" << serializedEvents.size();
+                int eventIndex = 0;
+                for (const auto &serialized : serializedEvents) {
                     QJsonParseError parseError;
                     const auto document = QJsonDocument::fromJson(serialized.toUtf8(), &parseError);
-                    if (parseError.error != QJsonParseError::NoError || !document.isObject()) continue;
+                    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+                        qWarning() << "[Valenz][Agenda] invalid event JSON at index" << eventIndex
+                                   << "error:" << parseError.errorString();
+                        ++eventIndex;
+                        continue;
+                    }
                     const auto object = document.object();
+                    const auto eventDate = object.value(QStringLiteral("dateKey")).toString();
+                    const auto title = object.value(QStringLiteral("title")).toString();
+                    if (eventDate.isEmpty() || title.isEmpty())
+                        qWarning() << "[Valenz][Agenda] event JSON missing dateKey or title at index" << eventIndex;
                     events.append(QVariantMap {
-                        {QStringLiteral("dateKey"), object.value(QStringLiteral("dateKey")).toString()},
+                        {QStringLiteral("dateKey"), eventDate},
                         {QStringLiteral("start"), object.value(QStringLiteral("start")).toString()},
                         {QStringLiteral("end"), object.value(QStringLiteral("end")).toString()},
-                        {QStringLiteral("title"), object.value(QStringLiteral("title")).toString()},
+                        {QStringLiteral("title"), title},
                         {QStringLiteral("location"), object.value(QStringLiteral("location")).toString()},
                         {QStringLiteral("description"), object.value(QStringLiteral("description")).toString()},
                         {QStringLiteral("allDay"), object.value(QStringLiteral("allDay")).toBool()}
                     });
+                    ++eventIndex;
                 }
+                qInfo() << "[Valenz][Agenda] parsed events for" << normalizedDate << ':' << events.size();
             }
         }
+    } else {
+        qWarning() << "[Valenz][Agenda] skipped event request because the date is empty";
     }
-    if (m_agendaEvents == events) return;
+    if (m_agendaEvents == events) {
+        qInfo() << "[Valenz][Agenda] event list unchanged; count:" << events.size();
+        return;
+    }
     m_agendaEvents = events;
     Q_EMIT agendaEventsChanged();
+    qInfo() << "[Valenz][Agenda] agendaEventsChanged emitted; count:" << m_agendaEvents.size();
+}
+
+void ValenzBridge::openAgenda()
+{
+    const auto program = QStandardPaths::findExecutable(QStringLiteral("agenda"));
+    if (program.isEmpty()) {
+        qWarning() << "[Valenz][Agenda] could not open Agenda: executable 'agenda' was not found in PATH";
+        return;
+    }
+
+    if (m_agendaDaemonPid > 0) {
+        m_agendaUiHandoffPending = true;
+        qInfo() << "[Valenz][Agenda] stopping Valenz-owned calendar service before opening the Agenda window; pid:" << m_agendaDaemonPid;
+        if (::kill(static_cast<pid_t>(m_agendaDaemonPid), SIGTERM) != 0)
+            qWarning() << "[Valenz][Agenda] could not stop its calendar service; pid:" << m_agendaDaemonPid;
+
+        auto *busInterface = QDBusConnection::sessionBus().interface();
+        bool serviceReleased = false;
+        for (int attempt = 0; attempt < 40 && busInterface; ++attempt) {
+            const auto registered = busInterface->isServiceRegistered(QStringLiteral("org.maui.agenda"));
+            if (registered.isValid() && !registered.value()) {
+                serviceReleased = true;
+                break;
+            }
+            QThread::msleep(50);
+        }
+        if (!serviceReleased) {
+            m_agendaUiHandoffPending = false;
+            qWarning() << "[Valenz][Agenda] did not open the GUI because the calendar service did not release its D-Bus name";
+            return;
+        }
+        m_agendaDaemonPid = 0;
+    }
+
+    if (!QProcess::startDetached(program, {})) {
+        m_agendaUiHandoffPending = false;
+        qWarning() << "[Valenz][Agenda] failed to launch Agenda executable:" << program;
+        if (!m_agendaDate.isEmpty()) refreshAgendaEvents(m_agendaDate);
+        return;
+    }
+    const bool handedOffDaemon = m_agendaUiHandoffPending;
+    m_agendaUiHandoffPending = false;
+    qInfo() << "[Valenz][Agenda] launched Agenda executable:" << program;
+    if (handedOffDaemon) {
+        QTimer::singleShot(3000, this, [this] {
+            const auto *busInterface = QDBusConnection::sessionBus().interface();
+            if (m_agendaDate.isEmpty() || !busInterface) return;
+            const auto registered = busInterface->isServiceRegistered(QStringLiteral("org.maui.agenda"));
+            if (registered.isValid() && registered.value()) return;
+            qInfo() << "[Valenz][Agenda] Agenda GUI did not claim the calendar service; restoring the headless service";
+            m_agendaDaemonPid = 0;
+            refreshAgendaEvents(m_agendaDate);
+        });
+    }
 }
 
 void ValenzBridge::setAgendaInstalled(bool installed)
