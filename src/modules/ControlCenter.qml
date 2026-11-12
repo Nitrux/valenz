@@ -742,7 +742,7 @@ Window
 
                                 background: Rectangle
                                 {
-                                    radius: Math.round(Maui.Style.radiusV * 0.6)
+                                    radius: Maui.Style.radiusV
                                     color: parent.down ? Qt.darker(Maui.Theme.negativeBackgroundColor, 1.12) : Maui.Theme.negativeBackgroundColor
                                 }
 
