@@ -366,6 +366,16 @@ Window
         aboutToShow()
         _fadeOutPending = false
         _panelOpen = false
+        const anchor = _anchorPointInScreen(0, 0)
+        const screenGeometry = _screenGeometry()
+        if (anchor && screenGeometry.width > 0 && rootWindow && layerShellHelper && layerShellHelper.configureQtPopupAnchor)
+        {
+            const minX = _margin
+            const maxX = Math.max(minX, screenGeometry.width - width - _margin)
+            const targetX = Math.max(minX, Math.min(maxX, anchor.x - width / 2))
+            layerShellHelper.configureQtPopupAnchor(calendarPopup, rootWindow,
+                                                    Math.round(targetX), Math.round(Math.max(_margin, _targetY)))
+        }
         visible = true
         requestActivate()
         Qt.callLater(function()

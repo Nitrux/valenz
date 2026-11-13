@@ -45,16 +45,13 @@ ValenzBridge::ValenzBridge(QObject *parent)
     connect(m_agendaCalendarWatcher, &QFileSystemWatcher::fileChanged, this, watchAgendaCalendar);
     connect(m_agendaCalendarWatcher, &QFileSystemWatcher::directoryChanged, this, watchAgendaCalendar);
     watchAgendaCalendar({});
-    const bool agendaSignalConnected = QDBusConnection::sessionBus().connect(QStringLiteral("org.maui.agenda"), QStringLiteral("/Agenda"),
-                                                                               QStringLiteral("org.maui.agenda"), QStringLiteral("calendarChanged"),
-                                                                               this, SLOT(onAgendaCalendarChanged()));
-    qInfo() << "[Valenz][Agenda] calendarChanged subscription" << (agendaSignalConnected ? "connected" : "failed")
-            << QDBusConnection::sessionBus().lastError().message();
+    QDBusConnection::sessionBus().connect(QStringLiteral("org.maui.agenda"), QStringLiteral("/Agenda"),
+                                          QStringLiteral("org.maui.agenda"), QStringLiteral("calendarChanged"),
+                                          this, SLOT(onAgendaCalendarChanged()));
     auto *agendaWatcher = new QDBusServiceWatcher(QStringLiteral("org.maui.agenda"), QDBusConnection::sessionBus(),
                                                    QDBusServiceWatcher::WatchForOwnerChange, this);
     connect(agendaWatcher, &QDBusServiceWatcher::serviceOwnerChanged, this,
             [this](const QString &, const QString &, const QString &newOwner) {
-                qInfo() << "[Valenz][Agenda] D-Bus service owner changed; available:" << !newOwner.isEmpty();
                 if (!newOwner.isEmpty()) {
                     if (!m_agendaDate.isEmpty()) refreshAgendaEvents(m_agendaDate);
                     return;
@@ -66,12 +63,10 @@ ValenzBridge::ValenzBridge(QObject *parent)
                     if (m_agendaUiHandoffPending || m_agendaDate.isEmpty() || !busInterface) return;
                     const auto registered = busInterface->isServiceRegistered(QStringLiteral("org.maui.agenda"));
                     if (registered.isValid() && registered.value()) return;
-                    qInfo() << "[Valenz][Agenda] Agenda service stopped; restarting the headless calendar service";
                     m_agendaDaemonPid = 0;
                     refreshAgendaEvents(m_agendaDate);
                 });
             });
-    qInfo() << "[Valenz][Agenda] desktop entry detected:" << isAgendaInstalled();
 
     m_weatherNetwork = new QNetworkAccessManager(this);
     connect(m_weatherNetwork, &QNetworkAccessManager::finished, this, &ValenzBridge::onWeatherReplyFinished);
