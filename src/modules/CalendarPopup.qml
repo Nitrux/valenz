@@ -22,6 +22,7 @@ Window
     property int reopenGuardMs: 180
     property double _lastClosedAtMs: -1
     property int _geometryRevision: 0
+    property var _lastLoggedPosition: null
     property bool _calendarStateSyncing: false
     property bool _fadeOutPending: false
     property bool _panelOpen: false
@@ -348,6 +349,42 @@ Window
         return Qt.rect(0, 0, 0, 0)
     }
 
+    function _tracePosition(reason)
+    {
+        if (!visible)
+            return
+
+        const screenGeometry = _screenGeometry()
+        const anchorGlobal = anchorItem && anchorItem.mapToGlobal ? anchorItem.mapToGlobal(0, 0) : null
+        const rootContent = rootWindow ? rootWindow.contentItem : null
+        const anchorInRoot = anchorItem && rootContent && anchorItem.mapToItem ? anchorItem.mapToItem(rootContent, 0, 0) : null
+        const rootContentGlobal = rootContent && rootContent.mapToGlobal ? rootContent.mapToGlobal(0, 0) : null
+        const mappedAnchor = _anchorPointInScreen(0, 0)
+        const previous = _lastLoggedPosition
+        const minX = _margin
+        const maxX = Math.max(minX, screenGeometry.width - width - _margin)
+        const targetX = mappedAnchor ? mappedAnchor.x - width / 2 : _margin
+        const expectedX = Math.max(minX, Math.min(maxX, targetX))
+        const expectedY = Math.max(_margin, _targetY)
+        const point = function(p) { return p ? { x: p.x, y: p.y } : null }
+        JSON.stringify({
+            date: Qt.formatDate(selectedDate, "yyyy-MM-dd"),
+            popup: { x: x, y: y, width: width, height: height },
+            delta: previous ? { x: x - previous.x, y: y - previous.y } : null,
+            expected: { x: expectedX, y: expectedY },
+            anchorGlobal: point(anchorGlobal),
+            anchorInRoot: point(anchorInRoot),
+            rootContentGlobal: point(rootContentGlobal),
+            rootWindow: rootWindow ? { x: rootWindow.x, y: rootWindow.y, width: rootWindow.width, height: rootWindow.height } : null,
+            screen: { x: screenGeometry.x, y: screenGeometry.y, width: screenGeometry.width, height: screenGeometry.height },
+            geometryRevision: _geometryRevision
+        })
+        _lastLoggedPosition = { x: x, y: y }
+    }
+
+    onYChanged: _tracePosition("y changed")
+    onWidthChanged: _tracePosition("width changed")
+
     onDisplayMonthChanged: _syncModelFromDisplay()
     onDisplayYearChanged: _syncModelFromDisplay()
     onSelectedDateChanged: _syncSelectionFromDate(selectedDate)
@@ -373,6 +410,7 @@ Window
             const minX = _margin
             const maxX = Math.max(minX, screenGeometry.width - width - _margin)
             const targetX = Math.max(minX, Math.min(maxX, anchor.x - width / 2))
+            // Keep the Wayland popup anchored to this position as its content height changes.
             layerShellHelper.configureQtPopupAnchor(calendarPopup, rootWindow,
                                                     Math.round(targetX), Math.round(Math.max(_margin, _targetY)))
         }
@@ -466,6 +504,7 @@ Window
     {
         if (visible)
         {
+            _lastLoggedPosition = null
             opened()
             selectedDate = new Date()
             displayMonth = selectedDate.getMonth()
