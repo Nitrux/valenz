@@ -7,6 +7,8 @@
 #include <QDBusConnection>
 #include <QDBusServiceWatcher>
 #include <QDir>
+#include <QFileInfo>
+#include <QFileSystemWatcher>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QProcess>
@@ -20,6 +22,29 @@ ValenzBridge::ValenzBridge(QObject *parent)
     initializeConfig();
     refreshSharedSettingsFromFile();
     setAgendaInstalled(isAgendaInstalled());
+    m_agendaCalendarFilePath = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation)
+        + QStringLiteral("/Maui/agenda/default.ics");
+    m_agendaCalendarWatcher = new QFileSystemWatcher(this);
+    const auto watchAgendaCalendar = [this](const QString &) {
+        const QFileInfo calendarFile(m_agendaCalendarFilePath);
+        const QStringList directories {
+            QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation),
+            calendarFile.dir().absolutePath(),
+            calendarFile.dir().absolutePath() + QStringLiteral("/..")
+        };
+        for (const auto &directory : directories) {
+            const auto path = QDir(directory).canonicalPath();
+            if (!path.isEmpty() && !m_agendaCalendarWatcher->directories().contains(path))
+                m_agendaCalendarWatcher->addPath(path);
+        }
+        if (calendarFile.exists() && !m_agendaCalendarWatcher->files().contains(m_agendaCalendarFilePath))
+            m_agendaCalendarWatcher->addPath(m_agendaCalendarFilePath);
+        if (!m_agendaDate.isEmpty())
+            QTimer::singleShot(100, this, [this] { refreshAgendaEvents(m_agendaDate); });
+    };
+    connect(m_agendaCalendarWatcher, &QFileSystemWatcher::fileChanged, this, watchAgendaCalendar);
+    connect(m_agendaCalendarWatcher, &QFileSystemWatcher::directoryChanged, this, watchAgendaCalendar);
+    watchAgendaCalendar({});
     const bool agendaSignalConnected = QDBusConnection::sessionBus().connect(QStringLiteral("org.maui.agenda"), QStringLiteral("/Agenda"),
                                                                                QStringLiteral("org.maui.agenda"), QStringLiteral("calendarChanged"),
                                                                                this, SLOT(onAgendaCalendarChanged()));

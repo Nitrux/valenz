@@ -514,6 +514,8 @@ private:
     bool m_agendaInstalled = false;
     QVariantList m_agendaEvents;
     QString m_agendaDate;
+    QString m_agendaCalendarFilePath;
+    QFileSystemWatcher *m_agendaCalendarWatcher = nullptr;
     qint64 m_agendaDaemonPid = 0;
     bool m_agendaUiHandoffPending = false;
     QString m_weatherIconName = QStringLiteral("weather-severe-alert");

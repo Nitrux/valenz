@@ -25,6 +25,7 @@ Window
     property bool _calendarStateSyncing: false
     property bool _fadeOutPending: false
     property bool _panelOpen: false
+    property date _eventClock: new Date()
 
     readonly property int _fadeInDurationMs: 25
     readonly property int _fadeOutDurationMs: 100
@@ -39,7 +40,30 @@ Window
     readonly property int _minPanelHeight: Maui.Handy.isMobile ? _baseUnit * 19 : _baseUnit * 20
     readonly property int _preferredPanelHeight: Maui.Handy.isMobile ? _baseUnit * 23 : _baseUnit * 24
     readonly property int _calendarSpacing: Maui.Style.space.small
-    readonly property var _eventsModel: calendarPopup.bridge ? calendarPopup.bridge.agendaEvents : []
+    readonly property var _eventsModel:
+    {
+        const events = calendarPopup.bridge ? calendarPopup.bridge.agendaEvents : []
+        const sorted = []
+        for (let i = 0; i < events.length; ++i)
+            sorted.push(events[i])
+        sorted.sort((first, second) => {
+            if (!!first.allDay !== !!second.allDay)
+                return first.allDay ? -1 : 1
+            return new Date(first.start).getTime() - new Date(second.start).getTime()
+        })
+        return sorted
+    }
+    readonly property real _eventTimeColumnWidth:
+    {
+        let width = eventTimeFontMetrics.boundingRect(i18n("All day")).width
+        for (let i = 0; i < _eventsModel.length; ++i)
+        {
+            const event = _eventsModel[i]
+            const label = event.allDay ? i18n("All day") : new Date(event.start).toLocaleTimeString(Qt.locale(), Locale.ShortFormat)
+            width = Math.max(width, eventTimeFontMetrics.boundingRect(label).width)
+        }
+        return Math.ceil(width) + Maui.Style.space.tiny
+    }
     readonly property int _eventsCount: _eventCountForSelectedDate()
     readonly property var _weatherForecast: calendarPopup.bridge ? calendarPopup.bridge.weatherForecast : []
     readonly property var _weatherDetailLabels: [i18n("Feels like"), i18n("Humidity"), i18n("UV index"), i18n("Wind")]
@@ -89,6 +113,12 @@ Window
     }
 
     Maui.Theme.colorSet: Maui.Theme.View
+
+    FontMetrics
+    {
+        id: eventTimeFontMetrics
+        font: Maui.Style.defaultFont
+    }
 
     Component.onCompleted: { }
     color: "transparent"
@@ -375,6 +405,15 @@ Window
                 _touchGeometryRevision()
             }
         }
+    }
+
+    Timer
+    {
+        interval: 60 * 1000
+        running: calendarPopup.visible
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: calendarPopup._eventClock = new Date()
     }
 
     Timer
@@ -731,8 +770,13 @@ Window
 
                             delegate: RowLayout
                             {
+                                id: eventRow
                                 required property var modelData
 
+                                readonly property bool _hasPassed: {
+                                    const end = new Date(modelData.end)
+                                    return !isNaN(end.getTime()) && end.getTime() <= calendarPopup._eventClock.getTime()
+                                }
                                 readonly property string dateKey: modelData.dateKey || ""
                                 readonly property string titleText: modelData.title || i18n("Untitled event")
                                 readonly property string timeText: modelData.allDay ? i18n("All day") : new Date(modelData.start).toLocaleTimeString(Qt.locale(), Locale.ShortFormat)
@@ -756,7 +800,8 @@ Window
                                 {
                                     Layout.alignment: Qt.AlignTop
                                     text: timeText
-                                    width: Math.max(52, implicitWidth)
+                                    font.strikeout: eventRow._hasPassed
+                                    Layout.preferredWidth: calendarPopup._eventTimeColumnWidth
                                     horizontalAlignment: Text.AlignRight
                                     color: Qt.alpha(Maui.Theme.textColor, 0.72)
                                 }
@@ -772,6 +817,7 @@ Window
                                         text: titleText
                                         elide: Text.ElideRight
                                         font.weight: Font.Medium
+                                        font.strikeout: eventRow._hasPassed
                                     }
 
                                     Label
@@ -797,7 +843,7 @@ Window
                             Button
                             {
                                 visible: calendarPopup._agendaInstalled
-                                text: i18n("Edit Events")
+                                text: i18n("Open Agenda")
                                 onClicked:
                                 {
                                     if (calendarPopup.bridge && calendarPopup.bridge.openAgenda)

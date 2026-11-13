@@ -6,6 +6,15 @@
 #include "mauikit_system_control.h"
 
 #include <QDebug>
+#include <KCalendarCore/Event>
+#include <KCalendarCore/FileStorage>
+#include <KCalendarCore/MemoryCalendar>
+#include <KCalendarCore/OccurrenceIterator>
+#include <QDateTime>
+#include <QFile>
+#include <QSet>
+#include <QSharedPointer>
+#include <QTimeZone>
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
@@ -20,6 +29,54 @@
 
 namespace
 {
+
+bool readAgendaCalendarEvents(const QString &filePath, const QDate &selectedDate, QVariantList &events)
+{
+    if (!selectedDate.isValid() || !QFile::exists(filePath)) return false;
+
+    auto calendar = QSharedPointer<KCalendarCore::MemoryCalendar>::create(QTimeZone::systemTimeZone());
+    KCalendarCore::FileStorage storage(calendar, filePath);
+    if (!storage.open() || !storage.load()) {
+        qWarning() << "[Valenz][Agenda] failed to read calendar file:" << filePath;
+        return false;
+    }
+
+    const QDateTime dayStart(selectedDate, QTime(0, 0), QTimeZone::systemTimeZone());
+    const QDateTime dayEnd(selectedDate.addDays(1), QTime(0, 0), QTimeZone::systemTimeZone());
+    QSet<QString> seen;
+    const auto appendEvent = [&events, &seen, &selectedDate, &dayStart, &dayEnd](const KCalendarCore::Event::Ptr &event,
+                                                                                 const QDateTime &start) {
+        if (!event || !start.isValid()) return;
+        const auto end = event->endDateForStart(start);
+        if (!end.isValid() || start >= dayEnd || end <= dayStart) return;
+        const auto key = event->customProperty("MauiCalendar", "CollectionId") + QLatin1Char(39)
+            + event->uid() + QLatin1Char(39)
+            + (event->allDay() ? start.date().toString(Qt::ISODate) : QString::number(start.toMSecsSinceEpoch()));
+        if (seen.contains(key)) return;
+        seen.insert(key);
+        events.append(QVariantMap {
+            {QStringLiteral("dateKey"), selectedDate.toString(Qt::ISODate)},
+            {QStringLiteral("start"), start.toString(Qt::ISODate)},
+            {QStringLiteral("end"), end.toString(Qt::ISODate)},
+            {QStringLiteral("title"), event->summary()},
+            {QStringLiteral("location"), event->location()},
+            {QStringLiteral("description"), event->description()},
+            {QStringLiteral("allDay"), event->allDay()}
+        });
+    };
+
+    KCalendarCore::OccurrenceIterator iterator(*calendar, dayStart.addDays(-1), dayEnd);
+    while (iterator.hasNext()) {
+        iterator.next();
+        appendEvent(iterator.incidence().dynamicCast<KCalendarCore::Event>(), iterator.occurrenceStartDate());
+    }
+    for (const auto &incidence : calendar->incidences()) {
+        const auto event = incidence.dynamicCast<KCalendarCore::Event>();
+        if (event && !event->recurs() && !event->hasRecurrenceId())
+            appendEvent(event, event->dtStart());
+    }
+    return true;
+}
 
 bool setBluezAdapterPowered(bool enabled)
 {
@@ -236,6 +293,17 @@ void ValenzBridge::refreshAgendaEvents(const QString &date)
     m_agendaDate = normalizedDate;
     qInfo() << "[Valenz][Agenda] requesting events for date:" << normalizedDate;
     QVariantList events;
+    QVariantList fileEvents;
+    const bool fileLoaded = readAgendaCalendarEvents(m_agendaCalendarFilePath, QDate::fromString(normalizedDate, Qt::ISODate), fileEvents);
+    const auto publishEvents = [this](const QVariantList &updatedEvents) {
+        if (m_agendaEvents == updatedEvents) {
+            qInfo() << "[Valenz][Agenda] event list unchanged; count:" << updatedEvents.size();
+            return;
+        }
+        m_agendaEvents = updatedEvents;
+        Q_EMIT agendaEventsChanged();
+        qInfo() << "[Valenz][Agenda] agendaEventsChanged emitted; count:" << m_agendaEvents.size();
+    };
     if (!normalizedDate.isEmpty()) {
         QDBusInterface agenda(QStringLiteral("org.maui.agenda"), QStringLiteral("/Agenda"), QStringLiteral("org.maui.agenda"), QDBusConnection::sessionBus());
         if (!agenda.isValid()) {
@@ -263,12 +331,14 @@ void ValenzBridge::refreshAgendaEvents(const QString &date)
                 qWarning() << "[Valenz][Agenda] service owns its D-Bus name but its /Agenda interface is not available yet";
                 QTimer::singleShot(250, this, [this, normalizedDate] { refreshAgendaEvents(normalizedDate); });
             }
+            if (fileLoaded) publishEvents(fileEvents);
             return;
         } else {
             const QDBusReply<QStringList> reply = agenda.call(QStringLiteral("eventsForDate"), normalizedDate);
             if (!reply.isValid()) {
                 qWarning() << "[Valenz][Agenda] eventsForDate D-Bus call failed for" << normalizedDate
                            << "error:" << reply.error().name() << reply.error().message();
+                if (fileLoaded) publishEvents(fileEvents);
                 return;
             } else {
                 const auto serializedEvents = reply.value();
@@ -305,13 +375,13 @@ void ValenzBridge::refreshAgendaEvents(const QString &date)
     } else {
         qWarning() << "[Valenz][Agenda] skipped event request because the date is empty";
     }
-    if (m_agendaEvents == events) {
-        qInfo() << "[Valenz][Agenda] event list unchanged; count:" << events.size();
-        return;
+    if (fileLoaded) {
+        if (events != fileEvents)
+            qInfo() << "[Valenz][Agenda] using Agenda calendar file because the service returned"
+                    << events.size() << "events and the file contains" << fileEvents.size();
+        events = fileEvents;
     }
-    m_agendaEvents = events;
-    Q_EMIT agendaEventsChanged();
-    qInfo() << "[Valenz][Agenda] agendaEventsChanged emitted; count:" << m_agendaEvents.size();
+    publishEvents(events);
 }
 
 void ValenzBridge::openAgenda()
