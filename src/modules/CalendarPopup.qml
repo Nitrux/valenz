@@ -27,6 +27,7 @@ Window
     property bool _fadeOutPending: false
     property bool _panelOpen: false
     property date _eventClock: new Date()
+    readonly property var _calendarMonthView: _calendarMonthViewLoader.item
 
     readonly property int _fadeInDurationMs: 25
     readonly property int _fadeOutDurationMs: 100
@@ -727,19 +728,27 @@ Window
                             }
                         }
 
-                        MauiCalendar.MonthView
+                        Loader
                         {
-                            id: _calendarMonthView
+                            id: _calendarMonthViewLoader
                             Layout.fillWidth: true
                             Layout.preferredHeight: Maui.Style.units.gridUnit * 14
-                            selectedDate: calendarPopup.selectedDate
-                            dragDropEnabled: false
-                            onFirstDayOfMonthChanged: calendarPopup._syncDisplayFromModel()
-                            onDateClicked: function(date)
+                            active: calendarPopup.visible
+                            sourceComponent: Component
                             {
-                                calendarPopup.selectedDate = date
-                                calendarPopup._refreshAgendaEvents()
+                                MauiCalendar.MonthView
+                                {
+                                    selectedDate: calendarPopup.selectedDate
+                                    dragDropEnabled: false
+                                    onFirstDayOfMonthChanged: calendarPopup._syncDisplayFromModel()
+                                    onDateClicked: function(date)
+                                    {
+                                        calendarPopup.selectedDate = date
+                                        calendarPopup._refreshAgendaEvents()
+                                    }
+                                }
                             }
+                            onLoaded: calendarPopup._syncModelFromDisplay()
                         }
                     }
                 }
