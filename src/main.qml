@@ -341,6 +341,11 @@ Window
             _screenCapturePopup.forceClose()
         else if (_screenCapturePopup.visible)
             _screenCapturePopup.close()
+
+        if (_workspaceMovePopup.visible && _workspaceMovePopup.forceClose)
+            _workspaceMovePopup.forceClose()
+        else if (_workspaceMovePopup.visible)
+            _workspaceMovePopup.close()
     }
 
     function _showNotificationBubble(id, sourceName, messageText, timestampText, iconName, urgencyLevel, actionText, actionKey, actions, replyPlaceholderText, replySubmitButtonText)
@@ -810,6 +815,14 @@ Window
         anchorItem: _mprisControl.popupAnchorMarker
     }
 
+    WorkspaceMovePopup
+    {
+        id: _workspaceMovePopup
+        rootWindow: root
+        bridge: valenzBridge
+        overlayItem: root.contentItem
+    }
+
     CalendarPopup
     {
         id: _calendarPopup
@@ -957,6 +970,7 @@ Window
                     {
                         id: _windowTitleMiddle
                         bridge: valenzBridge
+                        workspacePopup: _workspaceMovePopup
                         fallbackTitle: ""
                         referenceHeight: barContentHeight
                         anchors.left: parent.left
@@ -1023,7 +1037,7 @@ Window
                     MouseArea
                     {
                         anchors.fill: parent
-                        enabled: _controlCenterPopup.visible || _notificationsCenterPopup.visible || _notificationsBubble.visible || _notificationsBubbleSecondary.visible || _notificationsBubbleTertiary.visible || _calendarPopup.visible || _mprisSourcesPopup.visible || _screenCapturePopup.visible
+                        enabled: _controlCenterPopup.visible || _notificationsCenterPopup.visible || _notificationsBubble.visible || _notificationsBubbleSecondary.visible || _notificationsBubbleTertiary.visible || _calendarPopup.visible || _mprisSourcesPopup.visible || _screenCapturePopup.visible || _workspaceMovePopup.visible
                         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                         hoverEnabled: false
                         propagateComposedEvents: true

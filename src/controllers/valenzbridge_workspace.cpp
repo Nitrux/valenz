@@ -26,6 +26,25 @@ void ValenzBridge::goToNextWorkspace()
     scheduleWorkspaceStateRefresh(50);
 }
 
+void ValenzBridge::moveWindowToWorkspace(const QString &address, int workspace)
+{
+    const QString normalizedAddress = address.trimmed();
+    if (normalizedAddress.isEmpty() || workspace < 1 || workspace > m_workspaceCount)
+        return;
+
+    const QString luaDispatch = QStringLiteral("hl.dsp.window.move({ window = \"address:%1\", workspace = %2 })")
+                                    .arg(normalizedAddress)
+                                    .arg(workspace);
+    const bool dispatched = runHyprctlDispatch(QStringList { QStringLiteral("dispatch"), luaDispatch })
+                         || runHyprctlDispatch(QStringList { QStringLiteral("dispatch"),
+                                                            QStringLiteral("movetoworkspace"),
+                                                            QStringLiteral("%1,address:%2").arg(workspace).arg(normalizedAddress) });
+    if (!dispatched)
+        return;
+
+    scheduleWorkspaceStateRefresh(50);
+}
+
 void ValenzBridge::scheduleWorkspaceStateRefresh(int delayMs)
 {
     if (delayMs <= 0)

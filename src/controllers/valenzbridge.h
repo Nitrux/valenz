@@ -277,6 +277,7 @@ public:
     Q_INVOKABLE void setControlCenterGpuPowerLease(bool active);
     Q_INVOKABLE void goToPreviousWorkspace();
     Q_INVOKABLE void goToNextWorkspace();
+    Q_INVOKABLE void moveWindowToWorkspace(const QString &address, int workspace);
     Q_INVOKABLE bool refreshWorkspaceState();
     Q_INVOKABLE void focusWindow(const QString &address);
     Q_INVOKABLE void refreshSharedSettings();

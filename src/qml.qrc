@@ -6,6 +6,7 @@
         <file>modules/WorkspaceNavigation.qml</file>
         <file>modules/MprisControl.qml</file>
         <file>modules/MprisSourcesPopup.qml</file>
+        <file>modules/WorkspaceMovePopup.qml</file>
         <file>modules/WindowTitle.qml</file>
         <file>modules/WeatherClock.qml</file>
         <file>modules/CalendarPopup.qml</file>
