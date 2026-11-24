@@ -294,6 +294,13 @@ Window
 
     property var _networkUploadHistory: []
     property var _networkDownloadHistory: []
+    property real _networkAnimatedUploadRate: 0
+    property real _networkAnimatedDownloadRate: 0
+    property real _networkUploadStartRate: 0
+    property real _networkDownloadStartRate: 0
+    property real _networkUploadTargetRate: 0
+    property real _networkDownloadTargetRate: 0
+    property double _networkAnimationStartedAt: 0
     readonly property int _networkHistoryLength: 60
     readonly property real _networkHistoryMaximum: Math.max(1, ..._networkUploadHistory, ..._networkDownloadHistory)
 
@@ -309,8 +316,16 @@ Window
         {
             if (!controlCenter._systemResourcesRefreshActive)
                 return
-            controlCenter._networkUploadHistory = controlCenter._networkUploadHistory.concat([Math.max(0, controlCenter.bridge.controlCenterNetworkUploadRate)]).slice(-controlCenter._networkHistoryLength)
-            controlCenter._networkDownloadHistory = controlCenter._networkDownloadHistory.concat([Math.max(0, controlCenter.bridge.controlCenterNetworkDownloadRate)]).slice(-controlCenter._networkHistoryLength)
+            const now = Date.now()
+            const uploadRate = Math.max(0, controlCenter.bridge.controlCenterNetworkUploadRate)
+            const downloadRate = Math.max(0, controlCenter.bridge.controlCenterNetworkDownloadRate)
+            controlCenter._networkUploadStartRate = controlCenter._networkAnimatedUploadRate
+            controlCenter._networkDownloadStartRate = controlCenter._networkAnimatedDownloadRate
+            controlCenter._networkUploadTargetRate = uploadRate
+            controlCenter._networkDownloadTargetRate = downloadRate
+            controlCenter._networkAnimationStartedAt = now
+            controlCenter._networkUploadHistory = controlCenter._networkUploadHistory.concat([uploadRate]).slice(-controlCenter._networkHistoryLength)
+            controlCenter._networkDownloadHistory = controlCenter._networkDownloadHistory.concat([downloadRate]).slice(-controlCenter._networkHistoryLength)
         }
     }
 
@@ -359,6 +374,22 @@ Window
                 _microphoneSlider._applyPending = false
                 controlCenter._commitMicrophoneVolumeFromSlider()
             }
+        }
+    }
+
+    Timer
+    {
+        interval: 16
+        repeat: true
+        running: controlCenter._systemResourcesRefreshActive
+        onTriggered:
+        {
+            const progress = Math.min(1, Math.max(0, (Date.now() - controlCenter._networkAnimationStartedAt) / 1000))
+            const easedProgress = progress * progress * (3 - 2 * progress)
+            controlCenter._networkAnimatedUploadRate = controlCenter._networkUploadStartRate + (controlCenter._networkUploadTargetRate - controlCenter._networkUploadStartRate) * easedProgress
+            controlCenter._networkAnimatedDownloadRate = controlCenter._networkDownloadStartRate + (controlCenter._networkDownloadTargetRate - controlCenter._networkDownloadStartRate) * easedProgress
+            if (_networkGraph)
+                _networkGraph.requestPaint()
         }
     }
 
@@ -471,6 +502,13 @@ Window
             Qt.callLater(_touchGeometryRevision)
             _deferredGeometryRefreshTimer.restart()
             _systemResourcesRefreshActive = true
+            _networkAnimatedUploadRate = bridge ? Math.max(0, bridge.controlCenterNetworkUploadRate) : 0
+            _networkAnimatedDownloadRate = bridge ? Math.max(0, bridge.controlCenterNetworkDownloadRate) : 0
+            _networkUploadStartRate = _networkAnimatedUploadRate
+            _networkDownloadStartRate = _networkAnimatedDownloadRate
+            _networkUploadTargetRate = _networkAnimatedUploadRate
+            _networkDownloadTargetRate = _networkAnimatedDownloadRate
+            _networkAnimationStartedAt = Date.now()
             if (bridge)
             {
                 bridge.setControlCenterGpuPowerLease(true)
@@ -1635,7 +1673,7 @@ Window
                                     color: Maui.Theme.textColor
                                 }
                                 Label { text: i18n("CPU"); color: Maui.Theme.textColor; font.weight: Font.DemiBold }
-                                Label { text: controlCenter._controlCenterCpuPercentage() + "%  " + controlCenter._temperatureText(controlCenter.bridge ? controlCenter.bridge.controlCenterCpuTemperature : -1); color: Maui.Theme.disabledTextColor }
+                                Label { text: controlCenter._controlCenterCpuPercentage() + "% • " + controlCenter._temperatureText(controlCenter.bridge ? controlCenter.bridge.controlCenterCpuTemperature : -1); color: Maui.Theme.disabledTextColor }
                             }
                             ProgressBar
                             {
@@ -1664,7 +1702,7 @@ Window
                                     color: Maui.Theme.textColor
                                 }
                                 Label { text: i18n("GPU"); color: Maui.Theme.textColor; font.weight: Font.DemiBold }
-                                Label { text: (controlCenter.bridge && controlCenter.bridge.controlCenterGpuPercentage >= 0 ? controlCenter.bridge.controlCenterGpuPercentage + "%" : i18n("N/A")) + "  " + controlCenter._temperatureText(controlCenter.bridge ? controlCenter.bridge.controlCenterGpuTemperature : -1); color: Maui.Theme.disabledTextColor }
+                                Label { text: (controlCenter.bridge && controlCenter.bridge.controlCenterGpuPercentage >= 0 ? controlCenter.bridge.controlCenterGpuPercentage + "%" : i18n("N/A")) + " • " + controlCenter._temperatureText(controlCenter.bridge ? controlCenter.bridge.controlCenterGpuTemperature : -1); color: Maui.Theme.disabledTextColor }
                             }
                             ProgressBar
                             {
@@ -1765,50 +1803,69 @@ Window
                                     }
                                 }
                                 Label { text: i18n("Network"); color: Maui.Theme.textColor; font.weight: Font.DemiBold }
-                                Label
+                                RowLayout
                                 {
-                                    text: "↑ " + controlCenter._networkRateText(controlCenter.bridge ? controlCenter.bridge.controlCenterNetworkUploadRate : 0) + "  ↓ " + controlCenter._networkRateText(controlCenter.bridge ? controlCenter.bridge.controlCenterNetworkDownloadRate : 0)
-                                    color: Maui.Theme.disabledTextColor
+                                    spacing: Maui.Style.space.tiny
+                                    Label
+                                    {
+                                        text: "↑"
+                                        color: Qt.rgba(Maui.Theme.highlightColor.r, Maui.Theme.highlightColor.g, Maui.Theme.highlightColor.b, 1)
+                                    }
+                                    Label
+                                    {
+                                        text: controlCenter._networkRateText(controlCenter._networkAnimatedUploadRate)
+                                        color: Maui.Theme.disabledTextColor
+                                    }
+                                    Label { text: "•"; color: Maui.Theme.disabledTextColor }
+                                    Label
+                                    {
+                                        text: "↓"
+                                        color: Qt.rgba(controlCenter._networkDownloadColor.r, controlCenter._networkDownloadColor.g, controlCenter._networkDownloadColor.b, 1)
+                                    }
+                                    Label
+                                    {
+                                        text: controlCenter._networkRateText(controlCenter._networkAnimatedDownloadRate)
+                                        color: Maui.Theme.disabledTextColor
+                                    }
                                 }
                             }
-                            ColumnLayout
+                            Canvas
                             {
+                                id: _networkGraph
                                 Layout.fillWidth: true
-                                spacing: Maui.Style.space.tiny
-                                Repeater
+                                Layout.preferredHeight: Maui.Style.units.gridUnit * 2
+                                readonly property real maximum: controlCenter._networkHistoryMaximum
+                                onMaximumChanged: requestPaint()
+                                onWidthChanged: requestPaint()
+                                onHeightChanged: requestPaint()
+                                onPaint:
                                 {
-                                    model: 2
-                                    delegate: Canvas
+                                    const context = getContext("2d")
+                                    context.clearRect(0, 0, width, height)
+                                    const sampleSpacing = width / (controlCenter._networkHistoryLength - 1)
+                                    context.globalAlpha = 0.55
+
+                                    function drawSeries(samples, animatedRate, barColor)
                                     {
-                                        required property int index
-                                        Layout.fillWidth: true
-                                        Layout.preferredHeight: Maui.Style.units.gridUnit * 2
-                                        readonly property var samples: index === 0 ? controlCenter._networkUploadHistory : controlCenter._networkDownloadHistory
-                                        readonly property real maximum: controlCenter._networkHistoryMaximum
-                                        readonly property color barColor: index === 0 ? Maui.Theme.highlightColor : controlCenter._networkDownloadColor
-                                        onSamplesChanged: requestPaint()
-                                        onMaximumChanged: requestPaint()
-                                        onBarColorChanged: requestPaint()
-                                        onWidthChanged: requestPaint()
-                                        onHeightChanged: requestPaint()
-                                        onPaint:
+                                        if (samples.length === 0)
+                                            return
+                                        const offset = controlCenter._networkHistoryLength - samples.length
+                                        context.fillStyle = barColor
+                                        context.beginPath()
+                                        context.moveTo(offset * sampleSpacing, height)
+                                        for (let i = 0; i < samples.length; ++i)
                                         {
-                                            const context = getContext("2d")
-                                            context.clearRect(0, 0, width, height)
-                                            context.fillStyle = barColor
-                                            if (samples.length === 0)
-                                                return
-                                            const sampleSpacing = width / (controlCenter._networkHistoryLength - 1)
-                                            const offset = controlCenter._networkHistoryLength - samples.length
-                                            context.beginPath()
-                                            context.moveTo(offset * sampleSpacing, height)
-                                            for (let i = 0; i < samples.length; ++i)
-                                                context.lineTo((offset + i) * sampleSpacing, height * (1 - samples[i] / maximum))
-                                            context.lineTo(width, height)
-                                            context.closePath()
-                                            context.fill()
+                                            const value = i === samples.length - 1 ? animatedRate : samples[i]
+                                            context.lineTo((offset + i) * sampleSpacing, height * (1 - value / maximum))
                                         }
+                                        context.lineTo(width, height)
+                                        context.closePath()
+                                        context.fill()
                                     }
+
+                                    drawSeries(controlCenter._networkUploadHistory, controlCenter._networkAnimatedUploadRate, Maui.Theme.highlightColor)
+                                    drawSeries(controlCenter._networkDownloadHistory, controlCenter._networkAnimatedDownloadRate, controlCenter._networkDownloadColor)
+                                    context.globalAlpha = 1
                                 }
                             }
                         }
