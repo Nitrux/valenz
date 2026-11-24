@@ -236,6 +236,8 @@ RowLayout
         color: "transparent"
         flags: Qt.FramelessWindowHint | Qt.Popup
         transientParent: systemTray.rootWindow ? systemTray.rootWindow : systemTray.Window.window
+        Maui.Theme.colorSet: Maui.Theme.Window
+        Maui.Theme.inherit: false
         visible: false
 
         x:
@@ -327,9 +329,9 @@ RowLayout
             id: _trayPanel
             anchors.fill: parent
             radius: Maui.Style.radiusV
-            color: systemTray.rootWindow ? systemTray.rootWindow.popupSurfaceColor : Maui.Theme.backgroundColor
+            color: _trayMenuWindow.Maui.Theme.backgroundColor
             border.width: 1
-            border.color: Qt.alpha(Maui.Theme.textColor, 0.10)
+            border.color: _trayMenuWindow.Maui.Theme.alternateBackgroundColor
             clip: true
 
             layer.enabled: visible && GraphicsInfo.api !== GraphicsInfo.Software
@@ -379,7 +381,7 @@ RowLayout
                         {
                             property var menuData: parent ? parent.modelData : null
                             width: parent ? parent.width : implicitWidth
-                            text: String(menuData && menuData.label || "")
+                            text: String(menuData && menuData.label || "").replace(/(^|\s)([a-z])/g, function(match, boundary, character) { return boundary + character.toUpperCase() })
                             enabled: !!menuData && menuData.visible !== false && menuData.enabled !== false
                             hoverEnabled: enabled && !Maui.Handy.isMobile
                             focusPolicy: enabled ? Qt.StrongFocus : Qt.NoFocus
