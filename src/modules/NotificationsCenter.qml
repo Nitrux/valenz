@@ -19,6 +19,8 @@ Item
     property bool useSystemThemeIcons: true
 
     Maui.Theme.colorSet: Maui.Theme.View
+    Maui.Theme.inherit: false
+    Maui.Theme.alternateBackgroundColor: hostWindow ? hostWindow.contentItem.Maui.Theme.alternateBackgroundColor : undefined
 
     Component.onCompleted: { }
     visible: false
@@ -842,7 +844,7 @@ Item
                                                     template.visible: false
                                                     background: Rectangle
                                                     {
-                                                        color: Qt.alpha(Maui.Theme.backgroundColor, 0.42)
+                                                        color: Maui.Theme.alternateBackgroundColor
                                                         radius: Maui.Style.radiusV
                                                         border.width: 1
                                                         border.color: Qt.alpha(Maui.Theme.textColor, 0.10)

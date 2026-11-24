@@ -115,6 +115,8 @@ Item
     }
 
     Maui.Theme.colorSet: Maui.Theme.View
+    Maui.Theme.inherit: false
+    Maui.Theme.alternateBackgroundColor: hostWindow ? hostWindow.contentItem.Maui.Theme.alternateBackgroundColor : undefined
 
     visible: false
 
