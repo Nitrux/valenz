@@ -236,7 +236,9 @@ RowLayout
         color: "transparent"
         flags: Qt.FramelessWindowHint | Qt.Popup
         transientParent: systemTray.rootWindow ? systemTray.rootWindow : systemTray.Window.window
-        Maui.Theme.colorSet: Maui.Theme.Window
+        // This separate popup imitates Maui.Menu because Valenz runs as a LayerShell layer.
+        // Keep the View color set and background binding aligned with Maui.Menu.
+        Maui.Theme.colorSet: Maui.Theme.View
         Maui.Theme.inherit: false
         visible: false
 
@@ -331,7 +333,7 @@ RowLayout
             radius: Maui.Style.radiusV
             color: _trayMenuWindow.Maui.Theme.backgroundColor
             border.width: 1
-            border.color: _trayMenuWindow.Maui.Theme.alternateBackgroundColor
+            border.color: Qt.alpha(_trayMenuWindow.Maui.Theme.textColor, 0.10)
             clip: true
 
             layer.enabled: visible && GraphicsInfo.api !== GraphicsInfo.Software

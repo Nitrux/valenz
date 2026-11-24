@@ -545,7 +545,10 @@ QString ValenzBridge::formatMprisTimeUs(qint64 microseconds) const
 QString ValenzBridge::formatMprisTimestamp(qint64 positionUs, qint64 lengthUs) const
 {
     const QString left = formatMprisTimeUs(positionUs);
-    const QString right = lengthUs > 0 ? formatMprisTimeUs(lengthUs) : QStringLiteral("--:--");
+    if (lengthUs <= 0 || lengthUs == std::numeric_limits<qint64>::max())
+        return left + QStringLiteral(" / --/--");
+
+    const QString right = formatMprisTimeUs(lengthUs);
     return left + QStringLiteral(" / ") + right;
 }
 
