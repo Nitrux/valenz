@@ -108,6 +108,9 @@ ValenzBridge::ValenzBridge(QObject *parent)
 
 ValenzBridge::~ValenzBridge()
 {
+    setControlCenterGpuPowerLease(false);
+    if (m_gpuPowerLeaseProcess)
+        m_gpuPowerLeaseProcess->waitForFinished(2000);
     cancelMediaArtworkRequest();
     resetBluezArtworkSession();
     delete m_artworkCacheDir;

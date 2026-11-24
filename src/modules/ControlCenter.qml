@@ -292,11 +292,26 @@ Window
         return (value / 1000000000).toFixed(1) + " GB/s"
     }
 
-    function _networkRateMaximum()
+    property var _networkUploadHistory: []
+    property var _networkDownloadHistory: []
+    readonly property int _networkHistoryLength: 60
+    readonly property real _networkHistoryMaximum: Math.max(1, ..._networkUploadHistory, ..._networkDownloadHistory)
+
+    function _temperatureText(value)
     {
-        const upload = controlCenter.bridge ? Number(controlCenter.bridge.controlCenterNetworkUploadRate) || 0 : 0
-        const download = controlCenter.bridge ? Number(controlCenter.bridge.controlCenterNetworkDownloadRate) || 0 : 0
-        return Math.max(1, upload, download)
+        return value >= 0 ? value + " °C" : i18n("N/A")
+    }
+
+    Connections
+    {
+        target: controlCenter.bridge
+        function onControlCenterNetworkSampled()
+        {
+            if (!controlCenter._systemResourcesRefreshActive)
+                return
+            controlCenter._networkUploadHistory = controlCenter._networkUploadHistory.concat([Math.max(0, controlCenter.bridge.controlCenterNetworkUploadRate)]).slice(-controlCenter._networkHistoryLength)
+            controlCenter._networkDownloadHistory = controlCenter._networkDownloadHistory.concat([Math.max(0, controlCenter.bridge.controlCenterNetworkDownloadRate)]).slice(-controlCenter._networkHistoryLength)
+        }
     }
 
     function _controlCenterDiskUsageText()
@@ -458,6 +473,7 @@ Window
             _systemResourcesRefreshActive = true
             if (bridge)
             {
+                bridge.setControlCenterGpuPowerLease(true)
                 bridge.setControlCenterRuntimeActive(true)
                 _initialDataRefreshTimer.restart()
             }
@@ -467,10 +483,15 @@ Window
             _fadeOutTimer.stop()
             _panelOpen = false
             closed()
+            _networkUploadHistory = []
+            _networkDownloadHistory = []
             _systemResourcesRefreshActive = false
             _initialDataRefreshTimer.stop()
             if (bridge)
+            {
+                bridge.setControlCenterGpuPowerLease(false)
                 bridge.setControlCenterRuntimeActive(false)
+            }
         }
     }
     x:
@@ -1584,6 +1605,8 @@ Window
                         flat: false
                         clip: true
                         padding: controlCenter._cardPadding
+                        topPadding: controlCenter._cardPadding + Maui.Style.space.medium
+                        bottomPadding: controlCenter._cardPadding + Maui.Style.space.medium
                         text: ""
                         label2.text: ""
                         template.visible: false
@@ -1612,7 +1635,7 @@ Window
                                     color: Maui.Theme.textColor
                                 }
                                 Label { text: i18n("CPU"); color: Maui.Theme.textColor; font.weight: Font.DemiBold }
-                                Label { text: controlCenter._controlCenterCpuPercentage() + "%"; color: Maui.Theme.disabledTextColor }
+                                Label { text: controlCenter._controlCenterCpuPercentage() + "%  " + controlCenter._temperatureText(controlCenter.bridge ? controlCenter.bridge.controlCenterCpuTemperature : -1); color: Maui.Theme.disabledTextColor }
                             }
                             ProgressBar
                             {
@@ -1620,6 +1643,36 @@ Window
                                 from: 0
                                 to: 100
                                 value: controlCenter._controlCenterCpuPercentage()
+                            }
+
+                            RowLayout
+                            {
+                                Layout.fillWidth: true
+                                spacing: Maui.Style.space.small
+                                Maui.IconLabel
+                                {
+                                    Layout.minimumWidth: controlCenter._iconSlotSize
+                                    Layout.preferredWidth: controlCenter._iconSlotSize
+                                    Layout.maximumWidth: controlCenter._iconSlotSize
+                                    Layout.minimumHeight: controlCenter._iconSlotSize
+                                    Layout.preferredHeight: controlCenter._iconSlotSize
+                                    Layout.maximumHeight: controlCenter._iconSlotSize
+                                    icon: ({name: controlCenter.useSystemThemeIcons ? "device-pci-gpu" : "", source: "", width: controlCenter._iconSlotSize, height: controlCenter._iconSlotSize, color: Maui.Theme.textColor})
+                                    text: "\uf26c"
+                                    font.family: controlCenter._nerdFontFamily
+                                    font.pointSize: Math.max(9, Math.round(controlCenter._glyphSize * 0.75))
+                                    color: Maui.Theme.textColor
+                                }
+                                Label { text: i18n("GPU"); color: Maui.Theme.textColor; font.weight: Font.DemiBold }
+                                Label { text: (controlCenter.bridge && controlCenter.bridge.controlCenterGpuPercentage >= 0 ? controlCenter.bridge.controlCenterGpuPercentage + "%" : i18n("N/A")) + "  " + controlCenter._temperatureText(controlCenter.bridge ? controlCenter.bridge.controlCenterGpuTemperature : -1); color: Maui.Theme.disabledTextColor }
+                            }
+                            ProgressBar
+                            {
+                                Layout.fillWidth: true
+                                from: 0
+                                to: 100
+                                value: controlCenter.bridge ? Math.max(0, controlCenter.bridge.controlCenterGpuPercentage) : 0
+                                enabled: controlCenter.bridge && controlCenter.bridge.controlCenterGpuPercentage >= 0
                             }
 
                             RowLayout
@@ -1722,20 +1775,40 @@ Window
                             {
                                 Layout.fillWidth: true
                                 spacing: Maui.Style.space.tiny
-                                ProgressBar
+                                Repeater
                                 {
-                                    Layout.fillWidth: true
-                                    from: 0
-                                    to: controlCenter._networkRateMaximum()
-                                    value: controlCenter.bridge ? Number(controlCenter.bridge.controlCenterNetworkUploadRate) || 0 : 0
-                                }
-                                ProgressBar
-                                {
-                                    Layout.fillWidth: true
-                                    from: 0
-                                    to: controlCenter._networkRateMaximum()
-                                    value: controlCenter.bridge ? Number(controlCenter.bridge.controlCenterNetworkDownloadRate) || 0 : 0
-                                    Maui.Theme.highlightColor: controlCenter._networkDownloadColor
+                                    model: 2
+                                    delegate: Canvas
+                                    {
+                                        required property int index
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: Maui.Style.units.gridUnit * 2
+                                        readonly property var samples: index === 0 ? controlCenter._networkUploadHistory : controlCenter._networkDownloadHistory
+                                        readonly property real maximum: controlCenter._networkHistoryMaximum
+                                        readonly property color barColor: index === 0 ? Maui.Theme.highlightColor : controlCenter._networkDownloadColor
+                                        onSamplesChanged: requestPaint()
+                                        onMaximumChanged: requestPaint()
+                                        onBarColorChanged: requestPaint()
+                                        onWidthChanged: requestPaint()
+                                        onHeightChanged: requestPaint()
+                                        onPaint:
+                                        {
+                                            const context = getContext("2d")
+                                            context.clearRect(0, 0, width, height)
+                                            context.fillStyle = barColor
+                                            if (samples.length === 0)
+                                                return
+                                            const sampleSpacing = width / (controlCenter._networkHistoryLength - 1)
+                                            const offset = controlCenter._networkHistoryLength - samples.length
+                                            context.beginPath()
+                                            context.moveTo(offset * sampleSpacing, height)
+                                            for (let i = 0; i < samples.length; ++i)
+                                                context.lineTo((offset + i) * sampleSpacing, height * (1 - samples[i] / maximum))
+                                            context.lineTo(width, height)
+                                            context.closePath()
+                                            context.fill()
+                                        }
+                                    }
                                 }
                             }
                         }

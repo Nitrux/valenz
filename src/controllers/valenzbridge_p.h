@@ -8,6 +8,7 @@ constexpr auto kLauncherCommandKey = "Actions/launcherCommand";
 constexpr auto kClipboardCommandKey = "Actions/clipboardCommand";
 constexpr auto kControlCenterSettingsCommandKey = "ControlCenter/settingsCommand";
 constexpr auto kControlCenterDiskUsagePathKey = "ControlCenter/diskUsagePath";
+constexpr auto kControlCenterGpuTemperatureDeviceKey = "ControlCenter/gpuTemperatureDevice";
 constexpr auto kWindowBarHeightKey = "Window/barHeight";
 constexpr auto kWindowBarLayerSpacingTopKey = "Window/barLayerSpacingTop";
 constexpr auto kWindowBarLayerSpacingBottomKey = "Window/barLayerSpacingBottom";

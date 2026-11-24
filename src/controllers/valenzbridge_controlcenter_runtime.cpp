@@ -11,6 +11,7 @@
 #include <QTextStream>
 #include <QMetaObject>
 #include <QPointer>
+#include <QStandardPaths>
 #include <QProcess>
 #include <QSettings>
 #include <QTimer>
@@ -312,12 +313,132 @@ struct ControlCenterSystemResourcesSnapshot
 {
     bool cpuValid = false;
     int cpuPercentage = 0;
+    int cpuTemperature = -1;
+    int gpuPercentage = -1;
+    int gpuTemperature = -1;
     bool ramValid = false;
     int ramPercentage = 0;
     QString diskText;
     int diskPercentage = 0;
     bool diskValid = false;
 };
+
+QString readSensorText(const QString &path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text))
+        return {};
+    return QString::fromUtf8(file.readAll()).trimmed();
+}
+
+int readSensorValue(const QString &path, int divisor = 1)
+{
+    bool ok = false;
+    const int value = readSensorText(path).toInt(&ok);
+    return ok && value >= 0 ? qRound(double(value) / divisor) : -1;
+}
+
+void collectHardwareMetrics(ControlCenterSystemResourcesSnapshot *snapshot, const QString &gpuTemperatureDevice)
+{
+    const QDir hwmon(QStringLiteral("/sys/class/hwmon"));
+    for (const QString &entry : hwmon.entryList({QStringLiteral("hwmon*")}, QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name))
+    {
+        const QDir sensor(hwmon.filePath(entry));
+        const QString name = readSensorText(sensor.filePath(QStringLiteral("name")));
+        if (name != QStringLiteral("coretemp") && name != QStringLiteral("k10temp")
+            && name != QStringLiteral("zenpower") && name != QStringLiteral("cpu_thermal"))
+            continue;
+
+        for (const QString &input : sensor.entryList({QStringLiteral("temp*_input")}, QDir::Files, QDir::Name))
+            snapshot->cpuTemperature = qMax(snapshot->cpuTemperature, readSensorValue(sensor.filePath(input), 1000));
+    }
+
+    // Use one GPU consistently for both readings; prefer the boot display device.
+    const QDir drm(QStringLiteral("/sys/class/drm"));
+    QStringList devices;
+    for (const QString &card : drm.entryList({QStringLiteral("card*")}, QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name))
+    {
+        bool validCard = false;
+        card.mid(4).toInt(&validCard);
+        if (!validCard)
+            continue;
+        const QString device = drm.filePath(card + QStringLiteral("/device"));
+        if (readSensorText(device + QStringLiteral("/boot_vga")) == QStringLiteral("1"))
+            devices.prepend(device);
+        else
+            devices.append(device);
+    }
+    if (devices.isEmpty())
+        return;
+
+    const QString usageDevice = devices.first();
+    QString temperatureDevice = usageDevice;
+    if (!gpuTemperatureDevice.isEmpty())
+    {
+        for (const QString &candidate : devices)
+        {
+            if (QDir(candidate).canonicalPath().section(QLatin1Char('/'), -1) == gpuTemperatureDevice)
+            {
+                temperatureDevice = candidate;
+                break;
+            }
+        }
+    }
+
+    const auto readNvidiaMetric = [](const QString &devicePath, const QString &metric, int *value) {
+        if (readSensorText(devicePath + QStringLiteral("/vendor")) != QStringLiteral("0x10de"))
+            return false;
+        const QString pciId = QDir(devicePath).canonicalPath().section(QLatin1Char('/'), -1);
+        QString output;
+        if (!MauiKitSystem::runCommandText(QStringLiteral("nvidia-smi"),
+                {QStringLiteral("--id=") + pciId,
+                 QStringLiteral("--query-gpu=") + metric,
+                 QStringLiteral("--format=csv,noheader,nounits")}, &output, 1000))
+            return false;
+        bool ok = false;
+        const int parsed = output.trimmed().toInt(&ok);
+        if (!ok || parsed < 0)
+            return false;
+        *value = parsed;
+        return true;
+    };
+
+    int usage = -1;
+    if (readNvidiaMetric(usageDevice, QStringLiteral("utilization.gpu"), &usage))
+        snapshot->gpuPercentage = usage;
+    else if (readSensorText(usageDevice + QStringLiteral("/vendor")) != QStringLiteral("0x10de"))
+    {
+        usage = readSensorValue(usageDevice + QStringLiteral("/gpu_busy_percent"));
+        if (usage <= 100)
+            snapshot->gpuPercentage = usage;
+    }
+
+    if (readNvidiaMetric(temperatureDevice, QStringLiteral("temperature.gpu"), &snapshot->gpuTemperature))
+        return;
+
+    const QDir gpuHwmon(temperatureDevice + QStringLiteral("/hwmon"));
+    int fallbackTemperature = -1;
+    for (const QString &entry : gpuHwmon.entryList({QStringLiteral("hwmon*")}, QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name))
+    {
+        const QDir sensor(gpuHwmon.filePath(entry));
+        for (const QString &input : sensor.entryList({QStringLiteral("temp*_input")}, QDir::Files, QDir::Name))
+        {
+            const int temperature = readSensorValue(sensor.filePath(input), 1000);
+            if (temperature < 0)
+                continue;
+
+            const QString labelPath = sensor.filePath(input.left(input.size() - QStringLiteral("_input").size()) + QStringLiteral("_label"));
+            if (readSensorText(labelPath).compare(QStringLiteral("edge"), Qt::CaseInsensitive) == 0)
+            {
+                snapshot->gpuTemperature = temperature;
+                return;
+            }
+            if (fallbackTemperature < 0)
+                fallbackTemperature = temperature;
+        }
+    }
+    snapshot->gpuTemperature = fallbackTemperature;
+}
 
 void collectControlCenterNetworkState(ControlCenterRuntimeSnapshot *snapshot)
 {
@@ -445,10 +566,11 @@ ControlCenterRuntimeSnapshot collectControlCenterRuntimeSnapshot(const QString &
     return snapshot;
 }
 
-ControlCenterSystemResourcesSnapshot collectControlCenterSystemResourcesSnapshot(const QString &diskUsagePath)
+ControlCenterSystemResourcesSnapshot collectControlCenterSystemResourcesSnapshot(const QString &diskUsagePath, const QString &gpuTemperatureDevice)
 {
     ControlCenterSystemResourcesSnapshot snapshot;
 
+    collectHardwareMetrics(&snapshot, gpuTemperatureDevice);
     snapshot.cpuValid = MauiKitSystem::readCpuUsagePercent(&snapshot.cpuPercentage);
     snapshot.ramValid = MauiKitSystem::readRamUsagePercent(&snapshot.ramPercentage);
     snapshot.diskValid = MauiKitSystem::readDiskUsage(diskUsagePath, &snapshot.diskText, &snapshot.diskPercentage);
@@ -547,6 +669,7 @@ void ValenzBridge::refreshControlCenterRuntimeState()
                 bridge->m_controlCenterNetworkDownloadRate = snapshot.networkDownloadRate;
                 Q_EMIT bridge->controlCenterNetworkDownloadRateChanged(bridge->m_controlCenterNetworkDownloadRate);
             }
+            Q_EMIT bridge->controlCenterNetworkSampled();
             bridge->setControlCenterBluetoothAvailable(snapshot.bluetoothAvailable);
             bridge->setControlCenterBluetoothConnectedDeviceCount(snapshot.bluetoothConnectedDeviceCount);
             if (bridge->m_controlCenterBluetoothEnabled != snapshot.bluetoothEnabled)
@@ -803,10 +926,11 @@ void ValenzBridge::refreshControlCenterSystemResources()
     m_controlCenterSystemResourcesRefreshInFlight = true;
 
     const QString diskUsagePath = m_controlCenterDiskUsagePath;
+    const QString gpuTemperatureDevice = m_controlCenterGpuTemperatureDevice;
     QPointer<ValenzBridge> bridge(this);
 
-    QThreadPool::globalInstance()->start([bridge, diskUsagePath]() {
-        const ControlCenterSystemResourcesSnapshot snapshot = collectControlCenterSystemResourcesSnapshot(diskUsagePath);
+    QThreadPool::globalInstance()->start([bridge, diskUsagePath, gpuTemperatureDevice]() {
+        const ControlCenterSystemResourcesSnapshot snapshot = collectControlCenterSystemResourcesSnapshot(diskUsagePath, gpuTemperatureDevice);
         if (!bridge)
             return;
 
@@ -815,6 +939,15 @@ void ValenzBridge::refreshControlCenterSystemResources()
                 return;
 
             bridge->m_controlCenterSystemResourcesRefreshInFlight = false;
+            if (bridge->m_controlCenterCpuTemperature != snapshot.cpuTemperature
+                || bridge->m_controlCenterGpuPercentage != snapshot.gpuPercentage
+                || bridge->m_controlCenterGpuTemperature != snapshot.gpuTemperature)
+            {
+                bridge->m_controlCenterCpuTemperature = snapshot.cpuTemperature;
+                bridge->m_controlCenterGpuPercentage = snapshot.gpuPercentage;
+                bridge->m_controlCenterGpuTemperature = snapshot.gpuTemperature;
+                Q_EMIT bridge->controlCenterHardwareMetricsChanged();
+            }
             if (snapshot.cpuValid)
                 bridge->setControlCenterCpuPercentage(snapshot.cpuPercentage);
             if (snapshot.ramValid)
@@ -837,6 +970,83 @@ void ValenzBridge::refreshControlCenterSystemResources()
             }
         }, Qt::QueuedConnection);
     });
+}
+
+void ValenzBridge::setControlCenterGpuPowerLease(bool active)
+{
+    if (m_gpuPowerLeaseRequested == active)
+        return;
+
+    m_gpuPowerLeaseRequested = active;
+    if (!active)
+    {
+        if (m_gpuPowerLeaseProcess && m_gpuPowerLeaseProcess->state() != QProcess::NotRunning
+            && !m_gpuPowerLeaseReleaseSent)
+        {
+            m_gpuPowerLeaseReleaseSent = true;
+            m_gpuPowerLeaseProcess->write("release\n");
+            m_gpuPowerLeaseProcess->closeWriteChannel();
+        }
+        return;
+    }
+
+    if (m_controlCenterGpuTemperatureDevice.isEmpty() || m_gpuPowerLeaseProcess)
+        return;
+
+    const QString devicePath = QStringLiteral("/sys/bus/pci/devices/") + m_controlCenterGpuTemperatureDevice;
+    if (readSensorText(devicePath + QStringLiteral("/vendor")) != QStringLiteral("0x1002")
+        || QFileInfo(devicePath + QStringLiteral("/driver")).symLinkTarget().section(QLatin1Char('/'), -1) != QStringLiteral("amdgpu")
+        || readSensorText(devicePath + QStringLiteral("/power/control")) != QStringLiteral("auto"))
+    {
+        m_gpuPowerLeaseRequested = false;
+        return;
+    }
+
+    const QString pkexec = QStandardPaths::findExecutable(QStringLiteral("pkexec"));
+    if (pkexec.isEmpty())
+    {
+        qWarning() << "[Valenz][GPU] pkexec is unavailable; the selected GPU will remain under automatic runtime power management";
+        m_gpuPowerLeaseRequested = false;
+        return;
+    }
+
+    auto *process = new QProcess(this);
+    m_gpuPowerLeaseProcess = process;
+    m_gpuPowerLeaseReleaseSent = false;
+    process->setProcessChannelMode(QProcess::SeparateChannels);
+
+    connect(process, &QProcess::readyReadStandardError, this, [process] {
+        const QByteArray error = process->readAllStandardError().trimmed();
+        if (!error.isEmpty())
+            qWarning().noquote() << "[Valenz][GPU]" << QString::fromLocal8Bit(error);
+    });
+    connect(process, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
+            [this, process](int, QProcess::ExitStatus) {
+                const bool restart = m_gpuPowerLeaseRequested && m_gpuPowerLeaseReleaseSent;
+                if (m_gpuPowerLeaseProcess == process)
+                    m_gpuPowerLeaseProcess = nullptr;
+                m_gpuPowerLeaseReleaseSent = false;
+                process->deleteLater();
+                if (restart)
+                {
+                    m_gpuPowerLeaseRequested = false;
+                    QTimer::singleShot(0, this, [this] { setControlCenterGpuPowerLease(true); });
+                }
+                else if (m_gpuPowerLeaseRequested)
+                    m_gpuPowerLeaseRequested = false;
+            });
+    connect(process, &QProcess::errorOccurred, this, [this, process](QProcess::ProcessError error) {
+        if (error != QProcess::FailedToStart)
+            return;
+        qWarning() << "[Valenz][GPU] Could not start the privileged GPU power helper:" << process->errorString();
+        if (m_gpuPowerLeaseProcess == process)
+            m_gpuPowerLeaseProcess = nullptr;
+        m_gpuPowerLeaseRequested = false;
+        m_gpuPowerLeaseReleaseSent = false;
+        process->deleteLater();
+    });
+
+    process->start(pkexec, {QStringLiteral(VALENZ_GPU_POWER_LEASE_HELPER), m_controlCenterGpuTemperatureDevice});
 }
 
 void ValenzBridge::refreshControlCenterSystemResourcesState()

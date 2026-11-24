@@ -16,6 +16,7 @@
 class QLocalSocket;
 class QNetworkAccessManager;
 class QNetworkReply;
+class QProcess;
 class QTemporaryDir;
 class QFileSystemWatcher;
 class QTimer;
@@ -58,6 +59,9 @@ class ValenzBridge : public QObject
     Q_PROPERTY(bool controlCenterBatteryCharging READ controlCenterBatteryCharging WRITE setControlCenterBatteryCharging NOTIFY controlCenterBatteryChargingChanged FINAL)
     Q_PROPERTY(QString controlCenterBatteryPercentage READ controlCenterBatteryPercentage WRITE setControlCenterBatteryPercentage NOTIFY controlCenterBatteryPercentageChanged FINAL)
     Q_PROPERTY(int controlCenterCpuPercentage READ controlCenterCpuPercentage WRITE setControlCenterCpuPercentage NOTIFY controlCenterCpuPercentageChanged FINAL)
+    Q_PROPERTY(int controlCenterCpuTemperature READ controlCenterCpuTemperature NOTIFY controlCenterHardwareMetricsChanged FINAL)
+    Q_PROPERTY(int controlCenterGpuPercentage READ controlCenterGpuPercentage NOTIFY controlCenterHardwareMetricsChanged FINAL)
+    Q_PROPERTY(int controlCenterGpuTemperature READ controlCenterGpuTemperature NOTIFY controlCenterHardwareMetricsChanged FINAL)
     Q_PROPERTY(int controlCenterRamPercentage READ controlCenterRamPercentage WRITE setControlCenterRamPercentage NOTIFY controlCenterRamPercentageChanged FINAL)
     Q_PROPERTY(int controlCenterDiskUsagePercentage READ controlCenterDiskUsagePercentage WRITE setControlCenterDiskUsagePercentage NOTIFY controlCenterDiskUsagePercentageChanged FINAL)
     Q_PROPERTY(QString controlCenterDiskUsageText READ controlCenterDiskUsageText WRITE setControlCenterDiskUsageText NOTIFY controlCenterDiskUsageTextChanged FINAL)
@@ -173,6 +177,9 @@ public:
     void setControlCenterBatteryPercentage(const QString &value);
     int controlCenterCpuPercentage() const;
     void setControlCenterCpuPercentage(int percent);
+    int controlCenterCpuTemperature() const { return m_controlCenterCpuTemperature; }
+    int controlCenterGpuPercentage() const { return m_controlCenterGpuPercentage; }
+    int controlCenterGpuTemperature() const { return m_controlCenterGpuTemperature; }
     int controlCenterRamPercentage() const;
     void setControlCenterRamPercentage(int percent);
     int controlCenterDiskUsagePercentage() const;
@@ -267,6 +274,7 @@ public:
     Q_INVOKABLE void setControlCenterMicrophoneVolumePercentageFromSlider(int percent);
     Q_INVOKABLE void setControlCenterBrightnessPercentageFromSlider(int percent);
     Q_INVOKABLE void setControlCenterRuntimeActive(bool active);
+    Q_INVOKABLE void setControlCenterGpuPowerLease(bool active);
     Q_INVOKABLE void goToPreviousWorkspace();
     Q_INVOKABLE void goToNextWorkspace();
     Q_INVOKABLE bool refreshWorkspaceState();
@@ -327,6 +335,8 @@ Q_SIGNALS:
     void controlCenterBatteryChargingChanged(bool charging);
     void controlCenterBatteryPercentageChanged(const QString &value);
     void controlCenterCpuPercentageChanged(int percent);
+    void controlCenterHardwareMetricsChanged();
+    void controlCenterNetworkSampled();
     void controlCenterRamPercentageChanged(int percent);
     void controlCenterDiskUsagePercentageChanged(int percent);
     void controlCenterDiskUsageTextChanged(const QString &text);
@@ -478,6 +488,9 @@ private:
     bool m_controlCenterBatteryCharging = false;
     QString m_controlCenterBatteryPercentage;
     int m_controlCenterCpuPercentage = 0;
+    int m_controlCenterCpuTemperature = -1;
+    int m_controlCenterGpuPercentage = -1;
+    int m_controlCenterGpuTemperature = -1;
     int m_controlCenterRamPercentage = 0;
     int m_controlCenterDiskUsagePercentage = 0;
     QString m_controlCenterDiskUsageText;
@@ -505,6 +518,10 @@ private:
     QString m_launcherCommand = QStringLiteral("vicinae toggle");
     QString m_clipboardCommand = QStringLiteral("vicinae vicinae://launch/clipboard/history");
     QString m_controlCenterDiskUsagePath = QStringLiteral("/");
+    QString m_controlCenterGpuTemperatureDevice;
+    QProcess *m_gpuPowerLeaseProcess = nullptr;
+    bool m_gpuPowerLeaseRequested = false;
+    bool m_gpuPowerLeaseReleaseSent = false;
     QString m_screenPlacement = QStringLiteral("active");
     int m_barHeight = 56;
     int m_barLayerSpacingTop = 0;

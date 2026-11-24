@@ -19,6 +19,9 @@ qt_add_executable(${PROJECT_NAME}
 set_target_properties(${PROJECT_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    VALENZ_GPU_POWER_LEASE_HELPER="${CMAKE_INSTALL_FULL_LIBEXECDIR}/valenz-gpu-power-lease")
+
 if(CMAKE_CONFIGURATION_TYPES)
     foreach(_cfg ${CMAKE_CONFIGURATION_TYPES})
         string(TOUPPER "${_cfg}" _cfg_upper)
@@ -75,6 +78,9 @@ target_link_libraries(${PROJECT_NAME}
     Qt6::QuickControls2)
 
 install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+add_executable(valenz-gpu-power-lease helpers/gpu_power_lease.cpp)
+install(TARGETS valenz-gpu-power-lease RUNTIME DESTINATION ${CMAKE_INSTALL_LIBEXECDIR})
 
 qt_finalize_target(${PROJECT_NAME})
 

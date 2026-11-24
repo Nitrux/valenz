@@ -401,6 +401,7 @@ void ValenzBridge::initializeConfig()
     ensureKey(QString::fromLatin1(kWeatherRefreshMinutesKey), QString(), 20);
     ensureKey(QString::fromLatin1(kMprisAlwaysVisibleKey), QString(), false);
     ensureKey(QString::fromLatin1(kControlCenterDiskUsagePathKey), QString::fromLatin1(kLegacyControlCenterDiskUsagePathKey), "/");
+    ensureKey(QString::fromLatin1(kControlCenterGpuTemperatureDeviceKey), QString(), QString());
     ensureKey(QString::fromLatin1(kWindowBarHeightKey), QString(), 56);
     userSettings.remove(QStringLiteral("Window/barLayerSpacing"));
 
@@ -456,6 +457,7 @@ void ValenzBridge::initializeConfig()
     if (m_clipboardCommand.isEmpty())
         m_clipboardCommand = QStringLiteral("vicinae vicinae://launch/clipboard/history");
     m_controlCenterDiskUsagePath = userSettings.value(kControlCenterDiskUsagePathKey, "/").toString().trimmed();
+    m_controlCenterGpuTemperatureDevice = userSettings.value(kControlCenterGpuTemperatureDeviceKey).toString().trimmed();
     if (m_controlCenterDiskUsagePath.isEmpty())
         m_controlCenterDiskUsagePath = QStringLiteral("/");
     if (!m_controlCenterDiskUsagePath.startsWith(QLatin1Char('/')))
@@ -566,6 +568,8 @@ void ValenzBridge::reloadConfig()
         diskUsagePath.prepend(QLatin1Char('/'));
     const bool diskUsagePathChanged = update(m_controlCenterDiskUsagePath, diskUsagePath,
                                              [this] { Q_EMIT controlCenterDiskUsagePathChanged(m_controlCenterDiskUsagePath); });
+    const bool gpuTemperatureDeviceChanged = update(m_controlCenterGpuTemperatureDevice,
+        settings.value(kControlCenterGpuTemperatureDeviceKey).toString().trimmed(), [] {});
 
     update(m_mprisAlwaysVisible, settings.value(kMprisAlwaysVisibleKey, false).toBool(),
            [this] { Q_EMIT mprisAlwaysVisibleChanged(m_mprisAlwaysVisible); });
@@ -602,7 +606,7 @@ void ValenzBridge::reloadConfig()
         updateWeatherRefreshTimerInterval();
     if (weatherChanged)
         refreshWeather();
-    if (diskUsagePathChanged)
+    if (diskUsagePathChanged || gpuTemperatureDeviceChanged)
         refreshControlCenterSystemResourcesState();
     refreshSharedSettingsFromFile();
 }
@@ -619,6 +623,7 @@ void ValenzBridge::persistControlCenterState() const
     userSettings.setValue(kLauncherCommandKey, m_launcherCommand);
     userSettings.setValue(kClipboardCommandKey, m_clipboardCommand);
     userSettings.setValue(kControlCenterDiskUsagePathKey, m_controlCenterDiskUsagePath);
+    userSettings.setValue(kControlCenterGpuTemperatureDeviceKey, m_controlCenterGpuTemperatureDevice);
     userSettings.setValue(kWindowScreenPlacementKey, m_screenPlacement);
     userSettings.sync();
 }

@@ -63,11 +63,21 @@ configure_file(
     @ONLY
 )
 
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/data/polkit/org.nx.valenz.policy.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/org.nx.valenz.policy"
+    @ONLY
+)
+
 add_subdirectory(src)
 
 install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/org.maui.valenz.desktop"
     DESTINATION share/applications)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/org.nx.valenz.policy"
+    DESTINATION share/polkit-1/actions)
 
 if(NOT TARGET uninstall)
     configure_file(
