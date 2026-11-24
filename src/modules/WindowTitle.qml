@@ -54,7 +54,6 @@ Item
 
         delegate: Maui.TabButton
         {
-            id: tabButton
             property var windowData: modelData
             font.pointSize: Maui.Style.fontSizes.small
             implicitHeight: windowTitle.tabHeight
@@ -70,36 +69,6 @@ Item
             checked: Boolean(windowData.focused)
             text: windowTitle.cleanText(windowData.title) || i18n("Untitled window")
             icon.name: windowData.iconName || "application-x-executable"
-
-            contentItem: MouseArea
-            {
-                implicitWidth: titleContent.implicitWidth
-                implicitHeight: titleContent.implicitHeight
-                acceptedButtons: Qt.RightButton
-                propagateComposedEvents: true
-                preventStealing: false
-
-                onClicked: (mouse) =>
-                {
-                    if (mouse.button === Qt.RightButton)
-                        tabButton.rightClicked(mouse)
-
-                    mouse.accepted = false
-                }
-
-                Maui.IconLabel
-                {
-                    id: titleContent
-                    anchors.fill: parent
-                    text: tabButton.text
-                    icon: tabButton.icon
-                    color: tabButton.Maui.Theme.textColor
-                    alignment: Qt.AlignLeft
-                    display: ToolButton.TextBesideIcon
-                    font: tabButton.font
-                    opacity: tabButton.checked || tabButton.hovered ? 1 : 0.7
-                }
-            }
 
             onClicked:
             {
