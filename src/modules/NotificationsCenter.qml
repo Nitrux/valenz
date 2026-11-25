@@ -999,7 +999,7 @@ Item
                                             Button
                                             {
                                                 visible: count > 1
-                                                text: _groupCard._expanded ? i18n("Hide") : i18n("Show more")
+                                                text: _groupCard._expanded ? i18n("Hide") : i18n("Show More")
                                                 enabled: !_groupCard._dismissing && !notificationsCenter._clearingAll
                                                 onClicked: notificationsCenter.toggleGroupExpanded(key)
                                             }
