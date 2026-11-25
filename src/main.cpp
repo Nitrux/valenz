@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
 
     KAboutData aboutData(QStringLiteral("valenz"),
                          i18n("Valenz"),
-                         QStringLiteral("0.1.0"),
+                         QStringLiteral("0.0.2"),
                          i18n("Status bar for Nitrux built with MauiKit."),
                          KAboutLicense::BSD_3_Clause,
                          i18n("© %1 Made by Nitrux | Built with MauiKit", QString::number(QDate::currentDate().year())),
@@ -200,7 +200,7 @@ int main(int argc, char *argv[])
     app.setQuitOnLastWindowClosed(false);
     app.setApplicationName(QStringLiteral("valenz"));
     app.setApplicationDisplayName(QStringLiteral("Valenz"));
-    app.setApplicationVersion(QStringLiteral("0.1.0"));
+    app.setApplicationVersion(QStringLiteral("0.0.2"));
     app.setWindowIcon(QIcon::fromTheme(QStringLiteral("preferences-system-windows")));
     app.setOrganizationName(QStringLiteral("Maui"));
 
