@@ -1010,6 +1010,7 @@ Window
                         WeatherClock
                         {
                             id: _weatherClock
+                            checked: _calendarPopup.visible
                             clockText: root.clockText
                             dateText: root.dateText
                             weatherIconName: root.weatherIconName

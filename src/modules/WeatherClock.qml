@@ -49,6 +49,7 @@ ToolButton
             Layout.row: 0
             Layout.column: 0
             text: weatherClock.clockText
+            color: weatherClock.icon.color
             font.weight: Font.DemiBold
             font.pointSize: Maui.Style.fontSizes.big
             horizontalAlignment: Text.AlignLeft
@@ -59,7 +60,7 @@ ToolButton
             Layout.row: 1
             Layout.column: 0
             text: weatherClock.dateText
-            color: Maui.Theme.disabledTextColor
+            color: weatherClock.down || weatherClock.checked ? weatherClock.icon.color : Maui.Theme.disabledTextColor
             font.pointSize: Maui.Style.fontSizes.tiny
             horizontalAlignment: Text.AlignLeft
         }
@@ -78,6 +79,7 @@ ToolButton
                 Layout.alignment: Qt.AlignVCenter
                 Layout.fillWidth: true
                 text: weatherClock.weatherTemperature
+                color: weatherClock.icon.color
                 font.weight: Font.DemiBold
                 font.pointSize: Maui.Style.fontSizes.big
             }
@@ -91,7 +93,7 @@ ToolButton
                 width: 16
                 height: 16
                 source: weatherClock.weatherIconName
-                color: Maui.Theme.textColor
+                color: weatherClock.icon.color
             }
         }
 
@@ -101,7 +103,7 @@ ToolButton
             Layout.column: 1
             text: weatherClock.weatherLocationName
             visible: text.length > 0
-            color: Maui.Theme.disabledTextColor
+            color: weatherClock.down || weatherClock.checked ? weatherClock.icon.color : Maui.Theme.disabledTextColor
             font.pointSize: Maui.Style.fontSizes.tiny
             horizontalAlignment: Text.AlignLeft
         }
