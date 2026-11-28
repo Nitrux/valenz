@@ -4,7 +4,7 @@ import QtQuick.Layouts
 
 import org.mauikit.controls as Maui
 
-Item
+ToolButton
 {
     id: weatherClock
 
@@ -15,7 +15,9 @@ Item
     property string weatherLocationName: ""
     property Item popupAnchorMarker: _popupAnchorMarker
 
-    implicitWidth: _clockWeatherGrid.implicitWidth
+    padding: 0
+    horizontalPadding: Maui.Style.radiusV
+    implicitWidth: _clockWeatherGrid.implicitWidth + leftPadding + rightPadding
     implicitHeight: _clockWeatherGrid.implicitHeight
 
     Item
@@ -35,10 +37,9 @@ Item
         }
     }
 
-    GridLayout
+    contentItem: GridLayout
     {
         id: _clockWeatherGrid
-        anchors.centerIn: parent
         columns: 2
         columnSpacing: Maui.Style.space.small
         rowSpacing: 0
@@ -66,10 +67,20 @@ Item
         RowLayout
         {
             id: _weatherValueRow
+            Layout.fillWidth: true
             Layout.row: 0
             Layout.column: 1
             Layout.alignment: Qt.AlignVCenter
             spacing: Maui.Style.space.tiny
+
+            Label
+            {
+                Layout.alignment: Qt.AlignVCenter
+                Layout.fillWidth: true
+                text: weatherClock.weatherTemperature
+                font.weight: Font.DemiBold
+                font.pointSize: Maui.Style.fontSizes.big
+            }
 
             Maui.Icon
             {
@@ -82,21 +93,12 @@ Item
                 source: weatherClock.weatherIconName
                 color: Maui.Theme.textColor
             }
-
-            Label
-            {
-                Layout.alignment: Qt.AlignVCenter
-                text: weatherClock.weatherTemperature
-                font.weight: Font.DemiBold
-                font.pointSize: Maui.Style.fontSizes.big
-            }
         }
 
         Label
         {
             Layout.row: 1
             Layout.column: 1
-            Layout.leftMargin: _weatherIcon.width + _weatherValueRow.spacing
             text: weatherClock.weatherLocationName
             visible: text.length > 0
             color: Maui.Theme.disabledTextColor

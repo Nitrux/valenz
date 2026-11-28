@@ -1015,14 +1015,7 @@ Window
                             weatherIconName: root.weatherIconName
                             weatherTemperature: root.weatherTemperature
                             weatherLocationName: root.weatherLocationName
-                            
-                            TapHandler
-                            {
-                                onTapped:
-                                {
-                                    openCalendarPopup()
-                                }
-                            }
+                            onClicked: root.openCalendarPopup()
                         }
 
                         Maui.Separator

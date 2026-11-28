@@ -790,25 +790,13 @@ Window
                                 height: 8
                             }
 
-                            ToolButton
+                            Button
                             {
                                 Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                                 Layout.minimumHeight: 28
                                 text: i18n("Shutdown")
-                                display: ToolButton.TextBesideIcon
-                                Maui.Theme.textColor: "#cdd6f4"
-                                Maui.Theme.highlightedTextColor: "#cdd6f4"
-
-                                background: Rectangle
-                                {
-                                    radius: Maui.Style.radiusV
-                                    color: parent.down ? Qt.darker(Maui.Theme.negativeBackgroundColor, 1.12) : Maui.Theme.negativeBackgroundColor
-
-                                    Behavior on color
-                                    {
-                                        Maui.ColorTransition { easing.type: Easing.OutQuad }
-                                    }
-                                }
+                                display: Button.TextBesideIcon
+                                Maui.Controls.status: Maui.Controls.Negative
 
                                 onClicked:
                                 {
