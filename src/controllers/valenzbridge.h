@@ -464,6 +464,7 @@ private:
     QVariantList m_mprisSources;
     QString m_focusedWindowTitle;
     QString m_focusedWindowIconName;
+    QStringList m_windowOrder;
     QVariantList m_windowList;
     bool m_darkMode = false;
     bool m_darkModeAvailable = false;

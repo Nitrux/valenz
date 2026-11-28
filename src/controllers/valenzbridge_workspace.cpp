@@ -4,6 +4,8 @@
 #include "valenzbridge.h"
 #include "valenzbridge_p.h"
 
+#include <QHash>
+
 namespace
 {
 constexpr qsizetype kMaximumHyprlandEventLineBytes = 16 * 1024;
@@ -133,18 +135,31 @@ bool ValenzBridge::refreshWindowList()
     QVariantList windows;
     if (clients.isArray())
     {
+        QHash<QString, QJsonObject> clientsByAddress;
         for (const QJsonValue &clientValue : clients.toArray())
         {
             if (!clientValue.isObject())
                 continue;
 
             const QJsonObject client = clientValue.toObject();
-            const int workspace = client.value(QStringLiteral("workspace")).toObject().value(QStringLiteral("id")).toInt(-1);
-            if (workspace != m_currentWorkspace)
-                continue;
-
             const QString address = client.value(QStringLiteral("address")).toString().trimmed();
             if (address.isEmpty())
+                continue;
+
+            clientsByAddress.insert(address, client);
+            if (!m_windowOrder.contains(address))
+                m_windowOrder.append(address);
+        }
+
+        m_windowOrder.removeIf([&clientsByAddress](const QString &address) {
+            return !clientsByAddress.contains(address);
+        });
+
+        for (const QString &address : std::as_const(m_windowOrder))
+        {
+            const QJsonObject client = clientsByAddress.value(address);
+            const int workspace = client.value(QStringLiteral("workspace")).toObject().value(QStringLiteral("id")).toInt(-1);
+            if (workspace != m_currentWorkspace)
                 continue;
 
             QString title = client.value(QStringLiteral("title")).toString().trimmed();

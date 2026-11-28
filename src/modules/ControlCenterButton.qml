@@ -27,7 +27,7 @@ ToolButton
     property double _lastClosedAtMs: -1
     property Item popupAnchorMarker: _popupAnchorMarker
     readonly property bool popupVisible: controlCenterButton.popup && controlCenterButton.popup.visible
-    readonly property color activeContentColor: (controlCenterButton.down || controlCenterButton.popupVisible) ? Maui.Theme.highlightedTextColor : Maui.Theme.textColor
+    readonly property color activeContentColor: controlCenterButton.icon.color
 
     display: ToolButton.IconOnly
     checked: popupVisible

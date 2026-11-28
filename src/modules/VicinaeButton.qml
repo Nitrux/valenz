@@ -10,7 +10,7 @@ ToolButton
 
     property bool useSystemThemeIcons: true
     property var glyphForIcon
-    readonly property color activeContentColor: vicinaeButton.down ? Maui.Theme.highlightedTextColor : Maui.Theme.textColor
+    readonly property color activeContentColor: vicinaeButton.icon.color
 
     display: ToolButton.IconOnly
     padding: Maui.Style.space.small

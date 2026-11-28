@@ -37,6 +37,38 @@ Item
                    : 0
     implicitHeight: hasWindows ? tabHeight : 0
 
+    ListModel
+    {
+        id: tabModel
+
+        function sync(windows)
+        {
+            for (let i = 0; i < windows.length; ++i)
+            {
+                const entry = windows[i]
+                let row = i
+                while (row < count && get(row).address !== entry.address)
+                    ++row
+
+                if (row === count)
+                    insert(i, entry)
+                else
+                {
+                    if (row !== i)
+                        move(row, i, 1)
+                    set(i, entry)
+                }
+            }
+
+            if (count > windows.length)
+                remove(windows.length, count - windows.length)
+        }
+
+        Component.onCompleted: sync(windowTitle.windows)
+    }
+
+    onWindowsChanged: if (tabModel) tabModel.sync(windows)
+
     function cleanText(value)
     {
         return String(value || "").trim()
@@ -80,11 +112,11 @@ Item
         clip: true
         interactive: true
         boundsBehavior: Flickable.StopAtBounds
-        model: windowTitle.windows
+        model: tabModel
 
         delegate: Maui.TabButton
         {
-            property var windowData: modelData
+            property var windowData: model
             font.pointSize: Maui.Style.fontSizes.small
             implicitHeight: windowTitle.tabHeight
             height: windowTitle.tabHeight

@@ -803,6 +803,11 @@ Window
                                 {
                                     radius: Maui.Style.radiusV
                                     color: parent.down ? Qt.darker(Maui.Theme.negativeBackgroundColor, 1.12) : Maui.Theme.negativeBackgroundColor
+
+                                    Behavior on color
+                                    {
+                                        Maui.ColorTransition { easing.type: Easing.OutQuad }
+                                    }
                                 }
 
                                 onClicked:

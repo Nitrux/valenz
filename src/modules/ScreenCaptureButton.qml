@@ -18,7 +18,7 @@ ToolButton
     readonly property bool popupVisible: screenCaptureButton.popup && screenCaptureButton.popup.visible
     readonly property bool recordingActive: screenCaptureButton.popup && screenCaptureButton.popup.recordingActive
     readonly property string recordingTimeText: screenCaptureButton.popup ? screenCaptureButton.popup.recordingTimeText : "0:00"
-    readonly property color activeContentColor: (screenCaptureButton.down || screenCaptureButton.popupVisible) ? Maui.Theme.highlightedTextColor : Maui.Theme.textColor
+    readonly property color activeContentColor: screenCaptureButton.icon.color
 
     display: ToolButton.IconOnly
     padding: Maui.Style.space.small

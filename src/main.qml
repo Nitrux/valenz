@@ -9,8 +9,6 @@ import org.mauikit.controls as Maui
 Window
 {
     id: root
-    // Keep Maui.Theme synchronized with the live application palette.
-    Maui.Style.styleType: Maui.Style.Auto
     readonly property int barHeight: valenzBridge ? valenzBridge.barHeight : 56
     readonly property int barHeightClamped: Math.max(1, Math.min(barHeight, Screen.height > 0 ? Screen.height : barHeight))
     readonly property int barFrameInset: 6
